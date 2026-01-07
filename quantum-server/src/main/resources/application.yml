@@ -1,0 +1,94 @@
+# 服务器配置
+server:
+  port: 8080
+  servlet:
+    context-path:
+  shutdown: graceful
+  compression:
+    enabled: true
+    mime-types: application/json,text/html,text/xml,text/plain
+  tomcat:
+    uri-encoding: UTF-8
+    threads:
+      max: 200
+      min-spare: 10
+spring:
+  application:
+    name: quantum
+  profiles:
+    active: dev
+  lifecycle:
+    timeout-per-shutdown-phase: 30s
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
+  # Jackson配置
+  Jackson:
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: Asia/Shanghai
+    default-property-inclusion: non_null
+    serialization:
+      fail-on-empty-beans: false
+    deserialization:
+      fail-on-unknown-properties: false
+  # 缓存配置
+  cache:
+    type: redis
+
+# Actuator配置
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus,metrics
+  endpoint:
+    health:
+      show-details: always
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+file:
+  # 文件存储配置 local / rustfs
+  storage-type: local
+  local:
+    base-path: /data/files
+    domain: http://localhost:8080/api/file
+  rustfs:
+    endpoint: http://localhost:9000
+    access-key: rustfs
+    secret-key: rustfs123
+    bucket: quantum
+    region: cn-north-1
+    path-style-access: true
+
+# Security 配置
+security:
+  xss-enabled: true
+  # 允许传 HTML 的富文本字段接口
+  #xss-excludes:
+  #  - /notice/content
+  # 白名单路径
+  whitelist:
+    - /auth/login
+    - /auth/captcha
+  # 密码
+  password-min-length: 6
+  password-max-length: 20
+  # 登录失败
+  max-login-fail-count: 5
+  # 登录失败锁定时间（分钟）
+  lock-time: 30
+  # Token 配置
+  token:
+    access-token-expire: 10
+    refresh-token-expire: 30
+    multi-login: true
+
+# Knife4j配置
+knife4j:
+  enable: false
+  setting:
+    language: zh_cn
+  # 生产环境关闭
+  production: false

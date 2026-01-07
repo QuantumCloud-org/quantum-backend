@@ -1,0 +1,64 @@
+spring:
+  datasource:
+    hikari:
+      driver-class-name: org.postgresql.Driver
+      jdbc-url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+      username: baseweb
+      password: 1234QWer
+      maximum-pool-size: 20
+      minimum-idle: 5
+      max-lifetime: 1800000
+      connection-timeout: 30000
+      idle-timeout: 600000
+      connection-test-query: SELECT 1
+  data:
+    redis:
+      host: 192.168.31.10
+      port: 16379
+      database: 10
+      password: password!
+
+# Redisson 配置
+redisson:
+  single-server-config:
+    address: redis://${spring.data.redis.host}:${spring.data.redis.port}
+    password: ${spring.data.redis.password:}
+    database: ${spring.data.redis.database}
+    connection-minimum-idle-size: 8
+    connection-pool-size: 32
+    connect-timeout: 3000
+    timeout: 3000
+    retry-attempts: 3
+    retry-interval: 1500
+    subscription-connection-minimum-idle-size: 1
+    subscription-connection-pool-size: 8
+  threads: 0
+  netty-threads: 0
+  pingConnectionInterval: 3000
+  metricsEnabled: true
+
+# MyBatis-Flex 配置
+mybatis-flex:
+  mapper-locations: classpath*:/mapper/*.xml
+  type-aliases-package: com.alpha.**.entity
+  global-config:
+    print-banner: false
+  configuration:
+    map-underscore-to-camel-case: true
+  audit:
+    enabled: true
+  sql-print:
+    enabled: false
+
+# SpringDoc 配置
+springdoc:
+  enabled: false
+  api-docs:
+    enabled: false
+  swagger-ui:
+    enabled: false
+logging:
+  level:
+    root: WARN
+    # 业务包日志级别
+    com.alpha: WARN

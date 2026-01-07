@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.alpha</groupId>
+        <artifactId>quantum-backend</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <groupId>com.alpha.system</groupId>
+    <artifactId>quantum-biz-system</artifactId>
+    <packaging>jar</packaging>
+    <description>系统管理模块（用户、部门、角色、菜单、日志）</description>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.alpha.logging</groupId>
+            <artifactId>quantum-common-logging</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alpha.security</groupId>
+            <artifactId>quantum-common-security</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alpha.orm</groupId>
+            <artifactId>quantum-common-orm</artifactId>
+            <version>${revision}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.alpha.file</groupId>
+            <artifactId>quantum-common-file</artifactId>
+            <version>${revision}</version>
+        </dependency>
+    </dependencies>
+</project>

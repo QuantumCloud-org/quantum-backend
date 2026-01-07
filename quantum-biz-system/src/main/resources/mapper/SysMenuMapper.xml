@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alpha.system.mapper.SysMenuMapper">
+
+    <!-- 根据用户ID查询菜单列表（包含所有祖先菜单）- 递归CTE -->
+    <select id="selectMenusByUserId" resultType="com.alpha.system.domain.SysMenu">
+        WITH RECURSIVE menu_tree AS (
+            SELECT m.* FROM sys_menu m
+            INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+            INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+            WHERE ur.user_id = #{userId}
+            AND m.menu_type IN ('M', 'C')
+            AND m.status = 1
+            AND m.deleted = 0
+            UNION ALL
+            SELECT m.* FROM sys_menu m
+            INNER JOIN menu_tree t ON m.id = t.parent_id
+            WHERE m.deleted = 0
+        )
+        SELECT DISTINCT * FROM menu_tree
+        ORDER BY parent_id, order_num
+    </select>
+
+    <!-- 根据用户ID查询权限标识 -->
+    <select id="selectPermsByUserId" resultType="java.lang.String">
+        SELECT DISTINCT m.perms FROM sys_menu m
+        INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
+        INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+        WHERE ur.user_id = #{userId}
+        AND m.perms IS NOT NULL
+        AND m.perms != ''
+        AND m.status = 1
+        AND m.deleted = 0
+    </select>
+
+</mapper>

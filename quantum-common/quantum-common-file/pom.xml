@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+    <parent>
+        <groupId>com.alpha</groupId>
+        <artifactId>quantum-common</artifactId>
+        <version>${revision}</version>
+    </parent>
+
+    <groupId>com.alpha.file</groupId>
+    <artifactId>quantum-common-file</artifactId>
+    <packaging>jar</packaging>
+    <description>文件服务模块（上传/下载/Excel）</description>
+
+    <dependencies>
+        <!-- Framework -->
+        <dependency>
+            <groupId>com.alpha</groupId>
+            <artifactId>quantum-common-framework</artifactId>
+            <version>${revision}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>software.amazon.awssdk</groupId>
+            <artifactId>s3</artifactId>
+        </dependency>
+
+        <dependency>
+            <groupId>cn.idev.excel</groupId>
+            <artifactId>fastexcel</artifactId>
+        </dependency>
+
+    </dependencies>
+</project>

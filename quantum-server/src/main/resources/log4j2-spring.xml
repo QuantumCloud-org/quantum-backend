@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Log4j2 混合异步配置（AsyncLogger + Disruptor）
+    ===================== JVM 参数 =====================
+    -Dlog4j2.asyncLoggerRingBufferSize=262144
+    -Dlog4j2.asyncLoggerWaitStrategy=Timeout
+    -Dlog4j2.formatMsgNoLookups=true
+    -Dlog4j2.disable.jmx=true
+    -Dlog4j.skipJansi=false
+
+    1. 混合异步模式：XML 中使用 <AsyncLogger>/<AsyncRoot>，不需要 contextSelector 参数
+    2. MDC 自动传递：Log4j2 AsyncLogger 默认传递 ThreadContext，无需额外配置
+    3. includeLocation="false"：禁用调用位置信息，性能提升 4-20 倍
+    4. 错误日志 immediateFlush="true"：确保关键日志不丢失
+-->
+<Configuration status="WARN" monitorInterval="60">
+    <Properties>
+        <!-- 应用名称 -->
+        <Property name="APP_NAME">${spring:spring.application.name}</Property>
+
+        <!-- 日志路径 -->
+        <Property name="LOG_PATH">logs</Property>
+
+        <!-- ==================== 日志格式定义 ==================== -->
+
+        <!-- 控制台格式（彩色，开发环境） -->
+        <Property name="CONSOLE_PATTERN">%d{HH:mm:ss.SSS} %highlight{%-5level} [%15.15t] %cyan{%c{1.}} [%X{traceId:-} ] - %msg%n%xEx
+        </Property>
+
+        <!-- 文件格式（标准，包含完整 MDC 链路信息） -->
+        <Property name="FILE_PATTERN">%d{yyyy-MM-dd HH:mm:ss.SSS} [%-5level] [%t] [traceId=%X{traceId:-}|userId=%X{userId:-}|uri=%X{requestUri:-}] %c{1.} - %msg%n%xEx
+        </Property>
+
+        <!-- JSON 格式（便于 ELK/Loki 收集，取消注释 JsonTemplateLayout 使用） -->
+        <Property name="JSON_TEMPLATE">{
+            "@timestamp": "%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}",
+            "level": "%level",
+            "thread": "%t",
+            "traceId": "%X{traceId}",
+            "userId": "%X{userId}",
+            "requestUri": "%X{requestUri}",
+            "logger": "%c{1.}",
+            "message": "%msg",
+            "exception": "%xEx"
+            }
+        </Property>
+
+        <!-- 滚动策略参数 -->
+        <Property name="MAX_FILE_SIZE">100MB</Property>
+        <Property name="MAX_HISTORY_DAYS">30</Property>
+        <Property name="ERROR_HISTORY_DAYS">90</Property>
+    </Properties>
+
+    <Appenders>
+        <!-- ==================== 控制台（开发环境） ==================== -->
+        <Console name="Console" target="SYSTEM_OUT">
+            <PatternLayout pattern="${CONSOLE_PATTERN}"/>
+        </Console>
+
+        <!-- ==================== 应用日志文件 ==================== -->
+        <RollingRandomAccessFile name="AppFile"
+                                 fileName="${LOG_PATH}/app.log"
+                                 filePattern="${LOG_PATH}/app.%d{yyyy-MM-dd}-%i.log.gz"
+                                 immediateFlush="false"
+                                 bufferSize="262144">
+            <PatternLayout pattern="${FILE_PATTERN}"/>
+            <Policies>
+                <!-- 每天滚动 -->
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <!-- 单文件大小限制 -->
+                <SizeBasedTriggeringPolicy size="${MAX_FILE_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_HISTORY_DAYS}">
+                <Delete basePath="${LOG_PATH}" maxDepth="1">
+                    <IfFileName glob="app.*.log.gz"/>
+                    <IfLastModified age="${MAX_HISTORY_DAYS}d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingRandomAccessFile>
+
+        <!-- ==================== 错误日志文件 ==================== -->
+        <RollingRandomAccessFile name="ErrorFile"
+                                 fileName="${LOG_PATH}/error.log"
+                                 filePattern="${LOG_PATH}/error.%d{yyyy-MM-dd}-%i.log.gz"
+                                 immediateFlush="true"
+                                 bufferSize="8192">
+            <!-- 只接受 ERROR 及以上级别 -->
+            <ThresholdFilter level="ERROR" onMatch="ACCEPT" onMismatch="DENY"/>
+            <PatternLayout pattern="${FILE_PATTERN}"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILE_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${ERROR_HISTORY_DAYS}">
+                <Delete basePath="${LOG_PATH}" maxDepth="1">
+                    <IfFileName glob="error.*.log.gz"/>
+                    <IfLastModified age="${ERROR_HISTORY_DAYS}d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingRandomAccessFile>
+    </Appenders>
+
+    <Loggers>
+        <!-- ==================== 第三方库降噪 ==================== -->
+        <!-- Spring 框架 -->
+        <Logger name="org.springframework" level="WARN"/>
+        <Logger name="org.springframework.boot.autoconfigure" level="WARN"/>
+        <Logger name="org.springframework.web" level="WARN"/>
+        <Logger name="org.springframework.security" level="WARN"/>
+        <!-- 数据层 -->
+        <Logger name="org.mybatis" level="WARN"/>
+        <Logger name="com.mybatisflex" level="WARN"/>
+        <Logger name="com.zaxxer.hikari" level="WARN"/>
+        <Logger name="org.postgresql" level="WARN"/>
+        <!-- Redis -->
+        <Logger name="org.redisson" level="WARN"/>
+        <Logger name="io.lettuce" level="WARN"/>
+        <!-- 网络层 -->
+        <Logger name="io.netty" level="WARN"/>
+        <Logger name="org.apache.catalina" level="WARN"/>
+        <Logger name="org.apache.tomcat" level="WARN"/>
+        <Logger name="org.apache.coyote" level="WARN"/>
+        <!-- MyBatis Flex SQL 日志 -->
+        <Logger name="com.alpha.web.mapper" level="INFO"/>
+
+        <!-- ==================== 应用主日志（AsyncLogger + Disruptor） ==================== -->
+        <AsyncLogger name="com.alpha" level="INFO" additivity="false" includeLocation="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </AsyncLogger>
+
+        <!-- Root Logger -->
+        <AsyncRoot level="INFO" includeLocation="false">
+            <AppenderRef ref="Console"/>
+            <AppenderRef ref="AppFile"/>
+            <AppenderRef ref="ErrorFile"/>
+        </AsyncRoot>
+    </Loggers>
+</Configuration>

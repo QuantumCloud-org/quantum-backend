@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alpha.system.mapper.SysDeptMapper">
+
+    <!-- 查询所有子部门ID（包含自身）- 递归CTE -->
+    <select id="selectChildDeptIds" resultType="java.lang.Long">
+        WITH RECURSIVE dept_tree AS (
+            SELECT id FROM sys_dept WHERE id = #{deptId} AND deleted = 0
+            UNION ALL
+            SELECT d.id FROM sys_dept d
+            INNER JOIN dept_tree dt ON d.parent_id = dt.id
+            WHERE d.deleted = 0
+        )
+        SELECT id FROM dept_tree
+    </select>
+
+    <!-- 根据角色ID查询关联的部门ID -->
+    <select id="selectDeptIdsByRoleId" resultType="java.lang.Long">
+        SELECT dept_id FROM sys_role_dept WHERE role_id = #{roleId}
+    </select>
+
+    <!-- 查询部门及其所有子部门 -->
+    <select id="selectDeptAndChildren" resultType="com.alpha.system.domain.SysDept">
+        SELECT * FROM sys_dept
+        WHERE deleted = 0
+        AND (id = #{deptId} OR ancestors LIKE CONCAT('%,', #{deptId}, ',%')
+             OR ancestors LIKE CONCAT(#{deptId}, ',%')
+             OR ancestors LIKE CONCAT('%,', #{deptId}))
+        ORDER BY parent_id, order_num
+    </select>
+
+    <!-- 检查部门名称是否存在 -->
+    <select id="checkDeptNameExists" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM sys_dept
+        WHERE dept_name = #{deptName}
+        AND parent_id = #{parentId}
+        AND deleted = 0
+        AND id != #{excludeId}
+    </select>
+
+    <!-- 查询子部门数量 -->
+    <select id="selectChildCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM sys_dept WHERE parent_id = #{deptId} AND deleted = 0
+    </select>
+
+    <!-- 查询部门下用户数量 -->
+    <select id="selectUserCount" resultType="java.lang.Integer">
+        SELECT COUNT(*) FROM sys_user WHERE dept_id = #{deptId} AND deleted = 0
+    </select>
+
+    <!-- 更新子部门的祖级列表 -->
+    <update id="updateChildrenAncestors">
+        UPDATE sys_dept
+        SET ancestors = REPLACE(ancestors, #{oldAncestors}, #{newAncestors})
+        WHERE ancestors LIKE CONCAT(#{oldAncestors}, ',%')
+    </update>
+
+    <!-- 根据ID查询部门名称 -->
+    <select id="selectNameById" resultType="java.lang.String">
+        SELECT dept_name FROM sys_dept WHERE id = #{deptId} AND deleted = 0
+    </select>
+
+</mapper>

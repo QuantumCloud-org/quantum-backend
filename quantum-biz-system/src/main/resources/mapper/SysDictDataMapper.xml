@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="com.alpha.system.mapper.SysDictDataMapper">
+
+    <!-- 根据字典类型删除所有字典数据 -->
+    <delete id="deleteByDictType">
+        DELETE FROM sys_dict_data WHERE dict_type = #{dictType}
+    </delete>
+
+</mapper>

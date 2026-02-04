@@ -1,14 +1,14 @@
 package com.alpha.framework.util;
 
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.type.TypeReference;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.util.Collections;
 import java.util.List;
@@ -52,7 +52,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.writeValueAsString(object);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 序列化失败: {}", object.getClass().getName(), e);
             return null;
         }
@@ -67,7 +67,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(object);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 序列化失败: {}", object.getClass().getName(), e);
             return null;
         }
@@ -82,7 +82,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.writeValueAsBytes(object);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 序列化失败: {}", object.getClass().getName(), e);
             return new byte[0];
         }
@@ -99,7 +99,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.readValue(json, clazz);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 反序列化失败: {} -> {}", json, clazz.getName(), e);
             return null;
         }
@@ -118,7 +118,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.readValue(json, typeRef);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 反序列化失败: {}", typeRef.getType().getTypeName(), e);
             return null;
         }
@@ -134,7 +134,7 @@ public class JsonUtil {
         try {
             return objectMapper.readValue(json,
                     objectMapper.getTypeFactory().constructCollectionType(List.class, elementClass));
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 转 List 失败: {} -> List<{}>", json, elementClass.getName(), e);
             return Collections.emptyList();
         }
@@ -150,7 +150,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.readValue(json, Map.class);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 转 Map 失败: {}", json, e);
             return Collections.emptyMap();
         }
@@ -204,7 +204,7 @@ public class JsonUtil {
         }
         try {
             return objectMapper.readTree(json);
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             log.error("JSON 解析为 JsonNode 失败: {}", json, e);
             return null;
         }
@@ -287,7 +287,7 @@ public class JsonUtil {
         try {
             objectMapper.readTree(json);
             return true;
-        } catch (JsonProcessingException e) {
+        } catch (JacksonException e) {
             return false;
         }
     }
@@ -313,7 +313,5 @@ public class JsonUtil {
         String trimmed = json.trim();
         return trimmed.startsWith("[") && trimmed.endsWith("]");
     }
-
-    // ==================== 获取 ObjectMapper ====================
 
 }

@@ -17,7 +17,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.0.1</version>
+        <version>4.1.0-M1</version>
         <relativePath/>
     </parent>
 
@@ -30,16 +30,16 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <!--核心框架-->
-        <spring-boot.version>4.0.1</spring-boot.version>
-        <postgresql.version>42.7.8</postgresql.version>
+        <spring-boot.version>4.1.0-M1</spring-boot.version>
+        <postgresql.version>42.7.9</postgresql.version>
         <mybatis-flex.version>1.11.5</mybatis-flex.version>
         <!-- 组件版本管理 -->
-        <jwt.version>10.6</jwt.version>
+        <nimbus-jose-jwt.version>10.7</nimbus-jose-jwt.version>
         <disruptor.version>4.0.0</disruptor.version>
         <spring-jcl.version>6.2.15</spring-jcl.version>
-        <redisson.version>4.0.0</redisson.version>
+        <redisson.version>4.1.0</redisson.version>
         <caffeine.version>3.2.3</caffeine.version>
-        <jackson.version>3.0.3</jackson.version>
+        <jackson.version>3.0.4</jackson.version>
         <knife4j.version>4.5.0</knife4j.version>
         <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
         <hutool.version>5.8.42</hutool.version>
@@ -92,7 +92,7 @@
             <dependency>
                 <groupId>com.nimbusds</groupId>
                 <artifactId>nimbus-jose-jwt</artifactId>
-                <version>${jwt.version}</version>
+                <version>${nimbus-jose-jwt.version}</version>
             </dependency>
 
             <!-- Redisson -->

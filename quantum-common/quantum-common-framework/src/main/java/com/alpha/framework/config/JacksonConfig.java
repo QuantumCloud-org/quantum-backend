@@ -2,38 +2,40 @@ package com.alpha.framework.config;
 
 import com.alpha.framework.constant.CommonConstants;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.*;
-import com.fasterxml.jackson.databind.json.JsonMapper;
-import com.fasterxml.jackson.databind.module.SimpleModule;
-import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
-import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.deser.LocalTimeDeserializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateSerializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
-import com.fasterxml.jackson.datatype.jsr310.ser.LocalTimeSerializer;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.StreamWriteFeature;
+import tools.jackson.core.json.JsonReadFeature;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.DeserializationFeature;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.DateTimeFeature;
+import tools.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.module.SimpleModule;
+import tools.jackson.databind.ser.std.StdSerializer;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
 
-import java.io.IOException;
 import java.math.BigDecimal;
 import java.math.BigInteger;
-import java.time.LocalDate;
-import java.time.LocalDateTime;
-import java.time.LocalTime;
-import java.time.format.DateTimeFormatter;
 import java.util.TimeZone;
 
 /**
- * Jackson 全局配置
+ * Jackson 3.x 全局配置
+ * <p>
+ * Jackson 3.x 主要变更：
+ * 1. 包名变更：com.fasterxml.jackson → tools.jackson（jackson-annotations 例外）
+ * 2. Java 8 时间模块已内置到 jackson-databind，无需单独注册 JavaTimeModule
+ * 3. 使用不可变的 JsonMapper.builder() 模式构建
+ * 4. SerializerProvider 重命名为 SerializationContext
+ * 5. JsonParser.Feature 拆分为 JsonReadFeature（JSON特有）和 StreamReadFeature（通用）
  * <p>
  * 核心处理：
- * 1. 时间格式统一（LocalDateTime/LocalDate/LocalTime）
+ * 1. 时间格式：保持时间戳格式（Long 毫秒值）
  * 2. Long/BigInteger 超出 JS 安全范围时转 String
  * 3. BigDecimal 保留精度不使用科学计数法
  * 4. XSS 防护（可配置开关）
@@ -50,40 +52,41 @@ public class JacksonConfig {
 
     @Bean
     @Primary
-    public ObjectMapper objectMapper() {
+    public JsonMapper jsonMapper() {
         JsonMapper.Builder builder = JsonMapper.builder()
-                // 模块注册
-                .addModule(javaTimeModule())
-                .addModule(numericModule())
-
-                // 时区
+                // 时区配置
                 .defaultTimeZone(TimeZone.getTimeZone(CommonConstants.TIMEZONE))
 
-                // 日期格式（主要用于 java.util.Date）
-                .defaultDateFormat(new java.text.SimpleDateFormat(CommonConstants.DATETIME_PATTERN) {{
-                    setTimeZone(TimeZone.getTimeZone(CommonConstants.TIMEZONE));
-                }})
-
-                // 反序列化配置
+                // ==================== 反序列化配置 ====================
                 .disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES)
                 .disable(DeserializationFeature.FAIL_ON_MISSING_CREATOR_PROPERTIES)
                 .enable(DeserializationFeature.ACCEPT_EMPTY_STRING_AS_NULL_OBJECT)
 
-                // 序列化配置
+                // ==================== 序列化配置 ====================
                 .disable(SerializationFeature.FAIL_ON_EMPTY_BEANS)
-                .disable(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS)
-                .disable(SerializationFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
 
-                // 解析器配置
-                .enable(JsonParser.Feature.ALLOW_SINGLE_QUOTES)
-                .enable(JsonParser.Feature.ALLOW_UNQUOTED_FIELD_NAMES)
+                // ==================== 日期时间配置 ====================
+                // 启用时间戳格式
+                .enable(DateTimeFeature.WRITE_DATES_AS_TIMESTAMPS)
+                .enable(DateTimeFeature.WRITE_DURATIONS_AS_TIMESTAMPS)
 
-                // 生成器配置
-                .enable(JsonGenerator.Feature.WRITE_BIGDECIMAL_AS_PLAIN)
+                // ==================== JSON 读取特性（JsonReadFeature - JSON 格式专用）====================
+                // 允许单引号（非标准 JSON，但兼容性更好）
+                .enable(JsonReadFeature.ALLOW_SINGLE_QUOTES)
+                // 允许不带引号的字段名（非标准 JSON，但 JavaScript 风格常用）
+                .enable(JsonReadFeature.ALLOW_UNQUOTED_PROPERTY_NAMES)
 
-                // null 处理
-                .defaultPropertyInclusion(JsonInclude.Value.construct(JsonInclude.Include.NON_NULL, JsonInclude.Include.ALWAYS
-                ));
+                // ==================== JSON/流写入特性 ====================
+                // BigDecimal 不使用科学计数法
+                .enable(StreamWriteFeature.WRITE_BIGDECIMAL_AS_PLAIN)
+
+                // ==================== null 处理策略 ====================
+                .changeDefaultPropertyInclusion(inclusion ->
+                        inclusion.withValueInclusion(JsonInclude.Include.NON_NULL)
+                )
+
+                // ==================== 注册自定义模块 ====================
+                .addModule(numericModule());
 
         // 注册 XSS 防护模块（根据配置开关）
         if (xssEnabled) {
@@ -94,47 +97,17 @@ public class JacksonConfig {
     }
 
     /**
-     * Java 8+ 时间类型模块
-     */
-    private JavaTimeModule javaTimeModule() {
-        JavaTimeModule module = new JavaTimeModule();
-
-        // 使用 CommonConstants 中定义的格式，确保全局统一
-        DateTimeFormatter dateFormatter = DateTimeFormatter.ofPattern(CommonConstants.DATE_PATTERN);
-        DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(CommonConstants.TIME_PATTERN);
-        DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(CommonConstants.DATETIME_PATTERN);
-
-        // LocalDate
-        module.addSerializer(LocalDate.class, new LocalDateSerializer(dateFormatter));
-        module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
-
-        // LocalTime
-        module.addSerializer(LocalTime.class, new LocalTimeSerializer(timeFormatter));
-        module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
-
-        // LocalDateTime
-        module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTimeFormatter));
-        module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
-
-        return module;
-    }
-
-    /**
      * 数值类型处理模块
      */
     private SimpleModule numericModule() {
         SimpleModule module = new SimpleModule("NumericModule");
-
-        // Long：超出 JS 安全范围时转 String
-        module.addSerializer(Long.class, ToStringSerializer.instance);
-        module.addSerializer(Long.TYPE, ToStringSerializer.instance);
-
+        // Long：始终转 String（前端 JS 精度问题）
+        module.addSerializer(Long.class, new LongToStringSerializer());
+        module.addSerializer(long.class, new LongToStringSerializer());
         // BigInteger：始终转 String
-        module.addSerializer(BigInteger.class, ToStringSerializer.instance);
-
-        // BigDecimal：避免科学计数法
+        module.addSerializer(BigInteger.class, new BigIntegerToStringSerializer());
+        // BigDecimal：避免科学计数法，转为纯字符串
         module.addSerializer(BigDecimal.class, new BigDecimalPlainSerializer());
-
         return module;
     }
 
@@ -142,7 +115,6 @@ public class JacksonConfig {
      * XSS 防护模块
      * <p>
      * 通过 Jackson 反序列化时自动清理 XSS 攻击字符串
-     * 比 Filter 方式更可靠，能处理 JSON Body
      */
     private SimpleModule xssModule() {
         SimpleModule module = new SimpleModule("XssModule");
@@ -150,26 +122,43 @@ public class JacksonConfig {
         return module;
     }
 
+    // ==================== 自定义序列化器/反序列化器 ====================
+
     /**
-     * 安全的 Long 序列化器
+     * Long 转 String 序列化器
      * <p>
      * JavaScript Number 类型只能精确表示 -(2^53-1) 到 2^53-1 之间的整数
-     * 超出此范围的 Long 值会丢失精度，因此转为 String
+     * 统一转为 String 以避免前端精度丢失
      */
-    public static class SafeLongSerializer extends JsonSerializer<Long> {
-        private static final long JS_MAX_SAFE_INTEGER = 9007199254740991L;
-        private static final long JS_MIN_SAFE_INTEGER = -9007199254740991L;
+    public static class LongToStringSerializer extends StdSerializer<Long> {
+        public LongToStringSerializer() {
+            super(Long.class);
+        }
 
         @Override
-        public void serialize(Long value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+        public void serialize(Long value, JsonGenerator gen, SerializationContext ctxt) {
             if (value == null) {
                 gen.writeNull();
-                return;
-            }
-            if (value > JS_MAX_SAFE_INTEGER || value < JS_MIN_SAFE_INTEGER) {
-                gen.writeString(value.toString());
             } else {
-                gen.writeNumber(value);
+                gen.writeString(value.toString());
+            }
+        }
+    }
+
+    /**
+     * BigInteger 转 String 序列化器
+     */
+    public static class BigIntegerToStringSerializer extends StdSerializer<BigInteger> {
+        public BigIntegerToStringSerializer() {
+            super(BigInteger.class);
+        }
+
+        @Override
+        public void serialize(BigInteger value, JsonGenerator gen, SerializationContext ctxt) {
+            if (value == null) {
+                gen.writeNull();
+            } else {
+                gen.writeString(value.toString());
             }
         }
     }
@@ -179,9 +168,13 @@ public class JacksonConfig {
      * <p>
      * 使用 toPlainString() 避免科学计数法输出
      */
-    public static class BigDecimalPlainSerializer extends JsonSerializer<BigDecimal> {
+    public static class BigDecimalPlainSerializer extends StdSerializer<BigDecimal> {
+        public BigDecimalPlainSerializer() {
+            super(BigDecimal.class);
+        }
+
         @Override
-        public void serialize(BigDecimal value, JsonGenerator gen, SerializerProvider provider) throws IOException {
+        public void serialize(BigDecimal value, JsonGenerator gen, SerializationContext ctxt) {
             if (value == null) {
                 gen.writeNull();
             } else {
@@ -195,10 +188,13 @@ public class JacksonConfig {
      * <p>
      * 在 JSON 反序列化时自动清理 HTML 标签，防止 XSS 攻击
      */
-    public static class XssStringDeserializer extends JsonDeserializer<String> {
+    public static class XssStringDeserializer extends StdDeserializer<String> {
+        public XssStringDeserializer() {
+            super(String.class);
+        }
 
         @Override
-        public String deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+        public String deserialize(JsonParser p, DeserializationContext ctxt) {
             String value = p.getValueAsString();
             if (value == null || value.isEmpty()) {
                 return value;

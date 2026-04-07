@@ -2,7 +2,6 @@ package com.alpha.orm.config;
 
 import com.alpha.framework.context.UserContext;
 import com.alpha.orm.entity.BaseEntity;
-import com.alpha.orm.interceptor.DataPermissionInterceptor;
 import com.mybatisflex.annotation.InsertListener;
 import com.mybatisflex.annotation.UpdateListener;
 import com.mybatisflex.core.FlexGlobalConfig;
@@ -24,7 +23,6 @@ import java.time.LocalDateTime;
  * 功能：
  * 1. 自动填充（创建人、更新人、创建时间、更新时间）
  * 2. SQL 审计（慢 SQL 告警）
- * 3. 数据权限拦截器（自动注入数据权限条件）
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
@@ -38,7 +36,6 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
     private boolean sqlPrintEnabled;
 
     private final AuditManagerMessage auditMessage;
-    private final DataPermissionInterceptor dataPermissionInterceptor;
 
     /**
      * 自定义配置初始化
@@ -79,9 +76,6 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
         // 空值也调用 setter
         configuration.setCallSettersOnNulls(true);
 
-        // 注册数据权限拦截器
-        configuration.addInterceptor(dataPermissionInterceptor);
-        log.info("数据权限拦截器注册完成");
     }
 
     /**

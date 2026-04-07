@@ -9,6 +9,7 @@ import com.alpha.orm.entity.PageResult;
 import com.alpha.security.annotation.RequiresPermission;
 import com.alpha.system.convert.UserConvert;
 import com.alpha.system.domain.SysUser;
+import com.alpha.system.dto.request.ResetPasswordRequest;
 import com.alpha.system.dto.request.UserCreateRequest;
 import com.alpha.system.dto.request.UserQuery;
 import com.alpha.system.dto.request.UserUpdateRequest;
@@ -95,8 +96,8 @@ public class SysUserController {
     @SystemLog(title = "用户管理", businessType = BusinessType.IMPORT)
     @RequiresPermission("system:user:resetPwd")
     @PutMapping("/resetPwd")
-    public Result<Void> resetPwd(@RequestParam Long userId, @RequestParam String password) {
-        userService.resetPassword(userId, password);
+    public Result<Void> resetPwd(@Validated @RequestBody ResetPasswordRequest request) {
+        userService.resetPassword(request.getUserId(), request.getPassword());
         return Result.ok();
     }
 
@@ -149,7 +150,7 @@ public class SysUserController {
             return Result.ok(msg);
         } catch (Exception e) {
             log.error("导入用户失败", e);
-            return Result.fail("导入用户失败: " + e.getMessage());
+            return Result.fail("导入用户失败，请检查文件格式");
         }
     }
 

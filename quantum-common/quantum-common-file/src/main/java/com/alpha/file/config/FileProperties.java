@@ -1,5 +1,6 @@
 package com.alpha.file.config;
 
+import jakarta.annotation.PostConstruct;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
@@ -35,6 +36,18 @@ public class FileProperties {
      */
     private Upload upload = new Upload();
 
+    @PostConstruct
+    public void validate() {
+        if ("rustfs".equalsIgnoreCase(storageType)) {
+            if (rustfs.getAccessKey() == null || rustfs.getAccessKey().isBlank()) {
+                throw new IllegalStateException("file.rustfs.access-key 未配置");
+            }
+            if (rustfs.getSecretKey() == null || rustfs.getSecretKey().isBlank()) {
+                throw new IllegalStateException("file.rustfs.secret-key 未配置");
+            }
+        }
+    }
+
     @Data
     public static class Local {
         /**
@@ -58,12 +71,12 @@ public class FileProperties {
         /**
          * Access Key
          */
-        private String accessKey = "rustfs";
+        private String accessKey;
 
         /**
          * Secret Key
          */
-        private String secretKey = "rustfs123";
+        private String secretKey;
 
         /**
          * 默认 Bucket

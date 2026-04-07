@@ -18,10 +18,10 @@ public class UserContext {
      * 用户信息（支持异步传递）
      */
     private static final ThreadLocal<LoginUser> USER_HOLDER = new InheritableThreadLocal<>();
-    private static final ThreadLocal<String> IP_HOLDER = new ThreadLocal<>();
-    private static final ThreadLocal<String> TRACE_ID_HOLDER = new ThreadLocal<>();
-    private static final ThreadLocal<String> USER_AGENT_HOLDER = new ThreadLocal<>();
-    private static final ThreadLocal<String> REQUEST_URI_HOLDER = new ThreadLocal<>();
+    private static final ThreadLocal<String> IP_HOLDER = new InheritableThreadLocal<>();
+    private static final ThreadLocal<String> TRACE_ID_HOLDER = new InheritableThreadLocal<>();
+    private static final ThreadLocal<String> USER_AGENT_HOLDER = new InheritableThreadLocal<>();
+    private static final ThreadLocal<String> REQUEST_URI_HOLDER = new InheritableThreadLocal<>();
 
     // ==================== 用户操作 ====================
 

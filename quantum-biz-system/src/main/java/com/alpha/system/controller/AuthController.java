@@ -16,11 +16,13 @@ import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 
+@Slf4j
 @Tag(name = "认证管理")
 @RestController
 @RequestMapping("/auth")
@@ -44,7 +46,8 @@ public class AuthController {
         try {
             return Result.ok(loginService.login(request));
         } catch (JOSEException e) {
-            return Result.fail("登录失败：" + e.getMessage());
+            log.error("登录Token生成异常", e);
+            return Result.fail("登录失败，请稍后重试");
         }
     }
 

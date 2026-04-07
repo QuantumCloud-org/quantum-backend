@@ -37,7 +37,6 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         this.securityProperties = securityProperties;
     }
 
-//    quantum:tabs 和 quantum:user 不要全部存在localstore中，容易被坏人抓到攻击，前者直接渲染好了就可以，quantum:user  这个数据存的太多了，非常不安全，只需要存储accessToken 和refreshToken 还要用上 分片 + 混淆 + IndexedDB       存储
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String accessToken = extractToken(request);
@@ -112,7 +111,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         if (StrUtil.isNotBlank(header) && header.startsWith(CommonConstants.TOKEN_PREFIX)) {
             return header.substring(CommonConstants.TOKEN_PREFIX.length());
         }
-        return request.getParameter("token");
+        return null;
     }
 
     private String extractRefreshToken(HttpServletRequest request) {
@@ -121,8 +120,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         if (StrUtil.isNotBlank(header)) {
             return header;
         }
-        // 其次从请求参数获取
-        return request.getParameter("refreshToken");
+        return null;
     }
 
     private String getDeviceId(HttpServletRequest request) {

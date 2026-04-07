@@ -1,6 +1,8 @@
 package com.alpha.system.dto.response;
 
+import com.alpha.framework.enums.SensitiveStrategy;
 import com.alpha.orm.entity.BaseEntity;
+import com.alpha.security.annotation.Sensitive;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -33,11 +35,13 @@ public class UserVO extends BaseEntity implements Serializable {
     /**
      * 邮箱
      */
+    @Sensitive(SensitiveStrategy.EMAIL)
     private String email;
 
     /**
      * 手机号
      */
+    @Sensitive(SensitiveStrategy.PHONE)
     private String phone;
 
     /**

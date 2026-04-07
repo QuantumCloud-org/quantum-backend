@@ -58,12 +58,17 @@ public class SecurityProperties {
     /**
      * 密码最小长度
      */
-    private int passwordMinLength = 6;
+    private int passwordMinLength = 8;
 
     /**
      * 密码最大长度
      */
     private int passwordMaxLength = 20;
+
+    /**
+     * CORS 允许的来源
+     */
+    private List<String> corsAllowedOrigins = List.of("http://localhost:5173");
 
     /**
      * 登录失败最大次数

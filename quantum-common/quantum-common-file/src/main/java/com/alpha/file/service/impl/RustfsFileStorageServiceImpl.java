@@ -45,31 +45,37 @@ public class RustfsFileStorageServiceImpl implements FileStorageService {
 
     private final FileProperties fileProperties;
 
-    private S3Client s3Client;
+    private volatile S3Client s3Client;
 
     private S3Client getS3Client() {
-        if (s3Client == null) {
-            FileProperties.Rustfs rustfs = fileProperties.getRustfs();
-            AwsBasicCredentials credentials = AwsBasicCredentials.create(
-                    rustfs.getAccessKey(),
-                    rustfs.getSecretKey()
-            );
+        S3Client client = s3Client;
+        if (client == null) {
+            synchronized (this) {
+                client = s3Client;
+                if (client == null) {
+                    FileProperties.Rustfs rustfs = fileProperties.getRustfs();
+                    AwsBasicCredentials credentials = AwsBasicCredentials.create(
+                            rustfs.getAccessKey(),
+                            rustfs.getSecretKey()
+                    );
 
-            S3ClientBuilder builder = S3Client.builder()
-                    .region(Region.of(rustfs.getRegion()))
-                    .credentialsProvider(StaticCredentialsProvider.create(credentials))
-                    .endpointOverride(URI.create(rustfs.getEndpoint()));
+                    S3ClientBuilder builder = S3Client.builder()
+                            .region(Region.of(rustfs.getRegion()))
+                            .credentialsProvider(StaticCredentialsProvider.create(credentials))
+                            .endpointOverride(URI.create(rustfs.getEndpoint()));
 
-            // 根据配置选择路径样式或虚拟托管样式
-            if (rustfs.isPathStyleAccess()) {
-                builder.serviceConfiguration(S3Configuration.builder()
-                        .pathStyleAccessEnabled(true)
-                        .build());
+                    if (rustfs.isPathStyleAccess()) {
+                        builder.serviceConfiguration(S3Configuration.builder()
+                                .pathStyleAccessEnabled(true)
+                                .build());
+                    }
+
+                    client = builder.build();
+                    s3Client = client;
+                }
             }
-
-            s3Client = builder.build();
         }
-        return s3Client;
+        return client;
     }
 
     @Override
@@ -254,12 +260,19 @@ public class RustfsFileStorageServiceImpl implements FileStorageService {
     public String getPresignedUrl(String filePath, int expireSeconds) {
         FileProperties.Rustfs rustfs = fileProperties.getRustfs();
 
-        try (S3Presigner presigner = S3Presigner.builder()
+        S3Presigner.Builder presignerBuilder = S3Presigner.builder()
                 .region(Region.of(rustfs.getRegion()))
                 .endpointOverride(URI.create(rustfs.getEndpoint()))
                 .credentialsProvider(StaticCredentialsProvider.create(
-                        AwsBasicCredentials.create(rustfs.getAccessKey(), rustfs.getSecretKey())))
-                .build()) {
+                        AwsBasicCredentials.create(rustfs.getAccessKey(), rustfs.getSecretKey())));
+
+        if (rustfs.isPathStyleAccess()) {
+            presignerBuilder.serviceConfiguration(S3Configuration.builder()
+                    .pathStyleAccessEnabled(true)
+                    .build());
+        }
+
+        try (S3Presigner presigner = presignerBuilder.build()) {
 
             GetObjectPresignRequest presignRequest = GetObjectPresignRequest.builder()
                     .signatureDuration(java.time.Duration.ofSeconds(expireSeconds))
@@ -289,8 +302,16 @@ public class RustfsFileStorageServiceImpl implements FileStorageService {
             // 路径样式: http://endpoint/bucket/key
             return endpoint + "/" + bucket + "/" + objectKey;
         } else {
-            // 虚拟托管样式: http://bucket.endpoint/key
-            return endpoint.replace("http://", "http://" + bucket + ".");
+            // 虚拟托管样式: http(s)://bucket.endpoint/key
+            String virtualHostedEndpoint;
+            if (endpoint.startsWith("https://")) {
+                virtualHostedEndpoint = endpoint.replace("https://", "https://" + bucket + ".");
+            } else if (endpoint.startsWith("http://")) {
+                virtualHostedEndpoint = endpoint.replace("http://", "http://" + bucket + ".");
+            } else {
+                virtualHostedEndpoint = endpoint;
+            }
+            return virtualHostedEndpoint + "/" + objectKey;
         }
     }
 }

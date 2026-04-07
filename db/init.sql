@@ -520,6 +520,7 @@ VALUES
     (104, 1, '岗位管理', 'post', 'system/post/index', 'system:post:list', 'post', 'C', 5, 1, 1),
     (105, 1, '字典管理', 'dict', 'system/dict/index', 'system:dict:list', 'dict', 'C', 6, 1, 1),
     (106, 1, '参数设置', 'config', 'system/config/index', 'system:config:list', 'edit', 'C', 7, 1, 1),
+    (107, 1, '文件管理', 'file', 'system/file/index', 'system:file:query', 'upload', 'C', 8, 1, 1),
 
     -- 系统监控子菜单
     (200, 2, '在线用户', 'online', 'monitor/online/index', 'monitor:online:list', 'online', 'C', 1, 1, 1),
@@ -554,7 +555,16 @@ VALUES
     (1300, 103, '部门查询', '', '', 'system:dept:query', '#', 'F', 1, 1, 1),
     (1301, 103, '部门新增', '', '', 'system:dept:add', '#', 'F', 2, 1, 1),
     (1302, 103, '部门修改', '', '', 'system:dept:edit', '#', 'F', 3, 1, 1),
-    (1303, 103, '部门删除', '', '', 'system:dept:remove', '#', 'F', 4, 1, 1);
+    (1303, 103, '部门删除', '', '', 'system:dept:remove', '#', 'F', 4, 1, 1),
+
+    -- 参数设置按钮
+    (1060, 106, '参数查询', '', '', 'system:config:query', '#', 'F', 1, 1, 1),
+
+    -- 文件管理按钮
+    (1070, 107, '文件查询', '', '', 'system:file:query', '#', 'F', 1, 1, 1),
+    (1071, 107, '文件上传', '', '', 'system:file:upload', '#', 'F', 2, 1, 1),
+    (1072, 107, '文件下载', '', '', 'system:file:download', '#', 'F', 3, 1, 1),
+    (1073, 107, '文件删除', '', '', 'system:file:remove', '#', 'F', 4, 1, 1);
 
 -- 6. 初始化角色菜单关联（管理员拥有所有菜单权限）
 INSERT INTO sys_role_menu (role_id, menu_id)

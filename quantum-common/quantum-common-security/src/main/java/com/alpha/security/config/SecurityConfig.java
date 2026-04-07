@@ -83,7 +83,6 @@ public class SecurityConfig {
     public AuthenticationManager authenticationManager(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
         DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
         provider.setPasswordEncoder(passwordEncoder);
-        provider.setHideUserNotFoundExceptions(false);
         return new ProviderManager(provider);
     }
 
@@ -118,12 +117,13 @@ public class SecurityConfig {
                 // Headers
                 .headers(headers -> headers
                         // 允许 iframe（如需要）
-                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::disable)
+                        .frameOptions(HeadersConfigurer.FrameOptionsConfig::sameOrigin)
                         // XSS 保护
                         .xssProtection(xss -> xss.headerValue(XXssProtectionHeaderWriter.HeaderValue.ENABLED_MODE_BLOCK))
                         // 内容类型嗅探保护
                         .contentTypeOptions(contentType -> {
-                        }))
+                        })
+                        .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; object-src 'none'; frame-ancestors 'self'")))
 
                 // 异常处理
                 .exceptionHandling(exception -> exception
@@ -132,12 +132,10 @@ public class SecurityConfig {
 
                 // 授权配置
                 .authorizeHttpRequests(auth -> auth
-                        // 白名单
-                        .requestMatchers(HttpMethod.POST, "/auth/test").permitAll()
                         // 其他白名单路径
                         .requestMatchers(whitelist).permitAll()
                         // 静态资源
-                        .requestMatchers(HttpMethod.GET, "/actuator/**", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/*.html", "/*.css", "/*.js", "/favicon.ico", "/static/**", "/webjars/**", "/doc.html", "/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/*.html", "/*.css", "/*.js", "/favicon.ico", "/static/**", "/webjars/**", "/doc.html", "/error").permitAll()
                         // OPTIONS 预检请求
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         // 其他请求需要认证
@@ -150,14 +148,15 @@ public class SecurityConfig {
                         .clearAuthentication(true)
                         .invalidateHttpSession(true))
 
-                // 添加自定义过滤器
-                .addFilterBefore(requestWrapperFilter(), UsernamePasswordAuthenticationFilter.class)
+                // 添加自定义过滤器（执行顺序：TokenAuth → RateLimit → RequestWrapper → RepeatSubmit）
                 // 1. TokenAuthenticationFilter 最先执行（认证）
-                .addFilterBefore(tokenAuthenticationFilter(), RequestWrapperFilter.class)
+                .addFilterBefore(tokenAuthenticationFilter(), UsernamePasswordAuthenticationFilter.class)
                 // 2. RateLimitFilter 在 TokenAuth 之后（此时已有用户信息）
                 .addFilterAfter(rateLimitFilter, TokenAuthenticationFilter.class)
-                // 3. RepeatSubmitFilter 在 RateLimit 之后
-                .addFilterAfter(repeatSubmitFilter, RateLimitFilter.class);
+                // 3. RequestWrapperFilter 在 RateLimit 之后（包装请求体，供 RepeatSubmit 读取 body）
+                .addFilterAfter(requestWrapperFilter(), RateLimitFilter.class)
+                // 4. RepeatSubmitFilter 在 RequestWrapper 之后（此时可读取 body MD5）
+                .addFilterAfter(repeatSubmitFilter, RequestWrapperFilter.class);
 
         log.info("【SecurityConfig】配置完成 | 白名单: {}", Arrays.toString(whitelist));
 
@@ -170,11 +169,10 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        // 允许所有来源（生产环境应配置具体域名）
-        config.setAllowedOriginPatterns(List.of("*"));
+        config.setAllowedOriginPatterns(securityProperties.getCorsAllowedOrigins());
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(Arrays.asList("Authorization", "X-Trace-Id"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "X-Trace-Id", "X-Refresh-Token"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

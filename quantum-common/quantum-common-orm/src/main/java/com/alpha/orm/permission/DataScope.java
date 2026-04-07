@@ -7,21 +7,18 @@ import java.lang.annotation.*;
 /**
  * 数据权限注解
  * <p>
- * 标注在 Service/Mapper 方法上，自动添加数据权限过滤条件
+ * 标注在 Service 方法上，由 DataScopeAspect 将权限上下文写入 ThreadLocal。
+ * 业务代码需在 QueryWrapper 构建后显式调用
+ * {@code DataPermissionInterceptor.applyDataScope(wrapper, alias)} 注入过滤条件。
  * <p>
  * 使用示例：
  * <pre>
- * // 使用用户配置的数据权限（从 UserContext.getDataScope() 获取）
- * @DataScope
- * List<User> selectList();
- *
- * // 强制使用本部门及子部门
  * @DataScope(type = DataScopeType.DEPT_AND_CHILD)
- * List<User> selectDeptUsers();
- *
- * // 自定义字段名
- * @DataScope(deptField = "department_id", userField = "creator_id")
- * List<Order> selectOrders();
+ * public List<User> selectDeptUsers(UserQuery query) {
+ *     QueryWrapper wrapper = buildQueryWrapper(query);
+ *     DataPermissionInterceptor.applyDataScope(wrapper, "");
+ *     return list(wrapper);
+ * }
  * </pre>
  */
 @Target(ElementType.METHOD)

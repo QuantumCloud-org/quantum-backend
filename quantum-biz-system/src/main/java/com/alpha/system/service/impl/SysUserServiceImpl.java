@@ -1,10 +1,14 @@
 package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
 import com.alpha.orm.enums.DataScopeType;
+import com.alpha.orm.interceptor.DataPermissionInterceptor;
 import com.alpha.orm.permission.DataScope;
+import com.alpha.security.config.SecurityProperties;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserQuery;
 import com.alpha.system.mapper.SysDeptMapper;
@@ -38,11 +42,13 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
+    private final SecurityProperties securityProperties;
 
     @Override
     @DataScope(type = DataScopeType.DEPT_AND_CHILD)
     public Page<SysUser> selectUserPage(UserQuery query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
+        DataPermissionInterceptor.applyDataScope(wrapper, "");
         return page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
     }
 
@@ -50,6 +56,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @DataScope(type = DataScopeType.DEPT_AND_CHILD)
     public List<SysUser> selectUserList(UserQuery query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
+        DataPermissionInterceptor.applyDataScope(wrapper, "");
         return list(wrapper);
     }
 
@@ -78,6 +85,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (StrUtil.isNotBlank(user.getEmail()) && !checkEmailUnique(user.getEmail(), null)) {
             throw new BizException("邮箱已存在");
         }
+
+        validatePassword(user.getPassword());
 
         // 加密密码
         user.setPassword(passwordEncoder.encode(user.getPassword()));
@@ -123,7 +132,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteUserByIds(List<Long> userIds) {
         // 不能删除管理员
-        if (userIds.contains(1L)) {
+        if (userIds.contains(CommonConstants.SUPER_ADMIN_ID)) {
             throw new BizException("不能删除超级管理员");
         }
 
@@ -138,6 +147,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public boolean resetPassword(Long userId, String password) {
+        validatePassword(password);
         SysUser user = new SysUser();
         user.setId(userId);
         user.setPassword(passwordEncoder.encode(password));
@@ -146,8 +156,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public boolean updateStatus(Long userId, Integer status) {
+        if (status != 0 && status != 1) {
+            throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
+        }
         // 不能禁用管理员
-        if (userId == 1L && status == 0) {
+        if (CommonConstants.SUPER_ADMIN_ID.equals(userId) && CommonConstants.STATUS_DISABLE.equals(status)) {
             throw new BizException("不能禁用超级管理员");
         }
 
@@ -180,7 +193,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public Set<String> selectUserPermissions(Long userId) {
         // 管理员拥有所有权限
-        if (userId == 1L) {
+        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
             return Set.of("*:*:*");
         }
         return userMapper.selectUserPermissions(userId);
@@ -212,7 +225,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 SysUser existUser = selectByUsername(user.getUsername());
                 if (existUser == null) {
                     // 新增
-                    user.setPassword(passwordEncoder.encode("123456")); // 默认密码
+                    user.setPassword(passwordEncoder.encode(RandomUtil.randomString(8)));
                     save(user);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append("、账号 ")
@@ -279,5 +292,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         wrapper.orderBy(SYS_USER.CREATE_TIME.desc());
         return wrapper;
+    }
+
+    private void validatePassword(String password) {
+        if (StrUtil.isBlank(password)) {
+            throw new BizException("密码不能为空");
+        }
+
+        int length = password.length();
+        if (length < securityProperties.getPasswordMinLength() || length > securityProperties.getPasswordMaxLength()) {
+            throw new BizException(String.format("密码长度必须在%d-%d位之间",
+                    securityProperties.getPasswordMinLength(), securityProperties.getPasswordMaxLength()));
+        }
     }
 }

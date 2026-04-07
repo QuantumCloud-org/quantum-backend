@@ -45,6 +45,7 @@ public class SysConfigController {
 
     @Operation(summary = "根据键名查询配置值")
     @SystemLog(title = "系统配置", businessType = BusinessType.SELECT)
+    @RequiresPermission("system:config:query")
     @GetMapping("/configKey/{configKey}")
     public Result<String> getConfigKey(@PathVariable String configKey) {
         return Result.ok(configService.selectConfigByKey(configKey));

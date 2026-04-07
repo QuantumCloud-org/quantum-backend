@@ -2,6 +2,7 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysMenu;
 import com.alpha.system.dto.response.RouterVO;
@@ -84,7 +85,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     public List<SysMenu> selectMenuTreeByUserId(Long userId) {
         List<SysMenu> menus;
         // 管理员显示所有菜单
-        if (userId == 1L) {
+        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
             QueryWrapper wrapper = QueryWrapper.create()
                     .where(SYS_MENU.MENU_TYPE.in("M", "C"))
                     .and(SYS_MENU.STATUS.eq(1))
@@ -114,7 +115,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     public Set<String> selectPermsByUserId(Long userId) {
         // 管理员拥有所有权限
-        if (userId == 1L) {
+        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
             return Set.of("*:*:*");
         }
         return menuMapper.selectPermsByUserId(userId);
@@ -146,7 +147,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         }
 
         // 不能设置自己为父菜单
-        if (menu.getId().equals(menu.getParentId())) {
+        if (java.util.Objects.equals(menu.getId(), menu.getParentId())) {
             throw new BizException("父菜单不能是自己");
         }
 

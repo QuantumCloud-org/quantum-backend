@@ -15,6 +15,12 @@
 
     <dependencies>
         <dependency>
+            <groupId>com.alpha</groupId>
+            <artifactId>quantum-common-framework</artifactId>
+            <version>${revision}</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
             <groupId>com.alpha.cache</groupId>
             <artifactId>quantum-common-cache</artifactId>
             <version>${revision}</version>

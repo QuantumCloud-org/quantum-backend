@@ -79,7 +79,9 @@ public class IpUtil {
             try (InputStream is = resource.getInputStream()) {
                 // 加载到内存，实现毫秒级查询
                 xdbData = IoUtil.readBytes(is);
-                searcher = Searcher.newWithBuffer(Version.IPv4, new LongByteArray(xdbData));
+                LongByteArray buffer = new LongByteArray();
+                buffer.append(xdbData);
+                searcher = Searcher.newWithBuffer(Version.IPv4, buffer);
                 log.info("ip2region 初始化成功，数据大小: {} KB", xdbData.length / 1024);
             }
         } catch (Exception e) {

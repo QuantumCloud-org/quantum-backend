@@ -1,6 +1,8 @@
 package com.alpha.system.dto.response;
 
+import com.alpha.framework.enums.SensitiveStrategy;
 import com.alpha.orm.entity.BaseEntity;
+import com.alpha.security.annotation.Sensitive;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
 
@@ -51,11 +53,13 @@ public class DeptVO extends BaseEntity implements Serializable {
     /**
      * 联系电话
      */
+    @Sensitive(SensitiveStrategy.PHONE)
     private String phone;
 
     /**
      * 邮箱
      */
+    @Sensitive(SensitiveStrategy.EMAIL)
     private String email;
 
     /**

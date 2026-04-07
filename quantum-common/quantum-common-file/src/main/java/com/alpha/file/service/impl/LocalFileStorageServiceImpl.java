@@ -52,8 +52,9 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         // 1. 校验文件
         FileUtils.validateFile(file, fileProperties);
 
-        // 2. 生成存储路径
+        // 2. 生成存储路径（校验路径穿越）
         String basePath = fileProperties.getLocal().getBasePath();
+        FileUtils.validatePath(path, basePath);
         String datePath = DateUtil.format(new Date(), "yyyy/MM/dd");
         String storagePath = StrUtil.isNotBlank(path) ? path : datePath;
         String fullPath = basePath + "/" + storagePath;
@@ -112,6 +113,7 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
 
     @Override
     public InputStream download(String filePath) {
+        FileUtils.validatePath(filePath, fileProperties.getLocal().getBasePath());
         String fullPath = fileProperties.getLocal().getBasePath() + "/" + filePath;
         File file = new File(fullPath);
 
@@ -129,6 +131,7 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
 
     @Override
     public boolean delete(String filePath) {
+        FileUtils.validatePath(filePath, fileProperties.getLocal().getBasePath());
         String fullPath = fileProperties.getLocal().getBasePath() + "/" + filePath;
         boolean result = FileUtil.del(fullPath);
         if (result) {
@@ -150,6 +153,7 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
 
     @Override
     public boolean exists(String filePath) {
+        FileUtils.validatePath(filePath, fileProperties.getLocal().getBasePath());
         String fullPath = fileProperties.getLocal().getBasePath() + "/" + filePath;
         return FileUtil.exist(fullPath);
     }

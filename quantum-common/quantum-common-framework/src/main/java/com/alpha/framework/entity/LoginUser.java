@@ -1,5 +1,6 @@
 package com.alpha.framework.entity;
 
+import com.alpha.framework.constant.CommonConstants;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import lombok.Data;
 import lombok.experimental.Accessors;
@@ -83,14 +84,14 @@ public class LoginUser implements UserDetails, Serializable {
     private Integer dataScope;
 
     /**
-     * Token
+     * Access Token ID（不存储完整 JWT，仅存 tokenId 用于 Redis key 关联）
      */
-    private String token;
+    private String tokenId;
 
     /**
-     * refreshToken
+     * Refresh Token ID（不存储完整 JWT，仅存 refreshTokenId 用于注销时清理）
      */
-    private String refreshToken;
+    private String refreshTokenId;
 
     /**
      * 登录时间
@@ -127,7 +128,7 @@ public class LoginUser implements UserDetails, Serializable {
      * 是否为管理员
      */
     public boolean isAdmin() {
-        return userId != null && userId == 1L;
+        return CommonConstants.SUPER_ADMIN_ID.equals(userId);
     }
 
     /**

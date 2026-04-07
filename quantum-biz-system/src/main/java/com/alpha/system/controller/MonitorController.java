@@ -8,14 +8,12 @@ import com.alpha.security.annotation.RequiresPermission;
 import com.alpha.system.dto.response.OnlineUser;
 import com.alpha.system.dto.response.ServerInfo;
 import com.alpha.system.service.ISysOnlineService;
-import com.nimbusds.jose.JOSEException;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
 import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.web.bind.annotation.*;
 
-import java.text.ParseException;
 import java.util.List;
 import java.util.Map;
 
@@ -43,17 +41,18 @@ public class MonitorController {
     @GetMapping("/online/count")
     @SystemLog(title = "在线用户管理", businessType = BusinessType.SELECT)
     @Operation(summary = "获取在线用户数量")
+    @RequiresPermission("monitor:online:list")
     public Result<Long> onlineCount() {
         long count = onlineService.getOnlineCount();
         return Result.ok(count);
     }
 
-    @DeleteMapping("/online/{token}")
+    @DeleteMapping("/online/{tokenId}")
     @SystemLog(title = "在线用户管理", businessType = BusinessType.DELETE)
-    @Operation(summary = "强制下线用户（按Token）")
+    @Operation(summary = "强制下线用户（按TokenId）")
     @RequiresPermission("monitor:online:forceLogout")
-    public Result<Void> forceLogout(@PathVariable String token) throws ParseException, JOSEException {
-        onlineService.forceLogout(token);
+    public Result<Void> forceLogout(@PathVariable String tokenId) {
+        onlineService.forceLogout(tokenId);
         return Result.ok();
     }
 

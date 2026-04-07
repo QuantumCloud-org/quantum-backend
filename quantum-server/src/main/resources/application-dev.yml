@@ -4,7 +4,7 @@ spring:
       driver-class-name: org.postgresql.Driver
       jdbc-url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
       username: baseweb
-      password: 1234QWer
+      password: 1234QWer!@
       maximum-pool-size: 20
       minimum-idle: 5
       max-lifetime: 1800000
@@ -17,27 +17,17 @@ spring:
       port: 16379
       database: 12
       password: password!
-
-# Redisson 配置
-redisson:
-  single-server-config:
-    address: redis://${spring.data.redis.host}:${spring.data.redis.port}
-    password: ${spring.data.redis.password:}
-    database: ${spring.data.redis.database}
-    connection-minimum-idle-size: 8
-    connection-pool-size: 32
-    connect-timeout: 3000
-    timeout: 3000
-    retry-attempts: 3
-    retry-interval: 1500
-    subscription-connection-minimum-idle-size: 1
-    subscription-connection-pool-size: 8
-  threads: 0
-  netty-threads: 0
-  # 心跳检测
-  pingConnectionInterval: 3000
-  # 可选：监控
-  metricsEnabled: true
+      # Redisson 高级配置（通过 RedissonPoolProperties 绑定）
+      redisson:
+        connection-minimum-idle-size: 8
+        connection-pool-size: 32
+        connect-timeout: 3000
+        timeout: 3000
+        retry-attempts: 3
+        retry-interval: 1500
+        subscription-connection-minimum-idle-size: 1
+        subscription-connection-pool-size: 8
+        ping-connection-interval: 3000
 
 # MyBatis-Flex 配置
 mybatis-flex:
@@ -70,3 +60,7 @@ logging:
     org.mybatis: WARN
     com.zaxxer.hikari: WARN
     com.mybatisflex.core.monitor: DEBUG
+
+security:
+  token:
+    secret: dev-jwt-secret-2026-04-06-please-change-before-prod-0123456789abcdef

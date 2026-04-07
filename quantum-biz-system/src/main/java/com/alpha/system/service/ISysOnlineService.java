@@ -1,9 +1,6 @@
 package com.alpha.system.service;
 
 import com.alpha.system.dto.response.OnlineUser;
-import com.nimbusds.jose.JOSEException;
-
-import java.text.ParseException;
 import java.util.List;
 
 /**
@@ -24,7 +21,7 @@ public interface ISysOnlineService {
     /**
      * 强制下线用户
      */
-    void forceLogout(String token) throws ParseException, JOSEException;
+    void forceLogout(String tokenId);
 
     /**
      * 强制下线用户（按用户ID）

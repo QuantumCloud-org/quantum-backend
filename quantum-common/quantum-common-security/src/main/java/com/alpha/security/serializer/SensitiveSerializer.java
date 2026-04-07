@@ -2,63 +2,57 @@ package com.alpha.security.serializer;
 
 import com.alpha.security.annotation.Sensitive;
 import com.alpha.framework.enums.SensitiveStrategy;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.BeanProperty;
-import com.fasterxml.jackson.databind.JsonMappingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.ser.ContextualSerializer;
-
-import java.io.IOException;
-import java.util.Objects;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.BeanProperty;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.ser.std.StdSerializer;
 
 /**
- * 脱敏序列化器
+ * 脱敏序列化器（Jackson 3.0）
  * <p>
- * 基于 Jackson 实现，在 JSON 序列化时自动对指定字段进行脱敏处理
+ * 基于 Jackson 3.0 实现，在 JSON 序列化时自动对指定字段进行脱敏处理。
+ * 通过 {@link Sensitive} 注解 + {@code @JsonSerialize(using = ...)} 触发。
  */
-public class SensitiveSerializer extends JsonSerializer<String> implements ContextualSerializer {
+public class SensitiveSerializer extends StdSerializer<String> {
 
-    private SensitiveStrategy strategy;
+    private final SensitiveStrategy strategy;
 
-    /**
-     * 序列化逻辑
-     */
+    public SensitiveSerializer() {
+        super(String.class);
+        this.strategy = null;
+    }
+
+    public SensitiveSerializer(SensitiveStrategy strategy) {
+        super(String.class);
+        this.strategy = strategy;
+    }
+
     @Override
-    public void serialize(String value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
-        if (strategy != null) {
-            // 执行脱敏
+    public void serialize(String value, JsonGenerator gen, SerializationContext ctxt) {
+        if (strategy != null && value != null) {
             gen.writeString(strategy.desensitize(value));
         } else {
-            // 无策略则原样输出
             gen.writeString(value);
         }
     }
 
     /**
-     * 获取上下文信息（注解）
+     * Jackson 3.0 contextual serializer 支持
      * <p>
-     * 当 Jackson 扫描到字段时会调用此方法，我们在这里读取 @Sensitive 注解
+     * 当 Jackson 扫描到字段时调用此方法，读取 {@link Sensitive} 注解并创建带策略的序列化器实例。
      */
     @Override
-    public JsonSerializer<?> createContextual(SerializerProvider prov, BeanProperty property) throws JsonMappingException {
-        // 如果是独立的 String 值（非对象字段），直接返回默认
+    public ValueSerializer<?> createContextual(SerializationContext ctxt, BeanProperty property) {
         if (property == null) {
-            return prov.findValueSerializer(String.class);
+            return this;
         }
 
-        // 获取字段上的注解
         Sensitive annotation = property.getAnnotation(Sensitive.class);
-
-        // 如果字段上确实有 @Sensitive 注解
-        if (Objects.nonNull(annotation)) {
-            // 创建一个新的序列化器实例，并注入策略
-            SensitiveSerializer serializer = new SensitiveSerializer();
-            serializer.strategy = annotation.value();
-            return serializer;
+        if (annotation != null) {
+            return new SensitiveSerializer(annotation.value());
         }
 
-        // 没有注解，返回默认序列化器
-        return prov.findValueSerializer(property.getType(), property);
+        return this;
     }
 }

@@ -25,6 +25,11 @@ public interface SysDeptMapper extends BaseMapper<SysDept> {
     Set<Long> selectDeptIdsByRoleId(@Param("roleId") Long roleId);
 
     /**
+     * 根据多个角色ID批量查询关联的部门ID
+     */
+    Set<Long> selectDeptIdsByRoleIds(@Param("roleIds") List<Long> roleIds);
+
+    /**
      * 查询部门及其所有子部门
      */
     List<SysDept> selectDeptAndChildren(@Param("deptId") Long deptId);

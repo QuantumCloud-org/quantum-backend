@@ -17,35 +17,35 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>4.1.0-M1</version>
+        <version>4.0.5</version>
         <relativePath/>
     </parent>
 
     <properties>
         <revision>1.0.0</revision>
-        <skipTests>true</skipTests>
+        <skipTests>false</skipTests>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
         <java.version>25</java.version>
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <!--核心框架-->
-        <spring-boot.version>4.1.0-M1</spring-boot.version>
-        <postgresql.version>42.7.9</postgresql.version>
-        <mybatis-flex.version>1.11.5</mybatis-flex.version>
+        <spring-boot.version>4.0.5</spring-boot.version>
+        <postgresql.version>42.7.10</postgresql.version>
+        <mybatis-flex.version>1.11.6</mybatis-flex.version>
         <!-- 组件版本管理 -->
-        <nimbus-jose-jwt.version>10.7</nimbus-jose-jwt.version>
+        <nimbus-jose-jwt.version>10.9</nimbus-jose-jwt.version>
         <disruptor.version>4.0.0</disruptor.version>
-        <spring-jcl.version>6.2.15</spring-jcl.version>
-        <redisson.version>4.1.0</redisson.version>
+        <spring-jcl.version>6.2.17</spring-jcl.version>
+        <redisson.version>4.3.1</redisson.version>
         <caffeine.version>3.2.3</caffeine.version>
-        <jackson.version>3.0.4</jackson.version>
+        <jackson.version>3.1.1</jackson.version>
         <knife4j.version>4.5.0</knife4j.version>
-        <springdoc-openapi.version>3.0.1</springdoc-openapi.version>
-        <hutool.version>5.8.42</hutool.version>
+        <springdoc-openapi.version>3.0.2</springdoc-openapi.version>
+        <hutool.version>5.8.44</hutool.version>
         <mapstruct.version>1.6.3</mapstruct.version>
-        <ip2region.version>3.3.1</ip2region.version>
-        <s3.version>2.41.1</s3.version>
+        <ip2region.version>3.3.7</ip2region.version>
+        <s3.version>2.42.28</s3.version>
         <fastexcel.version>1.3.0</fastexcel.version>
     </properties>
 
@@ -218,7 +218,6 @@
                 <configuration>
                     <source>${java.version}</source>
                     <target>${java.version}</target>
-                    <skip>true</skip>
                     <encoding>${project.build.sourceEncoding}</encoding>
                     <annotationProcessorPaths>
                         <path>
@@ -243,7 +242,9 @@
             <plugin>
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
+                <inherited>false</inherited>
                 <configuration>
+                    <skip>true</skip>
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>

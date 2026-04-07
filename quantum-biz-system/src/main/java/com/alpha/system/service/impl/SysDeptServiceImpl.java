@@ -95,14 +95,14 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         }
 
         // 不能设置自己为父部门
-        if (dept.getId().equals(dept.getParentId())) {
+        if (java.util.Objects.equals(dept.getId(), dept.getParentId())) {
             throw new BizException("父部门不能是自己");
         }
 
         SysDept oldDept = getById(dept.getId());
 
         // 如果父部门变更，更新祖级列表
-        if (!oldDept.getParentId().equals(dept.getParentId())) {
+        if (!java.util.Objects.equals(oldDept.getParentId(), dept.getParentId())) {
             String newAncestors;
             if (dept.getParentId() == 0) {
                 newAncestors = "0";

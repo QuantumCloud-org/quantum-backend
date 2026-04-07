@@ -2,6 +2,7 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysRole;
 import com.alpha.system.dto.request.RoleQuery;
@@ -133,6 +134,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
     @Override
     public boolean updateStatus(Long roleId, Integer status) {
+        if (status != 0 && status != 1) {
+            throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
+        }
         checkRoleAllowed(roleId);
 
         SysRole role = new SysRole();
@@ -144,6 +148,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDataScope(Long roleId, Integer dataScope, List<Long> deptIds) {
+        if (dataScope < 1 || dataScope > 5) {
+            throw new BizException("数据权限范围无效，仅支持1-5");
+        }
         checkRoleAllowed(roleId);
 
         SysRole role = new SysRole();
@@ -199,7 +206,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
      * 检查是否允许操作角色
      */
     private void checkRoleAllowed(Long roleId) {
-        if (roleId == 1L) {
+        if (CommonConstants.SUPER_ADMIN_ID.equals(roleId)) {
             throw new BizException("不允许操作超级管理员角色");
         }
     }

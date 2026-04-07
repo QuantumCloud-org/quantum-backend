@@ -108,7 +108,17 @@ public class MultiLevelCacheConfig {
     @Getter
     public static class MultiLevelCache extends AbstractValueAdaptingCache {
 
-        private static final Object NULL_PLACEHOLDER = new Object();
+        /**
+         * 缓存空值哨兵，序列化稳定：经 Redis 序列化/反序列化后仍可通过 equals() 识别
+         */
+        private static final class NullSentinel implements java.io.Serializable {
+            private static final long serialVersionUID = 1L;
+            @Override public boolean equals(Object o) { return o instanceof NullSentinel; }
+            @Override public int hashCode() { return 0; }
+            @Override public String toString() { return "NullSentinel"; }
+        }
+
+        private static final NullSentinel NULL_PLACEHOLDER = new NullSentinel();
 
         private final String name;
         private final String instanceId;
@@ -137,7 +147,7 @@ public class MultiLevelCacheConfig {
             Object value = localCache.getIfPresent(key);
             if (value != null) {
                 log.trace("L1 命中: {} -> {}", name, key);
-                return value == NULL_PLACEHOLDER ? null : value;
+                return NULL_PLACEHOLDER.equals(value) ? null : value;
             }
 
             // L2: Redis
@@ -145,7 +155,7 @@ public class MultiLevelCacheConfig {
             if (value != null) {
                 log.trace("L2 命中: {} -> {}", name, key);
                 localCache.put(key, value);
-                return value;
+                return NULL_PLACEHOLDER.equals(value) ? null : value;
             }
 
             return null;
@@ -157,7 +167,7 @@ public class MultiLevelCacheConfig {
             // L1 检查
             Object value = localCache.getIfPresent(key);
             if (value != null) {
-                return value == NULL_PLACEHOLDER ? null : (T) value;
+                return NULL_PLACEHOLDER.equals(value) ? null : (T) value;
             }
 
             // L2 检查
@@ -165,7 +175,7 @@ public class MultiLevelCacheConfig {
             value = redis.get(redisKey);
             if (value != null) {
                 localCache.put(key, value);
-                return (T) value;
+                return NULL_PLACEHOLDER.equals(value) ? null : (T) value;
             }
 
             // 缓存击穿保护：分布式锁
@@ -180,7 +190,7 @@ public class MultiLevelCacheConfig {
                         value = redis.get(redisKey);
                         if (value != null) {
                             localCache.put(key, value);
-                            return (T) value;
+                            return NULL_PLACEHOLDER.equals(value) ? null : (T) value;
                         }
 
                         // 加载数据

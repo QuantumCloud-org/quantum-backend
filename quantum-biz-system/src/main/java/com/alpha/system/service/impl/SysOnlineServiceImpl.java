@@ -6,13 +6,11 @@ import com.alpha.framework.entity.LoginUser;
 import com.alpha.security.token.TokenService;
 import com.alpha.system.dto.response.OnlineUser;
 import com.alpha.system.service.ISysOnlineService;
-import com.nimbusds.jose.JOSEException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
-import java.text.ParseException;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -36,7 +34,7 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
             try {
                 LoginUser loginUser = redisUtil.get(tokenKey);
                 if (loginUser != null) {
-                    onlineUsers.add(convertToOnlineUser(loginUser));
+                    onlineUsers.add(convertToOnlineUser(loginUser, extractTokenId(tokenKey)));
                 } else {
                     redissonClient.getSet(CommonConstants.ONLINE_TOKENS_KEY).remove(tokenKey);
                 }
@@ -50,13 +48,13 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
 
     @Override
     public long getOnlineCount() {
-        return redissonClient.getSet(CommonConstants.ONLINE_TOKENS_KEY).size();
+        return redissonClient.<String>getSet(CommonConstants.ONLINE_TOKENS_KEY).size();
     }
 
     @Override
-    public void forceLogout(String token) throws ParseException, JOSEException {
-        tokenService.logout(token);
-        log.info("强制下线用户 | Token: {}", maskToken(token));
+    public void forceLogout(String tokenId) {
+        tokenService.logoutByTokenId(tokenId);
+        log.info("强制下线用户 | TokenId: {}", maskTokenId(tokenId));
     }
 
     @Override
@@ -68,13 +66,13 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
     /**
      * 转换为在线用户信息
      */
-    private OnlineUser convertToOnlineUser(LoginUser loginUser) {
+    private OnlineUser convertToOnlineUser(LoginUser loginUser, String tokenId) {
         return new OnlineUser()
                 .setUserId(loginUser.getUserId())
                 .setUsername(loginUser.getUsername())
                 .setNickname(loginUser.getNickname())
                 .setDeptName(loginUser.getDeptName())
-                .setToken(loginUser.getToken())
+                .setTokenId(tokenId)
                 .setLoginIp(loginUser.getLoginIp())
                 .setLoginLocation(loginUser.getLoginLocation())
                 .setBrowser(loginUser.getBrowser())
@@ -82,10 +80,17 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
                 .setLoginTime(loginUser.getLoginTime());
     }
 
-    private String maskToken(String token) {
-        if (token == null || token.length() < 8) {
+    private String maskTokenId(String tokenId) {
+        if (tokenId == null || tokenId.length() < 8) {
             return "***";
         }
-        return token.substring(0, 4) + "****" + token.substring(token.length() - 4);
+        return tokenId.substring(0, 4) + "****" + tokenId.substring(tokenId.length() - 4);
+    }
+
+    private String extractTokenId(String tokenKey) {
+        String prefix = CommonConstants.REDIS_TOKEN_PREFIX + "access:";
+        return tokenKey != null && tokenKey.startsWith(prefix)
+                ? tokenKey.substring(prefix.length())
+                : tokenKey;
     }
 }

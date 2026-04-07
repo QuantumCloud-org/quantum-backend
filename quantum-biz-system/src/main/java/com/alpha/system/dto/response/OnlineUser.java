@@ -37,9 +37,9 @@ public class OnlineUser implements Serializable {
     private String deptName;
 
     /**
-     * Token
+     * Token 标识
      */
-    private String token;
+    private String tokenId;
 
     /**
      * 登录 IP

@@ -100,7 +100,7 @@ public class RepeatSubmitFilter extends OncePerRequestFilter {
     }
 
     private void responseError(HttpServletResponse response) throws IOException {
-        response.setStatus(HttpServletResponse.SC_OK);
+        response.setStatus(ResultCode.DUPLICATE_REQUEST.getCode());
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");
         response.getWriter().write(jsonUtil.toJson(Result.fail(ResultCode.DUPLICATE_REQUEST)));

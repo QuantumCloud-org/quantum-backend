@@ -15,8 +15,8 @@
 
     <dependencies>
         <dependency>
-            <groupId>com.alpha.security</groupId>
-            <artifactId>quantum-common-security</artifactId>
+            <groupId>com.alpha</groupId>
+            <artifactId>quantum-common-framework</artifactId>
             <version>${revision}</version>
             <scope>compile</scope>
         </dependency>
@@ -37,6 +37,11 @@
             <groupId>org.postgresql</groupId>
             <artifactId>postgresql</artifactId>
             <scope>runtime</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-test</artifactId>
+            <scope>test</scope>
         </dependency>
     </dependencies>
 

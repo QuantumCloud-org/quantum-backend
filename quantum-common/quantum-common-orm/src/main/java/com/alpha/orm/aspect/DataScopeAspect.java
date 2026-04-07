@@ -21,19 +21,22 @@ import java.util.Set;
 /**
  * 数据权限切面
  * <p>
- * 使用方式：在 Service 方法上添加 @DataScope 注解即可，对业务完全无感
+ * 负责在方法执行前将数据权限上下文写入 ThreadLocal，方法执行后清理。
+ * 业务代码需在构建 QueryWrapper 后显式调用
+ * {@code DataPermissionInterceptor.applyDataScope(wrapper, alias)} 注入条件。
  * <pre>
  * {@code @DataScope(type = DataScopeType.DEPT_AND_CHILD)}
  * public List<SysUser> selectUserList(UserQuery query) {
- *     return userMapper.selectList(query);  // 自动添加数据权限条件
+ *     QueryWrapper wrapper = buildQueryWrapper(query);
+ *     DataPermissionInterceptor.applyDataScope(wrapper, "");
+ *     return list(wrapper);
  * }
  * </pre>
  * <p>
  * 工作原理：
  * 1. 切面在方法执行前设置 DataPermissionContext
- * 2. MyBatis-Flex 的 DataPermissionInterceptor 拦截 SQL 执行
- * 3. 拦截器读取 DataPermissionContext 自动拼接 WHERE 条件
- * 4. 切面在方法执行后清理 DataPermissionContext
+ * 2. 业务代码调用 DataPermissionInterceptor.applyDataScope() 读取上下文并注入 QueryWrapper 条件
+ * 3. 切面在方法执行后清理 DataPermissionContext
  */
 @Slf4j
 @Aspect

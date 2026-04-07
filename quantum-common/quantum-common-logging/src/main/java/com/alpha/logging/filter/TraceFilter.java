@@ -91,7 +91,7 @@ public class TraceFilter extends OncePerRequestFilter {
             if (shouldNotFilter(request)) {
                 return;
             }
-            LogInfo info = buildContextInfo(request);
+            LogInfo info = buildContextInfo(request, startTime);
             // 打印 JSON 日志 (会被 log4j2 收集到 logs/app.log)
             log.info(jsonUtil.toJson(info));
         } catch (Exception e) {
@@ -99,24 +99,17 @@ public class TraceFilter extends OncePerRequestFilter {
         }
     }
 
-    private LogInfo buildContextInfo(HttpServletRequest request) {
+    private LogInfo buildContextInfo(HttpServletRequest request, long startTime) {
         LogInfo info = new LogInfo();
 
-        // TraceId
-        String traceId = request.getHeader(CommonConstants.HEADER_TRACE_ID);
+        String traceId = UserContext.getTraceId();
         if (StrUtil.isBlank(traceId)) {
-            traceId = IdUtil.fastSimpleUUID().substring(0, 16);
+            traceId = MDC.get(CommonConstants.MDC_TRACE_ID);
         }
         info.setTraceId(traceId);
 
-        // 用户 ID（从请求头获取，后续由 TokenAuthenticationFilter 覆盖真实值）
-        String userIdStr = request.getHeader(CommonConstants.HEADER_AUTHORIZATION);
-        if (StrUtil.isNotBlank(userIdStr)) {
-            try {
-                info.setUserId(Long.parseLong(userIdStr));
-            } catch (NumberFormatException ignored) {
-            }
-        }
+        info.setUserId(UserContext.getUserId());
+        info.setUsername(UserContext.getUsername());
 
         // 租户 ID
         String tenantIdStr = request.getHeader(CommonConstants.HEADER_TENANT_ID);
@@ -128,10 +121,11 @@ public class TraceFilter extends OncePerRequestFilter {
         }
 
         // IP
-        info.setIp(IpUtil.getClientIp(request));
+        info.setIp(UserContext.getIp());
+        info.setIpAddress(IpUtil.getIpAddress(UserContext.getIp()));
 
         // User-Agent
-        String uaString = request.getHeader("User-Agent");
+        String uaString = UserContext.getUserAgent();
         info.setUserAgent(uaString);
         if (StrUtil.isNotBlank(uaString)) {
             UserAgent ua = UserAgentUtil.parse(uaString);
@@ -141,9 +135,9 @@ public class TraceFilter extends OncePerRequestFilter {
         }
 
         // 请求信息
-        info.setRequestUri(request.getRequestURI());
+        info.setRequestUri(UserContext.getRequestUri());
         info.setRequestMethod(request.getMethod());
-        info.setStartTime(System.currentTimeMillis());
+        info.setStartTime(startTime);
 
         return info;
     }

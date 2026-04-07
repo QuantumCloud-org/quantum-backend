@@ -8,14 +8,13 @@ import java.util.Set;
 /**
  * 数据权限上下文
  * <p>
- * 在 DataScopeAspect 切面和 DataPermissionInterceptor 拦截器之间传递数据权限信息
+ * 在 DataScopeAspect 切面和业务代码之间传递数据权限信息。
  * <p>
  * 工作流程：
  * 1. Service 方法标注 @DataScope 注解
  * 2. DataScopeAspect 在方法执行前设置 DataPermissionContext
- * 3. DataPermissionInterceptor 拦截 SQL 执行，读取 DataPermissionContext
- * 4. 拦截器自动在 SQL 中添加数据权限条件
- * 5. DataScopeAspect 在方法执行后清理 DataPermissionContext
+ * 3. 业务代码调用 DataPermissionInterceptor.applyDataScope(wrapper, alias) 将条件注入 QueryWrapper
+ * 4. DataScopeAspect 在方法执行后清理 DataPermissionContext
  */
 public class DataPermissionContext {
 

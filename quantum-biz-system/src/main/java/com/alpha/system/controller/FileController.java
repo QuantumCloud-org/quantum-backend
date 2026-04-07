@@ -3,6 +3,7 @@ package com.alpha.system.controller;
 import com.alpha.file.entity.FileInfo;
 import com.alpha.file.service.FileStorageService;
 import com.alpha.framework.entity.Result;
+import com.alpha.security.annotation.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
@@ -34,6 +35,7 @@ public class FileController {
 
     @PostMapping("/upload")
     @Operation(summary = "上传文件")
+    @RequiresPermission("system:file:upload")
     public Result<FileInfo> upload(@RequestParam("file") MultipartFile file, @RequestParam(value = "path", required = false) String path) {
         FileInfo fileInfo = fileStorageService.upload(file, path);
         return Result.ok(fileInfo);
@@ -41,6 +43,7 @@ public class FileController {
 
     @PostMapping("/upload/batch")
     @Operation(summary = "批量上传文件")
+    @RequiresPermission("system:file:upload")
     public Result<List<FileInfo>> uploadBatch(@RequestParam("files") List<MultipartFile> files, @RequestParam(value = "path", required = false) String path) {
         List<FileInfo> fileInfos = fileStorageService.uploadBatch(files, path);
         return Result.ok(fileInfos);
@@ -48,6 +51,7 @@ public class FileController {
 
     @GetMapping("/download")
     @Operation(summary = "下载文件")
+    @RequiresPermission("system:file:download")
     public void download(@RequestParam("path") String path, @RequestParam(value = "name", required = false) String name, HttpServletResponse response) throws IOException {
         // 设置响应头
         String fileName = name != null ? name : path.substring(path.lastIndexOf("/") + 1);
@@ -68,6 +72,7 @@ public class FileController {
 
     @DeleteMapping("/delete")
     @Operation(summary = "删除文件")
+    @RequiresPermission("system:file:remove")
     public Result<Boolean> delete(@RequestParam("path") String path) {
         boolean result = fileStorageService.delete(path);
         return Result.ok(result);
@@ -75,6 +80,7 @@ public class FileController {
 
     @PostMapping("/delete/batch")
     @Operation(summary = "批量删除文件")
+    @RequiresPermission("system:file:remove")
     public Result<Integer> deleteBatch(@RequestBody List<String> paths) {
         int count = fileStorageService.deleteBatch(paths);
         return Result.ok(count);
@@ -82,6 +88,7 @@ public class FileController {
 
     @GetMapping("/exists")
     @Operation(summary = "检查文件是否存在")
+    @RequiresPermission("system:file:query")
     public Result<Boolean> exists(@RequestParam("path") String path) {
         boolean exists = fileStorageService.exists(path);
         return Result.ok(exists);
@@ -89,6 +96,7 @@ public class FileController {
 
     @GetMapping("/url")
     @Operation(summary = "获取文件访问URL")
+    @RequiresPermission("system:file:query")
     public Result<String> getUrl(@RequestParam("path") String path, @RequestParam(value = "expire", required = false, defaultValue = "3600") int expire) {
         String url = fileStorageService.getPresignedUrl(path, expire);
         return Result.ok(url);

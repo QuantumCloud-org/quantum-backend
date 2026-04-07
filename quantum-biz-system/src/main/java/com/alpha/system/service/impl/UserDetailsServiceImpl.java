@@ -1,7 +1,11 @@
 package com.alpha.system.service.impl;
 
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.LoginUser;
+import com.alpha.orm.enums.DataScopeType;
+import com.alpha.system.domain.SysRole;
 import com.alpha.system.domain.SysUser;
+import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.mapper.SysMenuMapper;
 import com.alpha.system.mapper.SysRoleMapper;
 import com.alpha.system.mapper.SysUserMapper;
@@ -12,13 +16,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.Collections;
+import java.util.List;
 import java.util.Set;
 
 /**
  * 用户认证服务实现
- * <p>
- * 实现 Spring Security 的 UserDetailsService 接口
- * 由 Spring 自动注入到 SecurityConfig 的 AuthenticationManager
  */
 @Slf4j
 @Service
@@ -28,40 +31,35 @@ public class UserDetailsServiceImpl implements UserDetailsService {
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
     private final SysMenuMapper menuMapper;
+    private final SysDeptMapper deptMapper;
 
     @Override
     public UserDetails loadUserByUsername(String username) throws UsernameNotFoundException {
-        // 1. 查询用户
         SysUser user = userMapper.selectByUsername(username);
         if (user == null) {
             log.warn("用户不存在: {}", username);
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
-        // 2. 检查状态
         if (user.getStatus() == 0) {
             log.warn("用户已禁用: {}", username);
             throw new UsernameNotFoundException("用户已禁用: " + username);
         }
 
-        // 3. 查询角色
         Set<String> roles = roleMapper.selectRoleKeysByUserId(user.getId());
 
-        // 4. 查询权限
         Set<String> permissions;
         if (isAdmin(user.getId())) {
-            permissions = Set.of("*:*:*");  // 管理员拥有所有权限
+            permissions = Set.of("*:*:*");
         } else {
             permissions = menuMapper.selectPermsByUserId(user.getId());
         }
 
-        // 5. 查询部门名称
         String deptName = null;
         if (user.getDeptId() != null) {
             deptName = userMapper.selectDeptNameById(user.getDeptId());
         }
 
-        // 6. 构建 LoginUser
         return new LoginUser()
                 .setUserId(user.getId())
                 .setUsername(user.getUsername())
@@ -71,14 +69,47 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .setDeptName(deptName)
                 .setStatus(user.getStatus())
                 .setRoles(roles)
-                .setPermissions(permissions);
+                .setPermissions(permissions)
+                .setDataScope(user.getDataScope())
+                .setDeptIds(resolveDeptIds(user));
     }
 
-    /**
-     * 判断是否管理员
-     */
     private boolean isAdmin(Long userId) {
-        return userId != null && userId == 1L;
+        return CommonConstants.SUPER_ADMIN_ID.equals(userId);
     }
 
+    private Set<Long> resolveDeptIds(SysUser user) {
+        if (user.getDeptId() == null) {
+            return Collections.emptySet();
+        }
+
+        DataScopeType dataScopeType = DataScopeType.fromCode(user.getDataScope());
+        return switch (dataScopeType) {
+            case DEPT -> Set.of(user.getDeptId());
+            case DEPT_AND_CHILD -> {
+                Set<Long> deptIds = deptMapper.selectChildDeptIds(user.getDeptId());
+                yield deptIds == null || deptIds.isEmpty() ? Set.of(user.getDeptId()) : deptIds;
+            }
+            case CUSTOM -> resolveCustomDeptIds(user.getId());
+            default -> Collections.emptySet();
+        };
+    }
+
+    private Set<Long> resolveCustomDeptIds(Long userId) {
+        List<SysRole> roles = roleMapper.selectRolesByUserId(userId);
+        if (roles == null || roles.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        List<Long> roleIds = roles.stream()
+                .filter(role -> role.getDataScope() != null && DataScopeType.CUSTOM.getCode() == role.getDataScope())
+                .map(SysRole::getId)
+                .toList();
+        if (roleIds.isEmpty()) {
+            return Collections.emptySet();
+        }
+
+        Set<Long> deptIds = deptMapper.selectDeptIdsByRoleIds(roleIds);
+        return deptIds == null ? Collections.emptySet() : deptIds;
+    }
 }

@@ -7,6 +7,7 @@ import jakarta.validation.ConstraintViolation;
 import jakarta.validation.ConstraintViolationException;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.AuthenticationException;
@@ -46,11 +47,14 @@ public class GlobalExceptionHandler {
      * 通常是客户端的操作不符合业务逻辑（如余额不足、库存不足），归类为 400 Bad Request
      */
     @ExceptionHandler(BizException.class)
-    @ResponseStatus(HttpStatus.BAD_REQUEST)
-    public Result<Void> handleBizException(BizException e, HttpServletRequest request) {
+    public ResponseEntity<Result<Void>> handleBizException(BizException e, HttpServletRequest request) {
         log.warn("业务异常 | URI: {} | Code: {} | Message: {}",
                 request.getRequestURI(), e.getCode(), e.getMessage());
-        return Result.fail(e.getCode(), e.getMessage());
+        HttpStatus status = HttpStatus.resolve(e.getCode());
+        if (status == null) {
+            status = HttpStatus.BAD_REQUEST;
+        }
+        return ResponseEntity.status(status).body(Result.fail(e.getCode(), e.getMessage()));
     }
 
     // ==================== 参数校验异常 (HTTP 400) ====================

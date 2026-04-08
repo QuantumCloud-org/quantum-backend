@@ -1,7 +1,7 @@
 package com.alpha.logging.service;
 
+import com.alpha.logging.dto.LogPageQuery;
 import com.alpha.logging.entity.SysOperLog;
-import com.alpha.orm.entity.PageQuery;
 import com.mybatisflex.core.paginate.Page;
 
 import java.util.List;
@@ -24,7 +24,7 @@ public interface ISysOperLogService {
      * @param query 查询条件
      * @return 分页结果
      */
-    Page<SysOperLog> selectOperLogPage(SysOperLog query, PageQuery pageQuery);
+    Page<SysOperLog> selectOperLogPage(SysOperLog query, LogPageQuery pageQuery);
 
     /**
      * 查询操作日志列表
@@ -32,7 +32,7 @@ public interface ISysOperLogService {
      * @param query 查询条件
      * @return 日志列表
      */
-    List<SysOperLog> selectOperLogList(SysOperLog query, PageQuery pageQuery);
+    List<SysOperLog> selectOperLogList(SysOperLog query, LogPageQuery pageQuery);
 
     /**
      * 根据ID查询操作日志

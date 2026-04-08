@@ -1,8 +1,8 @@
 package com.alpha.system.service.impl;
 
+import com.alpha.logging.dto.LogPageQuery;
 import com.alpha.logging.entity.SysOperLog;
 import com.alpha.logging.service.ISysOperLogService;
-import com.alpha.orm.entity.PageQuery;
 import com.alpha.system.mapper.SysOperLogMapper;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -41,7 +41,7 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     }
 
     @Override
-    public Page<SysOperLog> selectOperLogPage(SysOperLog query, PageQuery pageQuery) {
+    public Page<SysOperLog> selectOperLogPage(SysOperLog query, LogPageQuery pageQuery) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         wrapper.orderBy(SYS_OPER_LOG.OPER_ID.desc());
         return operLogMapper.paginate(
@@ -51,7 +51,7 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     }
 
     @Override
-    public List<SysOperLog> selectOperLogList(SysOperLog query, PageQuery pageQuery) {
+    public List<SysOperLog> selectOperLogList(SysOperLog query, LogPageQuery pageQuery) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         wrapper.orderBy(SYS_OPER_LOG.OPER_ID.desc());
         return operLogMapper.selectListByQuery(wrapper);

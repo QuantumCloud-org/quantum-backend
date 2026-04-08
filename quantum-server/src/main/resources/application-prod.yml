@@ -1,10 +1,10 @@
 spring:
   datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+    username: ${DB_USERNAME}
+    password: ${DB_PASSWORD}
     hikari:
-      driver-class-name: org.postgresql.Driver
-      jdbc-url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
-      username: ${DB_USERNAME}
-      password: ${DB_PASSWORD}
       maximum-pool-size: 20
       minimum-idle: 5
       max-lifetime: 1800000
@@ -35,8 +35,6 @@ mybatis-flex:
   type-aliases-package: com.alpha.**.entity
   global-config:
     print-banner: false
-  configuration:
-    map-underscore-to-camel-case: true
   audit:
     enabled: true
   sql-print:

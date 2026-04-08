@@ -66,6 +66,8 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
 
     /**
      * MyBatis 原生配置
+     * <p>
+     * 当项目走 starter 自动装配链路时，由 MyBatis-Flex 的 ConfigurationCustomizer 回调注入。
      */
     @Override
     public void customize(FlexConfiguration configuration) {
@@ -75,7 +77,6 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
         configuration.setMapUnderscoreToCamelCase(true);
         // 空值也调用 setter
         configuration.setCallSettersOnNulls(true);
-
     }
 
     /**

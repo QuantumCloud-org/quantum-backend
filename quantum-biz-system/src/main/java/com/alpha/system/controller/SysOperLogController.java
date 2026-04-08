@@ -2,10 +2,10 @@ package com.alpha.system.controller;
 
 import com.alpha.framework.entity.Result;
 import com.alpha.logging.annotation.SystemLog;
+import com.alpha.logging.dto.LogPageQuery;
 import com.alpha.logging.entity.SysOperLog;
 import com.alpha.logging.enums.BusinessType;
 import com.alpha.logging.service.ISysOperLogService;
-import com.alpha.orm.entity.PageQuery;
 import com.alpha.orm.entity.PageResult;
 import com.alpha.security.annotation.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
@@ -30,7 +30,7 @@ public class SysOperLogController {
     @SystemLog(title = "操作日志", businessType = BusinessType.SELECT)
     @RequiresPermission("monitor:operlog:list")
     @GetMapping("/list")
-    public Result<PageResult<SysOperLog>> list(SysOperLog query, PageQuery pageQuery) {
+    public Result<PageResult<SysOperLog>> list(SysOperLog query, LogPageQuery pageQuery) {
         return Result.ok(PageResult.of(operLogService.selectOperLogPage(query, pageQuery)));
     }
 

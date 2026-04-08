@@ -1,10 +1,10 @@
 spring:
   datasource:
+    driver-class-name: org.postgresql.Driver
+    url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+    username: baseweb
+    password: "BaseWeb123"
     hikari:
-      driver-class-name: org.postgresql.Driver
-      jdbc-url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
-      username: baseweb
-      password: 1234QWer!@
       maximum-pool-size: 20
       minimum-idle: 5
       max-lifetime: 1800000
@@ -17,7 +17,7 @@ spring:
       port: 16379
       database: 12
       password: password!
-      # Redisson 高级配置（通过 RedissonPoolProperties 绑定）
+      # Redisson 高级配置
       redisson:
         connection-minimum-idle-size: 8
         connection-pool-size: 32
@@ -35,9 +35,6 @@ mybatis-flex:
   type-aliases-package: com.alpha.**.entity
   global-config:
     print-banner: false
-  configuration:
-    map-underscore-to-camel-case: true
-    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
   audit:
     enabled: true
   sql-print:

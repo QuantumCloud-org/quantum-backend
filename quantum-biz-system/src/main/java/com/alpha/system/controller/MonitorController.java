@@ -79,25 +79,26 @@ public class MonitorController {
     @SystemLog(title = "缓存监控", businessType = BusinessType.SELECT)
     @Operation(summary = "获取缓存列表")
     @RequiresPermission("monitor:cache:list")
-    public Result<List<CacheInfo>> cacheList() {
+    @SuppressWarnings("unchecked")
+    public Result<List<Map<String, Object>>> cacheList() {
         CacheInfo cacheEndpoint = cacheEndpointProvider.getIfAvailable();
         if (cacheEndpoint == null) {
             return Result.ok(List.of());
         }
         Map<String, Object> stats = cacheEndpoint.stats();
-        return Result.ok((List<CacheInfo>) stats.get("stats"));
+        return Result.ok((List<Map<String, Object>>) stats.get("stats"));
     }
 
     @GetMapping("/cache/{cacheName}")
     @SystemLog(title = "缓存监控", businessType = BusinessType.SELECT)
     @Operation(summary = "获取指定缓存信息")
     @RequiresPermission("monitor:cache:list")
-    public Result<CacheInfo> cacheInfo(@PathVariable String cacheName) {
+    public Result<Map<String, Object>> cacheInfo(@PathVariable String cacheName) {
         CacheInfo cacheEndpoint = cacheEndpointProvider.getIfAvailable();
         if (cacheEndpoint == null) {
             return Result.fail("缓存服务未就绪");
         }
         Map<String, Object> stat = cacheEndpoint.stat(cacheName);
-        return Result.ok((CacheInfo) stat);
+        return Result.ok(stat);
     }
 }

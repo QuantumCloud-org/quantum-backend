@@ -98,6 +98,24 @@
                 </Delete>
             </DefaultRolloverStrategy>
         </RollingRandomAccessFile>
+        <!-- ==================== SQL 审计日志文件 ==================== -->
+        <RollingRandomAccessFile name="SqlAuditFile"
+                                 fileName="${LOG_PATH}/sql-audit.log"
+                                 filePattern="${LOG_PATH}/sql-audit.%d{yyyy-MM-dd}-%i.log.gz"
+                                 immediateFlush="false"
+                                 bufferSize="262144">
+            <PatternLayout pattern="%d{yyyy-MM-dd HH:mm:ss.SSS} %msg%n"/>
+            <Policies>
+                <TimeBasedTriggeringPolicy interval="1"/>
+                <SizeBasedTriggeringPolicy size="${MAX_FILE_SIZE}"/>
+            </Policies>
+            <DefaultRolloverStrategy max="${MAX_HISTORY_DAYS}">
+                <Delete basePath="${LOG_PATH}" maxDepth="1">
+                    <IfFileName glob="sql-audit.*.log.gz"/>
+                    <IfLastModified age="${MAX_HISTORY_DAYS}d"/>
+                </Delete>
+            </DefaultRolloverStrategy>
+        </RollingRandomAccessFile>
     </Appenders>
 
     <Loggers>
@@ -122,6 +140,11 @@
         <Logger name="org.apache.coyote" level="WARN"/>
         <!-- MyBatis Flex SQL 日志 -->
         <Logger name="com.alpha.web.mapper" level="INFO"/>
+
+        <!-- ==================== SQL 审计日志 ==================== -->
+        <AsyncLogger name="com.alpha.sql.audit" level="INFO" additivity="false" includeLocation="false">
+            <AppenderRef ref="SqlAuditFile"/>
+        </AsyncLogger>
 
         <!-- ==================== 应用主日志（AsyncLogger + Disruptor） ==================== -->
         <AsyncLogger name="com.alpha" level="INFO" additivity="false" includeLocation="false">

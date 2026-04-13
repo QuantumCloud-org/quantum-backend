@@ -16,6 +16,8 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
+import com.alpha.system.security.MenuSessionInvalidationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -38,6 +40,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     private final SysMenuMapper menuMapper;
     private final SysRoleMenuMapper roleMenuMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     /**
      * 目录类型
@@ -99,12 +102,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     }
 
     @Override
-    public List<TreeSelectVO> buildMenuTreeSelect(List<SysMenu> menus) {
-        List<SysMenu> menuTrees = TreeBuilder.buildTree(menus);
-        return menuTrees.stream().map(this::buildTreeSelect).collect(Collectors.toList());
-    }
-
-    @Override
     public Set<Long> selectMenuIdsByRoleId(Long roleId) {
         QueryWrapper wrapper = QueryWrapper.create()
                 .select(SYS_ROLE_MENU.MENU_ID)
@@ -151,7 +148,19 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
             throw new BizException("父菜单不能是自己");
         }
 
-        return updateById(menu);
+        // 对比旧菜单，perms/status/menuType 变更时失效关联用户会话
+        SysMenu oldMenu = getById(menu.getId());
+        boolean securityFieldChanged = oldMenu != null && (
+                !java.util.Objects.equals(oldMenu.getPerms(), menu.getPerms())
+                || !java.util.Objects.equals(oldMenu.getStatus(), menu.getStatus())
+                || !java.util.Objects.equals(oldMenu.getMenuType(), menu.getMenuType())
+        );
+
+        boolean result = updateById(menu);
+        if (result && securityFieldChanged) {
+            eventPublisher.publishEvent(new MenuSessionInvalidationEvent(menu.getId()));
+        }
+        return result;
     }
 
     @Override

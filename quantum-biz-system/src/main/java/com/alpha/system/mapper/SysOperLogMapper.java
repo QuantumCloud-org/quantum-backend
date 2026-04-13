@@ -24,7 +24,7 @@ public interface SysOperLogMapper extends BaseMapper<SysOperLog> {
     /**
      * 删除指定天数之前的日志
      */
-    @Delete("DELETE FROM sys_oper_log WHERE oper_time < NOW() - INTERVAL '#{days} days'")
+    @Delete("DELETE FROM sys_oper_log WHERE oper_time < NOW() - make_interval(days => #{days})")
     int deleteOperLogByDays(@Param("days") int days);
 
     /**

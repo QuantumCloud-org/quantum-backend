@@ -1,9 +1,12 @@
 # 服务器配置
 server:
   port: 8080
-  servlet:
-    context-path:
   shutdown: graceful
+  servlet:
+    context-path: /talent_manger
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 200MB
   compression:
     enabled: true
     mime-types: application/json,text/html,text/xml,text/plain
@@ -22,18 +25,6 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
-  # Jackson配置
-  Jackson:
-    date-format: yyyy-MM-dd HH:mm:ss
-    time-zone: Asia/Shanghai
-    default-property-inclusion: non_null
-    serialization:
-      fail-on-empty-beans: false
-    deserialization:
-      fail-on-unknown-properties: false
-  # 缓存配置
-  cache:
-    type: redis
 
 # Actuator配置
 management:

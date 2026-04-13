@@ -16,6 +16,8 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.redisson.api.RBucket;
+import org.redisson.api.RedissonClient;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -41,6 +43,7 @@ public class TokenService {
     private final RedisUtil redisUtil;
     private final TokenProperties tokenProperties;
     private final UserDetailsService userDetailsService;
+    private final RedissonClient redissonClient;
 
     /**
      * 创建 Token
@@ -67,16 +70,18 @@ public class TokenService {
 
         String accessTokenKey = buildAccessTokenKey(tokenId);
         redisUtil.set(accessTokenKey, loginUser, Duration.ofMillis(accessExpireMs));
-        redisUtil.set(buildRefreshTokenKey(refreshTokenId), System.currentTimeMillis(), Duration.ofMillis(refreshExpireMs));
-
-        if (tokenProperties.isSingleDevice()) {
-            kickOtherDevices(loginUser.getUserId(), tokenId);
-        }
+        // 存储 tokenId 作为值，refresh 时用于 revoke 旧 accessToken
+        redisUtil.set(buildRefreshTokenKey(refreshTokenId), tokenId, Duration.ofMillis(refreshExpireMs));
+        redisUtil.set(buildRefreshMapKey(tokenId), refreshTokenId, Duration.ofMillis(refreshExpireMs));
 
         String userKey = USER_TOKEN_PREFIX + loginUser.getUserId();
         redisUtil.sAdd(userKey, tokenId);
         redisUtil.expire(userKey, Duration.ofMillis(Math.max(accessExpireMs, refreshExpireMs)));
         redisUtil.sAdd(CommonConstants.ONLINE_TOKENS_KEY, accessTokenKey);
+
+        if (tokenProperties.isSingleDevice()) {
+            kickOtherDevices(loginUser.getUserId(), tokenId);
+        }
 
         return new TokenInfo()
                 .setAccessToken(accessToken)
@@ -156,7 +161,10 @@ public class TokenService {
             return null;
         }
 
-        if (redisUtil.get(buildRefreshTokenKey(refreshTokenId)) == null) {
+        String refreshKey = buildRefreshTokenKey(refreshTokenId);
+        RBucket<String> bucket = redissonClient.getBucket(refreshKey);
+        String oldTokenId = bucket.getAndDelete();
+        if (oldTokenId == null) {
             return null;
         }
 
@@ -175,10 +183,14 @@ public class TokenService {
             }
         }
 
-        redisUtil.delete(buildRefreshTokenKey(refreshTokenId));
+        revokeTokenById(oldTokenId);
 
         String username = claims.getStringClaim("username");
         LoginUser loginUser = loadLoginUser(username);
+        if (!loginUser.isEnabled()) {
+            log.warn("用户已禁用，拒绝 refresh | username: {}", username);
+            throw new BizException(ResultCode.ACCOUNT_DISABLED);
+        }
         return createToken(loginUser, normalizedDeviceId, clientIp, userAgent);
     }
 
@@ -240,15 +252,20 @@ public class TokenService {
         redisUtil.delete(tokenKey);
         redisUtil.sRemove(CommonConstants.ONLINE_TOKENS_KEY, tokenKey);
 
-        if (loginUser == null) {
-            return;
+        String refreshMapKey = buildRefreshMapKey(tokenId);
+        String refreshTokenId = redisUtil.get(refreshMapKey);
+        if (StrUtil.isBlank(refreshTokenId) && loginUser != null) {
+            refreshTokenId = loginUser.getRefreshTokenId();
         }
-
-        if (StrUtil.isNotBlank(loginUser.getRefreshTokenId())) {
-            redisUtil.delete(buildRefreshTokenKey(loginUser.getRefreshTokenId()));
+        if (StrUtil.isNotBlank(refreshTokenId)) {
+            redisUtil.delete(buildRefreshTokenKey(refreshTokenId));
         }
+        redisUtil.delete(refreshMapKey);
 
-        redisUtil.sRemove(USER_TOKEN_PREFIX + loginUser.getUserId(), tokenId);
+        Long userId = loginUser != null ? loginUser.getUserId() : null;
+        if (userId != null) {
+            redisUtil.sRemove(USER_TOKEN_PREFIX + userId, tokenId);
+        }
 
         if (remainTtl > 0) {
             redisUtil.set(CommonConstants.BLACKLIST_PREFIX + tokenId, "1", Duration.ofSeconds(remainTtl));
@@ -308,28 +325,17 @@ public class TokenService {
         return signedJWT.getJWTClaimsSet().getJWTID();
     }
 
-    private String parseJwtTokenId(String token) throws ParseException, JOSEException {
-        SignedJWT signedJWT = SignedJWT.parse(token);
-        MACVerifier verifier = new MACVerifier(tokenProperties.getSecret().getBytes());
-        if (!signedJWT.verify(verifier)) {
-            log.debug("JWT 签名验证失败");
-            return null;
-        }
-
-        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-        if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
-            log.debug("JWT 已过期");
-            return null;
-        }
-        return claims.getJWTID();
-    }
-
     private boolean isJwtExpired(String token) throws ParseException {
         SignedJWT signedJWT = SignedJWT.parse(token);
         JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
         return claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date());
     }
 
+    /**
+     * 自动续期 Redis TTL（非 JWT 有效期）。
+     * JWT 的 exp 不变，过期后仍需走 refreshToken 路径重建。
+     * 此处仅延长 Redis 中 LoginUser 的存活时间，避免活跃用户的会话数据在 JWT 过期前被清除。
+     */
     private void renewIfNeeded(String tokenKey, LoginUser loginUser) {
         long ttl = redisUtil.getExpire(tokenKey);
         long maxTtl = tokenProperties.getAccessTokenExpire() * 60L;
@@ -353,7 +359,6 @@ public class TokenService {
                 revokeTokenById(tokenId);
             }
         }
-        redisUtil.delete(userKey);
     }
 
     private String buildAccessTokenKey(String tokenId) {
@@ -362,5 +367,9 @@ public class TokenService {
 
     private String buildRefreshTokenKey(String refreshTokenId) {
         return REFRESH_TOKEN_PREFIX + refreshTokenId;
+    }
+
+    private String buildRefreshMapKey(String tokenId) {
+        return CommonConstants.REDIS_TOKEN_PREFIX + "refresh-map:" + tokenId;
     }
 }

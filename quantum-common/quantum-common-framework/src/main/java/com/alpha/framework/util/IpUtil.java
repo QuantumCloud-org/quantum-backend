@@ -2,6 +2,7 @@ package com.alpha.framework.util;
 
 import cn.hutool.core.io.IoUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alpha.framework.config.TrustedProxyProperties;
 import jakarta.servlet.http.HttpServletRequest;
 import lombok.extern.slf4j.Slf4j;
 import org.lionsoul.ip2region.xdb.LongByteArray;
@@ -14,6 +15,9 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 import java.io.InputStream;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
+import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -35,18 +39,6 @@ public class IpUtil {
     private static final String LOCALHOST_IP = "127.0.0.1";
     private static final String LOCALHOST_IPV6 = "0:0:0:0:0:0:0:1";
     private static final String INTERNAL_IP = "内网IP";
-
-    /**
-     * IP 请求头（按优先级排序）
-     */
-    private static final String[] IP_HEADERS = {
-            "X-Forwarded-For",
-            "X-Real-IP",
-            "Proxy-Client-IP",
-            "WL-Proxy-Client-IP",
-            "HTTP_CLIENT_IP",
-            "HTTP_X_FORWARDED_FOR"
-    };
 
     /**
      * IPv4 正则
@@ -112,39 +104,23 @@ public class IpUtil {
             return UNKNOWN;
         }
 
-        String ip = null;
+        String directRemote = normalizeLoopback(request.getRemoteAddr());
 
-        // 依次尝试各个请求头
-        for (String header : IP_HEADERS) {
-            ip = request.getHeader(header);
-            if (isValidIp(ip)) {
-                break;
-            }
-        }
-
-        // 请求头中都没有，使用 RemoteAddr
-        if (!isValidIp(ip)) {
-            ip = request.getRemoteAddr();
-        }
-
-        // 处理多级代理（取第一个非 unknown 的 IP）
-        if (StrUtil.isNotBlank(ip) && ip.contains(",")) {
-            String[] ips = ip.split(",");
-            for (String subIp : ips) {
-                String trimmedIp = subIp.trim();
-                if (isValidIp(trimmedIp)) {
-                    ip = trimmedIp;
-                    break;
+        if (isTrustedProxy(directRemote)) {
+            String xff = request.getHeader("X-Forwarded-For");
+            if (StrUtil.isNotBlank(xff) && !UNKNOWN.equalsIgnoreCase(xff)) {
+                String firstIp = xff.split(",")[0].trim();
+                if (isValidIp(firstIp)) {
+                    return normalizeLoopback(firstIp);
                 }
             }
+            String xri = request.getHeader("X-Real-IP");
+            if (StrUtil.isNotBlank(xri) && isValidIp(xri.trim())) {
+                return normalizeLoopback(xri.trim());
+            }
         }
 
-        // IPv6 本地地址转换
-        if (LOCALHOST_IPV6.equals(ip)) {
-            ip = LOCALHOST_IP;
-        }
-
-        return ip;
+        return directRemote;
     }
 
     // ==================== IP 归属地查询 ====================
@@ -250,7 +226,79 @@ public class IpUtil {
      * 判断是否有效 IP（非空、非 unknown）
      */
     private static boolean isValidIp(String ip) {
-        return StrUtil.isNotBlank(ip) && !UNKNOWN.equalsIgnoreCase(ip);
+        if (StrUtil.isBlank(ip) || UNKNOWN.equalsIgnoreCase(ip)) {
+            return false;
+        }
+        String normalizedIp = normalizeLoopback(ip.trim());
+        return isIpv4(normalizedIp) || isIpv6(normalizedIp);
+    }
+
+    private static boolean isTrustedProxy(String remoteAddr) {
+        List<String> trustedProxies = TrustedProxyProperties.getTrustedProxies();
+        if (trustedProxies.isEmpty() || !isValidIp(remoteAddr)) {
+            return false;
+        }
+        return trustedProxies.stream().anyMatch(cidr -> cidrMatch(cidr, remoteAddr));
+    }
+
+    private static boolean cidrMatch(String cidr, String remoteAddr) {
+        if (StrUtil.isBlank(cidr) || !isValidIp(remoteAddr)) {
+            return false;
+        }
+
+        String normalizedRemote = normalizeLoopback(remoteAddr.trim());
+        String normalizedCidr = normalizeLoopback(cidr.trim());
+        if (!normalizedCidr.contains("/")) {
+            try {
+                return InetAddress.getByName(normalizedCidr).equals(InetAddress.getByName(normalizedRemote));
+            } catch (UnknownHostException e) {
+                return false;
+            }
+        }
+
+        String[] parts = normalizedCidr.split("/", 2);
+        if (parts.length != 2) {
+            return false;
+        }
+
+        try {
+            InetAddress network = InetAddress.getByName(parts[0]);
+            InetAddress target = InetAddress.getByName(normalizedRemote);
+            byte[] networkBytes = network.getAddress();
+            byte[] targetBytes = target.getAddress();
+            if (networkBytes.length != targetBytes.length) {
+                return false;
+            }
+
+            int prefixLength = Integer.parseInt(parts[1]);
+            if (prefixLength < 0 || prefixLength > networkBytes.length * 8) {
+                return false;
+            }
+
+            int fullBytes = prefixLength / 8;
+            int remainingBits = prefixLength % 8;
+            for (int i = 0; i < fullBytes; i++) {
+                if (networkBytes[i] != targetBytes[i]) {
+                    return false;
+                }
+            }
+
+            if (remainingBits == 0) {
+                return true;
+            }
+
+            int mask = (-1) << (8 - remainingBits);
+            return (networkBytes[fullBytes] & mask) == (targetBytes[fullBytes] & mask);
+        } catch (IllegalArgumentException | UnknownHostException e) {
+            return false;
+        }
+    }
+
+    private static String normalizeLoopback(String ip) {
+        if (LOCALHOST_IPV6.equals(ip)) {
+            return LOCALHOST_IP;
+        }
+        return ip;
     }
 
     /**

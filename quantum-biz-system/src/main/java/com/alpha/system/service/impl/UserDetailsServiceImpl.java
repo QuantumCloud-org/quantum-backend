@@ -41,11 +41,6 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
-        if (user.getStatus() == 0) {
-            log.warn("用户已禁用: {}", username);
-            throw new UsernameNotFoundException("用户已禁用: " + username);
-        }
-
         Set<String> roles = roleMapper.selectRoleKeysByUserId(user.getId());
 
         Set<String> permissions;

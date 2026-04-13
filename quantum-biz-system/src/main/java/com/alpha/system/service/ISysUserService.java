@@ -6,7 +6,6 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * 用户服务接口
@@ -72,16 +71,6 @@ public interface ISysUserService extends IService<SysUser> {
      * 检查邮箱是否唯一
      */
     boolean checkEmailUnique(String email, Long excludeId);
-
-    /**
-     * 查询用户角色标识
-     */
-    Set<String> selectUserRoleKeys(Long userId);
-
-    /**
-     * 查询用户权限标识
-     */
-    Set<String> selectUserPermissions(Long userId);
 
     /**
      * 更新用户登录信息

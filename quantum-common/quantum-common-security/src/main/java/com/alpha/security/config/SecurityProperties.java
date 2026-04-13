@@ -76,6 +76,11 @@ public class SecurityProperties {
     private int maxLoginFailCount = 5;
 
     /**
+     * 是否强制要求验证码
+     */
+    private boolean captchaRequired = true;
+
+    /**
      * 账号锁定时间（分钟）
      */
     private int lockTime = 15;

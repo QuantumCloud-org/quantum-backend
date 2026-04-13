@@ -7,6 +7,9 @@ import com.alpha.framework.util.JsonUtil;
 import com.alpha.logging.annotation.SystemLog;
 import com.alpha.logging.entity.SysOperLog;
 import com.alpha.logging.event.OperLogEvent;
+import com.alpha.logging.filter.SensitiveFieldFilter;
+import com.alpha.logging.properties.OperLogProperties;
+import jakarta.annotation.PostConstruct;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -24,6 +27,13 @@ import org.springframework.validation.BindingResult;
 import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
+import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.SerializationFeature;
+import tools.jackson.databind.cfg.MapperConfig;
+import tools.jackson.databind.introspect.Annotated;
+import tools.jackson.databind.introspect.JacksonAnnotationIntrospector;
+import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.ser.std.SimpleFilterProvider;
 
 import java.time.LocalDateTime;
 import java.util.*;
@@ -41,16 +51,20 @@ import java.util.stream.Collectors;
 @RequiredArgsConstructor
 public class LogAspect {
 
-    private static final Set<String> EXCLUDE_PROPERTIES = Set.of(
-            "password", "oldPassword", "newPassword", "confirmPassword",
-            "credentials", "secret", "token", "accessToken", "refreshToken"
-    );
-
+    private static final String SENSITIVE_FILTER_ID = "sensitiveFilter";
     private static final int MAX_PARAM_LENGTH = 2000;
     private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
 
     private final JsonUtil jsonUtil;
     private final ApplicationEventPublisher eventPublisher;
+    private final OperLogProperties operLogProperties;
+
+    private ObjectMapper sensitiveAwareMapper;
+
+    @PostConstruct
+    public void initSensitiveAwareMapper() {
+        this.sensitiveAwareMapper = createSensitiveAwareMapper();
+    }
 
     @Before("@annotation(systemLog)")
     public void before(JoinPoint point, SystemLog systemLog) {
@@ -111,7 +125,7 @@ public class LogAspect {
 
         // 响应结果
         if (systemLog.saveResult() && result != null) {
-            String resultJson = jsonUtil.toJson(result);
+            String resultJson = serializeSensitiveAware(result);
             operLog.setJsonResult(StrUtil.sub(resultJson, 0, MAX_PARAM_LENGTH));
         }
 
@@ -167,15 +181,14 @@ public class LogAspect {
             return "";
         }
 
-        Set<String> excludeSet = new HashSet<>(EXCLUDE_PROPERTIES);
-        Collections.addAll(excludeSet, excludeParams);
+        Set<String> excludeSet = buildExcludeSet(excludeParams);
 
         Map<String, Object> params = new LinkedHashMap<>();
         for (int i = 0; i < paramNames.length; i++) {
             String paramName = paramNames[i];
             Object arg = args[i];
 
-            if (excludeSet.contains(paramName)) {
+            if (excludeSet.contains(paramName.toLowerCase(Locale.ROOT))) {
                 params.put(paramName, "[PROTECTED]");
                 continue;
             }
@@ -199,7 +212,55 @@ public class LogAspect {
             params.put(paramName, arg);
         }
 
-        return jsonUtil.toJson(params);
+        return serializeSensitiveAware(params);
+    }
+
+    private Set<String> buildExcludeSet(String[] excludeParams) {
+        Set<String> excludeSet = new LinkedHashSet<>();
+        for (String field : operLogProperties.getSensitiveFields()) {
+            if (field != null && !field.isBlank()) {
+                excludeSet.add(field.toLowerCase(Locale.ROOT));
+            }
+        }
+        if (excludeParams != null) {
+            for (String field : excludeParams) {
+                if (field != null && !field.isBlank()) {
+                    excludeSet.add(field.toLowerCase(Locale.ROOT));
+                }
+            }
+        }
+        return excludeSet;
+    }
+
+    private String serializeSensitiveAware(Object value) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            return sensitiveAwareMapper.writeValueAsString(value);
+        } catch (Exception e) {
+            log.error("敏感字段过滤序列化失败: {}", value.getClass().getName(), e);
+            return jsonUtil.toJson(value);
+        }
+    }
+
+    private ObjectMapper createSensitiveAwareMapper() {
+        SensitiveFieldFilter filter = new SensitiveFieldFilter(operLogProperties.getSensitiveFields());
+        ObjectMapper baseMapper = jsonUtil.getObjectMapper();
+        JsonMapper.Builder builder = baseMapper instanceof JsonMapper jsonMapper
+                ? jsonMapper.rebuild()
+                : JsonMapper.builder();
+        builder.filterProvider(new SimpleFilterProvider()
+                .addFilter(SENSITIVE_FILTER_ID, filter)
+                .setDefaultFilter(filter));
+        builder.annotationIntrospector(new JacksonAnnotationIntrospector() {
+            @Override
+            public Object findFilterId(MapperConfig<?> config, Annotated a) {
+                return SENSITIVE_FILTER_ID;
+            }
+        });
+        builder.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
+        return builder.build();
     }
 
     private boolean isExcludedType(Object arg) {

@@ -17,7 +17,6 @@ spring:
       port: 16379
       database: 10
       password: ${REDIS_PASSWORD}
-      # Redisson 高级配置（通过 RedissonPoolProperties 绑定）
       redisson:
         connection-minimum-idle-size: 8
         connection-pool-size: 32
@@ -47,6 +46,13 @@ springdoc:
     enabled: false
   swagger-ui:
     enabled: false
+
+security:
+  trusted-proxies:
+    cidrs:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+
 logging:
   level:
     root: WARN

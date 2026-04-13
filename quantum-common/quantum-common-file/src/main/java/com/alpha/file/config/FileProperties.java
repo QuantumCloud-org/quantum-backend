@@ -106,7 +106,7 @@ public class FileProperties {
          */
         private List<String> allowedExtensions = Arrays.asList(
                 // 图片
-                "jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico",
+                "jpg", "jpeg", "png", "gif", "bmp", "webp", "ico",
                 // 文档
                 "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "md",
                 // 压缩包
@@ -121,7 +121,7 @@ public class FileProperties {
          * 禁止的文件扩展名
          */
         private List<String> forbiddenExtensions = Arrays.asList(
-                "exe", "bat", "cmd", "sh", "php", "jsp", "asp", "aspx", "dll", "so"
+                "exe", "bat", "cmd", "sh", "php", "jsp", "asp", "aspx", "dll", "so", "svg"
         );
     }
 }

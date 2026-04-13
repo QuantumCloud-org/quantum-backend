@@ -206,7 +206,7 @@ public final class FileUtils {
         if (StrUtil.isBlank(extension)) {
             return false;
         }
-        return List.of("jpg", "jpeg", "png", "gif", "bmp", "webp", "svg", "ico")
+        return List.of("jpg", "jpeg", "png", "gif", "bmp", "webp", "ico")
                 .contains(extension.toLowerCase());
     }
 

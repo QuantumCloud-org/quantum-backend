@@ -48,12 +48,6 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     }
 
     @Override
-    public List<TreeSelectVO> buildDeptTreeSelect(List<SysDept> depts) {
-        List<SysDept> deptTrees = TreeBuilder.buildTree(depts);  // ✅ 使用 TreeBuilder
-        return deptTrees.stream().map(this::convertToTreeSelect).toList();
-    }
-
-    @Override
     public SysDept selectDeptById(Long deptId) {
         return getById(deptId);
     }

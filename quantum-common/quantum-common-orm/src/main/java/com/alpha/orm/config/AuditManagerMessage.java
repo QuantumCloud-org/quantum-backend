@@ -3,44 +3,35 @@ package com.alpha.orm.config;
 import com.alpha.framework.context.UserContext;
 import com.mybatisflex.core.audit.AuditMessage;
 import com.mybatisflex.core.audit.MessageCollector;
-import lombok.Data;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
-
-import java.time.LocalDateTime;
-import java.util.concurrent.BlockingQueue;
-import java.util.concurrent.LinkedBlockingQueue;
 
 /**
  * SQL 审计管理器
  * <p>
- * 功能：
- * 1. 收集 SQL 执行信息
- * 2. 记录慢 SQL
- * 3. 异步写入审计日志
+ * 1. 慢 SQL 告警 → app.log + error.log
+ * 2. SQL 审计日志 → sql-audit.log (结构化 JSON，通过 traceId 关联请求链路)
  */
 @Slf4j
 @Component
-@RequiredArgsConstructor
 public class AuditManagerMessage implements MessageCollector {
 
-    /**
-     * 慢 SQL 阈值（毫秒）
-     */
     private static final long SLOW_SQL_THRESHOLD = 1000L;
 
-    /**
-     * 审计消息队列
-     */
-    private final BlockingQueue<SqlAuditLog> auditQueue = new LinkedBlockingQueue<>(10000);
+    private static final Logger sqlAuditLogger = LogManager.getLogger("com.alpha.sql.audit");
+
+    @Value("${mybatis-flex.audit.log-all-sql:false}")
+    private boolean logAllSql;
 
     @Override
     public void collect(AuditMessage message) {
         long elapsed = message.getElapsedTime();
         String sql = message.getFullSql();
 
-        // 慢 SQL 告警
+        // 慢 SQL 告警（写入 app.log + error.log）
         if (elapsed >= SLOW_SQL_THRESHOLD) {
             log.warn("慢SQL告警 | {}ms | TraceId: {} | SQL: {}",
                     elapsed,
@@ -48,33 +39,29 @@ public class AuditManagerMessage implements MessageCollector {
                     sql);
         }
 
-        // 构建审计日志
-        SqlAuditLog auditLog = new SqlAuditLog();
-        auditLog.setTraceId(UserContext.getTraceId());
-        auditLog.setUserId(UserContext.getUserId());
-        auditLog.setUsername(UserContext.getUsername());
-        auditLog.setSql(sql);
-        auditLog.setElapsedTime(elapsed);
-        auditLog.setDsName(message.getDsName());
-        auditLog.setExecuteTime(LocalDateTime.now());
-
-        // 非阻塞入队
-        if (!auditQueue.offer(auditLog)) {
-            log.warn("审计队列已满，丢弃日志: {}", sql);
+        // SQL 审计日志（写入 sql-audit.log）
+        if (logAllSql || elapsed >= SLOW_SQL_THRESHOLD) {
+            sqlAuditLogger.info("{\"traceId\":\"{}\",\"userId\":{},\"username\":\"{}\","
+                            + "\"sql\":\"{}\",\"elapsedMs\":{},\"dsName\":\"{}\"}",
+                    escape(UserContext.getTraceId()),
+                    UserContext.getUserId(),
+                    escape(UserContext.getUsername()),
+                    escapeSql(sql),
+                    elapsed,
+                    escape(message.getDsName()));
         }
     }
 
-    /**
-     * SQL 审计日志实体
-     */
-    @Data
-    public static class SqlAuditLog {
-        private String traceId;
-        private Long userId;
-        private String username;
-        private String sql;
-        private Long elapsedTime;
-        private String dsName;
-        private LocalDateTime executeTime;
+    private static String escapeSql(String sql) {
+        if (sql == null) return "";
+        return sql.replace("\\", "\\\\")
+                  .replace("\"", "\\\"")
+                  .replace("\n", " ")
+                  .replace("\r", "");
+    }
+
+    private static String escape(String value) {
+        if (value == null) return "";
+        return value.replace("\\", "\\\\").replace("\"", "\\\"");
     }
 }

@@ -3,6 +3,8 @@ package com.alpha.system.controller;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.entity.Result;
+import com.alpha.framework.enums.ResultCode;
+import com.alpha.framework.exception.BizException;
 import com.alpha.security.service.ICaptchaService;
 import com.alpha.system.convert.UserConvert;
 import com.alpha.system.domain.SysUser;
@@ -56,14 +58,15 @@ public class AuthController {
     public Result<UserVO> info() {
         Long userId = UserContext.getUserId();
         SysUser user = userService.selectUserById(userId);
+        if (user == null) {
+            throw new BizException(ResultCode.DATA_NOT_FOUND, "当前用户不存在或已被删除");
+        }
         UserVO userVO = userConvert.toVO(user);
 
-        // 获取登录用户信息
         Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
         if (authentication != null && authentication.getPrincipal() instanceof LoginUser loginUser) {
-            // 设置角色
+            userVO.setDeptName(loginUser.getDeptName());
             userVO.setRoles(loginUser.getRoles());
-            // 设置权限
             userVO.setPermissions(loginUser.getPermissions());
         }
         return Result.ok(userVO);

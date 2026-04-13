@@ -2,12 +2,10 @@ package com.alpha.system.mapper;
 
 import com.alpha.system.domain.SysRoleMenu;
 import com.mybatisflex.core.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 角色菜单关联 Mapper
@@ -39,4 +37,10 @@ public interface SysRoleMenuMapper extends BaseMapper<SysRoleMenu> {
             </script>
             """)
     int batchInsert(@Param("roleId") Long roleId, @Param("menuIds") List<Long> menuIds);
+
+    /**
+     * 根据菜单ID查询关联的角色ID集合
+     */
+    @Select("SELECT DISTINCT role_id FROM sys_role_menu WHERE menu_id = #{menuId}")
+    Set<Long> selectRoleIdsByMenuId(@Param("menuId") Long menuId);
 }

@@ -132,10 +132,24 @@ public class SecurityConfig {
 
                 // 授权配置
                 .authorizeHttpRequests(auth -> auth
-                        // 其他白名单路径
+                        // 白名单路径
                         .requestMatchers(whitelist).permitAll()
+                        // 探活端点公开
+                        .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
+                        // 其他 actuator 端点仅管理员
+                        .requestMatchers("/actuator/**").access((authentication, context) -> {
+                            var auth2 = authentication.get();
+                            if (auth2 == null || !auth2.isAuthenticated()) {
+                                return new org.springframework.security.authorization.AuthorizationDecision(false);
+                            }
+                            if (auth2.getPrincipal() instanceof com.alpha.framework.entity.LoginUser loginUser) {
+                                boolean isAdmin = loginUser.getRoles() != null && loginUser.getRoles().contains("admin");
+                                return new org.springframework.security.authorization.AuthorizationDecision(isAdmin);
+                            }
+                            return new org.springframework.security.authorization.AuthorizationDecision(false);
+                        })
                         // 静态资源
-                        .requestMatchers(HttpMethod.GET, "/actuator/health", "/actuator/info", "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/*.html", "/*.css", "/*.js", "/favicon.ico", "/static/**", "/webjars/**", "/doc.html", "/error").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/swagger-ui/**", "/swagger-ui.html", "/v3/api-docs/**", "/*.html", "/*.css", "/*.js", "/favicon.ico", "/static/**", "/webjars/**", "/doc.html", "/error").permitAll()
                         // OPTIONS 预检请求
                         .requestMatchers(HttpMethod.OPTIONS).permitAll()
                         // 其他请求需要认证

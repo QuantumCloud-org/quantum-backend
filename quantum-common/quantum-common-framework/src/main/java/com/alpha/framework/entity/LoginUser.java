@@ -188,7 +188,8 @@ public class LoginUser implements UserDetails, Serializable {
     @Override
     @JsonIgnore
     public boolean isAccountNonLocked() {
-        return status != null && status == 1;
+        // 账号锁定由 Redis 登录失败计数管理 (LoginServiceImpl.checkAccountLock)，不靠 status 字段
+        return true;
     }
 
     @Override

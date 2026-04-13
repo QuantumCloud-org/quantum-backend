@@ -18,11 +18,6 @@ public interface ISysDeptService extends IService<SysDept> {
     List<SysDept> selectDeptTree(SysDept query);
 
     /**
-     * 构建部门下拉树
-     */
-    List<TreeSelectVO> buildDeptTreeSelect(List<SysDept> depts);
-
-    /**
      * 根据ID查询部门
      */
     SysDept selectDeptById(Long deptId);

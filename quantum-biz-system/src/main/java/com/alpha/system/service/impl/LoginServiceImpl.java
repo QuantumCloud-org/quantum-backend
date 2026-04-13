@@ -51,8 +51,11 @@ public class LoginServiceImpl {
         String password = request.getPassword();
 
         // 1. 校验验证码
-        if (StrUtil.isNotBlank(request.getCaptchaKey())) {
-            // 校验验证码
+        if (securityProperties.isCaptchaRequired()) {
+            if (StrUtil.isBlank(request.getCaptchaKey()) || StrUtil.isBlank(request.getCaptchaCode())) {
+                recordLoginFail(username);
+                throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");
+            }
             if (!captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode())) {
                 recordLoginFail(username);
                 throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");

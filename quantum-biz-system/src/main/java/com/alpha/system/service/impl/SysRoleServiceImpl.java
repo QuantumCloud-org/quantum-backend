@@ -15,6 +15,8 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.alpha.system.security.RoleSessionInvalidationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -34,6 +36,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     private final SysRoleMapper roleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysRoleDeptMapper roleDeptMapper;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     public Page<SysRole> selectRolePage(RoleQuery query) {
@@ -129,10 +132,13 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             }
         }
 
+        // 角色变更后失效关联用户会话
+        eventPublisher.publishEvent(new RoleSessionInvalidationEvent(role.getId()));
         return true;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateStatus(Long roleId, Integer status) {
         if (status != 0 && status != 1) {
             throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
@@ -142,7 +148,11 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         SysRole role = new SysRole();
         role.setId(roleId);
         role.setStatus(status);
-        return updateById(role);
+        boolean result = updateById(role);
+        if (result) {
+            eventPublisher.publishEvent(new RoleSessionInvalidationEvent(roleId));
+        }
+        return result;
     }
 
     @Override
@@ -164,6 +174,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             roleDeptMapper.batchInsert(roleId, deptIds);
         }
 
+        // 数据权限变更后失效关联用户会话
+        eventPublisher.publishEvent(new RoleSessionInvalidationEvent(roleId));
         return true;
     }
 

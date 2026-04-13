@@ -168,6 +168,13 @@ public class GlobalExceptionHandler {
         return Result.fail(ResultCode.PARAM_ERROR, "不支持的媒体类型");
     }
 
+    @ExceptionHandler(org.springframework.web.multipart.MaxUploadSizeExceededException.class)
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    public Result<Void> handleMaxUploadSizeExceededException(org.springframework.web.multipart.MaxUploadSizeExceededException e) {
+        log.warn("上传文件过大: {}", e.getMessage());
+        return Result.fail(ResultCode.PARAM_ERROR, "上传文件大小超出限制");
+    }
+
     @ExceptionHandler(Exception.class)
     @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR) // 500
     public Result<Void> handleException(Exception e, HttpServletRequest request) {

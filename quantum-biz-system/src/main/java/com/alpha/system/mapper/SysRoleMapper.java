@@ -33,7 +33,7 @@ public interface SysRoleMapper extends BaseMapper<SysRole> {
     /**
      * 查询所有正常状态的角色
      */
-    @Select("SELECT * FROM sys_role WHERE status = 1 AND deleted = 0 ORDER BY role_sort")
+    @Select("SELECT * FROM sys_role WHERE status = 1 AND deleted = 0 ORDER BY order_num")
     List<SysRole> selectAllRoles();
 
     /**

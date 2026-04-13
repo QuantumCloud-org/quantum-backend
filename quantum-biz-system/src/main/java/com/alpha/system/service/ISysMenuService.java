@@ -24,11 +24,6 @@ public interface ISysMenuService extends IService<SysMenu> {
     List<SysMenu> selectMenuTreeByUserId(Long userId);
 
     /**
-     * 构建菜单下拉树
-     */
-    List<TreeSelectVO> buildMenuTreeSelect(List<SysMenu> menus);
-
-    /**
      * 根据角色ID查询菜单ID列表
      */
     Set<Long> selectMenuIdsByRoleId(Long roleId);

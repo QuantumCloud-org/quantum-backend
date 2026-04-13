@@ -477,23 +477,18 @@ CREATE INDEX idx_sys_file_biz ON sys_file (biz_type, biz_id);
 
 -- 1. 初始化部门
 INSERT INTO sys_dept (id, parent_id, ancestors, dept_name, order_num, leader, status)
-VALUES (0, '', '0', 'Alpha科技', 0, '管理员', 1),
-       (101, 0, '0,100', '深圳总公司', 1, '', 1),
-       (102, 0, '0,100', '北京分公司', 2, '', 1),
-       (103, 101, '0,100,101', '研发部门', 1, '', 1),
-       (104, 101, '0,100,101', '市场部门', 2, '', 1),
-       (105, 101, '0,100,101', '测试部门', 3, '', 1),
-       (106, 101, '0,100,101', '财务部门', 4, '', 1),
-       (107, 101, '0,100,101', '运维部门', 5, '', 1),
-       (108, 102, '0,100,102', '市场部门', 1, '', 1),
-       (109, 102, '0,100,102', '财务部门', 2, '', 1);
+VALUES
+    (0, 0, '0', 'Alpha科技', 0, '管理员', 1),
+    (101, 0, '0,100', '深圳总公司', 1, '', 1),
+    (102, 0, '0,100', '北京分公司', 2, '', 1),
+    (103, 101, '0,100,101', '研发部门', 1, '', 1);
 
 -- 2. 初始化用户（密码：123456）
 INSERT INTO sys_user (id, username, password, nickname, email, phone, dept_id, status, data_scope)
 VALUES (1, 'admin', '$2a$11$c/bx.QOJiDJpsfIlDLiMy.7ZqpQtV93V97OhRFvvaEn3HMCyz3.3u', '超级管理员', 'admin@alpha.com',
-        '13800000000', 103, 1, 1),
+        '13800000000', 0, 1, 1),
        (2, 'test', '$2a$10$7JB720yubVSZvUI0rEqK/.VqGOZTH.ulu33dHOiBE8ByOhJIrdAu2', '测试用户', 'test@alpha.com',
-        '13800000001', 105, 1, 5);
+        '13800000001', 103, 1, 5);
 
 -- 3. 初始化角色
 INSERT INTO sys_role (id, role_name, role_key, order_num, data_scope, status, remark)

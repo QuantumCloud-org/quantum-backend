@@ -2,12 +2,10 @@ package com.alpha.system.mapper;
 
 import com.alpha.system.domain.SysUserRole;
 import com.mybatisflex.core.BaseMapper;
-import org.apache.ibatis.annotations.Delete;
-import org.apache.ibatis.annotations.Insert;
-import org.apache.ibatis.annotations.Mapper;
-import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.*;
 
 import java.util.List;
+import java.util.Set;
 
 /**
  * 用户角色关联 Mapper
@@ -39,4 +37,10 @@ public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
             </script>
             """)
     int batchInsert(@Param("userId") Long userId, @Param("roleIds") List<Long> roleIds);
+
+    /**
+     * 根据角色ID查询关联的用户ID集合
+     */
+    @Select("SELECT DISTINCT user_id FROM sys_user_role WHERE role_id = #{roleId}")
+    Set<Long> selectUserIdsByRoleId(@Param("roleId") Long roleId);
 }

@@ -20,12 +20,15 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import com.alpha.system.security.SessionInvalidationEvent;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.alpha.system.domain.table.SysUserTableDef.SYS_USER;
@@ -43,6 +46,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final SysUserRoleMapper userRoleMapper;
     private final PasswordEncoder passwordEncoder;
     private final SecurityProperties securityProperties;
+    private final ApplicationEventPublisher eventPublisher;
 
     @Override
     @DataScope(type = DataScopeType.DEPT_AND_CHILD)
@@ -114,15 +118,25 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BizException("邮箱已存在");
         }
 
+        SysUser oldUser = getById(user.getId());
+        boolean deptChanged = oldUser != null && !Objects.equals(oldUser.getDeptId(), user.getDeptId());
+
         // 更新用户
         updateById(user);
 
         // 更新用户角色关联
+        boolean roleChanged = false;
         if (roleIds != null) {
             userRoleMapper.deleteByUserId(user.getId());
             if (CollUtil.isNotEmpty(roleIds)) {
                 userRoleMapper.batchInsert(user.getId(), roleIds);
             }
+            roleChanged = true;
+        }
+
+        // 角色、状态或部门变更时失效会话
+        if (roleChanged || user.getStatus() != null || deptChanged) {
+            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(user.getId())));
         }
 
         return true;
@@ -142,19 +156,29 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
 
         // 逻辑删除用户
-        return removeByIds(userIds);
+        boolean result = removeByIds(userIds);
+        if (result) {
+            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.copyOf(userIds)));
+        }
+        return result;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean resetPassword(Long userId, String password) {
         validatePassword(password);
         SysUser user = new SysUser();
         user.setId(userId);
         user.setPassword(passwordEncoder.encode(password));
-        return updateById(user);
+        boolean result = updateById(user);
+        if (result) {
+            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(userId)));
+        }
+        return result;
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
     public boolean updateStatus(Long userId, Integer status) {
         if (status != 0 && status != 1) {
             throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
@@ -167,7 +191,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         SysUser user = new SysUser();
         user.setId(userId);
         user.setStatus(status);
-        return updateById(user);
+        boolean result = updateById(user);
+        if (result) {
+            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(userId)));
+        }
+        return result;
     }
 
     @Override
@@ -183,20 +211,6 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public boolean checkEmailUnique(String email, Long excludeId) {
         return userMapper.checkEmailExists(email, excludeId != null ? excludeId : 0L) == 0;
-    }
-
-    @Override
-    public Set<String> selectUserRoleKeys(Long userId) {
-        return userMapper.selectUserRoleKeys(userId);
-    }
-
-    @Override
-    public Set<String> selectUserPermissions(Long userId) {
-        // 管理员拥有所有权限
-        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
-            return Set.of("*:*:*");
-        }
-        return userMapper.selectUserPermissions(userId);
     }
 
     @Override

@@ -26,6 +26,7 @@ import java.text.ParseException;
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Date;
+import java.util.Objects;
 import java.util.Set;
 
 /**
@@ -73,6 +74,8 @@ public class TokenService {
         // 存储 tokenId 作为值，refresh 时用于 revoke 旧 accessToken
         redisUtil.set(buildRefreshTokenKey(refreshTokenId), tokenId, Duration.ofMillis(refreshExpireMs));
         redisUtil.set(buildRefreshMapKey(tokenId), refreshTokenId, Duration.ofMillis(refreshExpireMs));
+        redisUtil.set(buildUserMapKey(tokenId), String.valueOf(loginUser.getUserId()),
+                Duration.ofMillis(Math.max(accessExpireMs, refreshExpireMs)));
 
         String userKey = USER_TOKEN_PREFIX + loginUser.getUserId();
         redisUtil.sAdd(userKey, tokenId);
@@ -142,23 +145,54 @@ public class TokenService {
             return null;
         }
 
-        // 一次性验证签名并提取所有 claims，避免多次解析未验证 JWT
-        SignedJWT signedJWT = SignedJWT.parse(refreshToken);
-        MACVerifier verifier = new MACVerifier(tokenProperties.getSecret().getBytes());
-        if (!signedJWT.verify(verifier)) {
-            log.warn("RefreshToken JWT 签名验证失败");
+        JWTClaimsSet claims;
+        String refreshTokenId;
+        try {
+            SignedJWT signedJWT = SignedJWT.parse(refreshToken);
+            MACVerifier verifier = new MACVerifier(tokenProperties.getSecret().getBytes());
+            if (!signedJWT.verify(verifier)) {
+                log.warn("RefreshToken JWT 签名验证失败");
+                return null;
+            }
+            claims = signedJWT.getJWTClaimsSet();
+            if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
+                log.debug("RefreshToken 已过期");
+                return null;
+            }
+            refreshTokenId = claims.getJWTID();
+        } catch (ParseException | JOSEException e) {
+            log.warn("RefreshToken 解析或验签失败: {}", e.getMessage());
             return null;
         }
 
-        JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
-        if (claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date())) {
-            log.debug("RefreshToken 已过期");
-            return null;
-        }
-
-        String refreshTokenId = claims.getJWTID();
         if (refreshTokenId == null) {
             return null;
+        }
+
+        String normalizedDeviceId = StrUtil.blankToDefault(deviceId, "default");
+        if (tokenProperties.isVerifyClientInfo()) {
+            String bindDeviceId = claims.getStringClaim("deviceId");
+            String bindIp = claims.getStringClaim("clientIp");
+            String bindUa = claims.getStringClaim("userAgent");
+            if (!Objects.equals(bindDeviceId, normalizedDeviceId)
+                    || !Objects.equals(bindIp, clientIp)
+                    || !Objects.equals(bindUa, userAgent)) {
+                log.warn("refresh clientInfo mismatch, reject without consuming refresh | tokenId: {}", refreshTokenId);
+                return null;
+            }
+        }
+
+        String username = claims.getStringClaim("username");
+        LoginUser loginUser;
+        try {
+            loginUser = loadLoginUser(username);
+        } catch (Exception e) {
+            log.warn("refresh loadLoginUser failed, keep old session intact", e);
+            return null;
+        }
+        if (!loginUser.isEnabled()) {
+            log.warn("用户已禁用，拒绝 refresh | username: {}", username);
+            throw new BizException(ResultCode.ACCOUNT_DISABLED);
         }
 
         String refreshKey = buildRefreshTokenKey(refreshTokenId);
@@ -168,30 +202,19 @@ public class TokenService {
             return null;
         }
 
-        String normalizedDeviceId = StrUtil.blankToDefault(deviceId, "default");
-        if (tokenProperties.isVerifyClientInfo()) {
-            String originalDeviceId = claims.getStringClaim("deviceId");
-            String originalClientIp = claims.getStringClaim("clientIp");
-            String originalUserAgent = claims.getStringClaim("userAgent");
-
-            if (!StrUtil.equals(originalDeviceId, normalizedDeviceId)
-                    || !StrUtil.equals(originalClientIp, clientIp)
-                    || !StrUtil.equals(originalUserAgent, userAgent)) {
-                log.warn("客户端信息验证失败 | deviceId: {} vs {} | ip: {} vs {}",
-                        originalDeviceId, normalizedDeviceId, originalClientIp, clientIp);
-                throw new BizException(ResultCode.UNAUTHORIZED, "客户端环境变更，请重新登录");
-            }
+        TokenInfo tokenInfo;
+        try {
+            tokenInfo = createToken(loginUser, normalizedDeviceId, clientIp, userAgent);
+        } catch (JOSEException e) {
+            log.error("createToken failed after refresh consume, session degraded to access-only", e);
+            throw e;
+        } catch (RuntimeException e) {
+            log.error("createToken failed after refresh consume, session degraded to access-only", e);
+            throw e;
         }
 
         revokeTokenById(oldTokenId);
-
-        String username = claims.getStringClaim("username");
-        LoginUser loginUser = loadLoginUser(username);
-        if (!loginUser.isEnabled()) {
-            log.warn("用户已禁用，拒绝 refresh | username: {}", username);
-            throw new BizException(ResultCode.ACCOUNT_DISABLED);
-        }
-        return createToken(loginUser, normalizedDeviceId, clientIp, userAgent);
+        return tokenInfo;
     }
 
     /**
@@ -262,10 +285,22 @@ public class TokenService {
         }
         redisUtil.delete(refreshMapKey);
 
-        Long userId = loginUser != null ? loginUser.getUserId() : null;
+        String userMapKey = buildUserMapKey(tokenId);
+        String userIdStr = redisUtil.get(userMapKey);
+        Long userId = null;
+        if (StrUtil.isNotBlank(userIdStr)) {
+            try {
+                userId = Long.parseLong(userIdStr);
+            } catch (NumberFormatException ignored) {
+            }
+        }
+        if (userId == null && loginUser != null) {
+            userId = loginUser.getUserId();
+        }
         if (userId != null) {
             redisUtil.sRemove(USER_TOKEN_PREFIX + userId, tokenId);
         }
+        redisUtil.delete(userMapKey);
 
         if (remainTtl > 0) {
             redisUtil.set(CommonConstants.BLACKLIST_PREFIX + tokenId, "1", Duration.ofSeconds(remainTtl));
@@ -371,5 +406,9 @@ public class TokenService {
 
     private String buildRefreshMapKey(String tokenId) {
         return CommonConstants.REDIS_TOKEN_PREFIX + "refresh-map:" + tokenId;
+    }
+
+    private String buildUserMapKey(String tokenId) {
+        return CommonConstants.REDIS_TOKEN_PREFIX + "user-map:" + tokenId;
     }
 }

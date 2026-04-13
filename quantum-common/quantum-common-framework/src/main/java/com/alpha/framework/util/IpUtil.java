@@ -106,18 +106,31 @@ public class IpUtil {
 
         String directRemote = normalizeLoopback(request.getRemoteAddr());
 
-        if (isTrustedProxy(directRemote)) {
-            String xff = request.getHeader("X-Forwarded-For");
-            if (StrUtil.isNotBlank(xff) && !UNKNOWN.equalsIgnoreCase(xff)) {
-                String firstIp = xff.split(",")[0].trim();
-                if (isValidIp(firstIp)) {
-                    return normalizeLoopback(firstIp);
+        if (!isTrustedProxy(directRemote)) {
+            return directRemote;
+        }
+
+        String xff = request.getHeader("X-Forwarded-For");
+        if (StrUtil.isNotBlank(xff) && !UNKNOWN.equalsIgnoreCase(xff)) {
+            String[] hops = xff.split(",");
+            for (int i = hops.length - 1; i >= 0; i--) {
+                String hop = normalizeLoopback(hops[i].trim());
+                if (!isValidIp(hop)) {
+                    continue;
+                }
+                if (!isTrustedProxy(hop)) {
+                    return hop;
                 }
             }
-            String xri = request.getHeader("X-Real-IP");
-            if (StrUtil.isNotBlank(xri) && isValidIp(xri.trim())) {
-                return normalizeLoopback(xri.trim());
+            String firstHop = normalizeLoopback(hops[0].trim());
+            if (isValidIp(firstHop)) {
+                return firstHop;
             }
+        }
+
+        String xri = request.getHeader("X-Real-IP");
+        if (StrUtil.isNotBlank(xri) && isValidIp(xri.trim())) {
+            return normalizeLoopback(xri.trim());
         }
 
         return directRemote;

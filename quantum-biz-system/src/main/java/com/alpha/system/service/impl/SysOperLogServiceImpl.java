@@ -42,7 +42,7 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
 
     @Override
     public Page<SysOperLog> selectOperLogPage(SysOperLog query, LogPageQuery pageQuery) {
-        QueryWrapper wrapper = buildQueryWrapper(query);
+        QueryWrapper wrapper = buildQueryWrapper(query, pageQuery);
         wrapper.orderBy(SYS_OPER_LOG.OPER_ID.desc());
         return operLogMapper.paginate(
                 Page.of(pageQuery.getPageNum(), pageQuery.getPageSize()),
@@ -52,7 +52,7 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
 
     @Override
     public List<SysOperLog> selectOperLogList(SysOperLog query, LogPageQuery pageQuery) {
-        QueryWrapper wrapper = buildQueryWrapper(query);
+        QueryWrapper wrapper = buildQueryWrapper(query, pageQuery);
         wrapper.orderBy(SYS_OPER_LOG.OPER_ID.desc());
         return operLogMapper.selectListByQuery(wrapper);
     }
@@ -92,13 +92,13 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     /**
      * 构建查询条件
      */
-    private QueryWrapper buildQueryWrapper(SysOperLog query) {
+    private QueryWrapper buildQueryWrapper(SysOperLog query, LogPageQuery pageQuery) {
         return QueryWrapper.create()
                 .where(SYS_OPER_LOG.TITLE.like(query.getTitle()).when(StringUtils.hasText(query.getTitle())))
                 .and(SYS_OPER_LOG.BUSINESS_TYPE.eq(query.getBusinessType()).when(query.getBusinessType() != null))
                 .and(SYS_OPER_LOG.OPER_NAME.like(query.getOperName()).when(StringUtils.hasText(query.getOperName())))
                 .and(SYS_OPER_LOG.STATUS.eq(query.getStatus()).when(query.getStatus() != null))
-                .and(SYS_OPER_LOG.OPER_TIME.ge(query.getOperTime()).when(query.getOperTime() != null))
-                .and(SYS_OPER_LOG.OPER_TIME.le(query.getOperTime()).when(query.getOperTime() != null));
+                .and(SYS_OPER_LOG.OPER_TIME.ge(pageQuery.getBeginTime()).when(pageQuery.getBeginTime() != null))
+                .and(SYS_OPER_LOG.OPER_TIME.le(pageQuery.getEndTime()).when(pageQuery.getEndTime() != null));
     }
 }

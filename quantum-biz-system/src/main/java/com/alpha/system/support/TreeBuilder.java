@@ -1,8 +1,10 @@
 package com.alpha.system.support;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /**
@@ -25,6 +27,11 @@ public final class TreeBuilder {
             return new ArrayList<>();
         }
 
+        // 避免复用旧 children 导致脏树结构残留。
+        for (T item : list) {
+            item.setChildren(new ArrayList<>());
+        }
+
         // 收集所有 ID
         var allIds = list.stream()
                 .map(TreeNode::getId)
@@ -40,8 +47,21 @@ public final class TreeBuilder {
         }
 
         // 递归构建子树
+        Set<Long> attachedIds = new HashSet<>();
         for (T root : roots) {
-            buildChildren(root, list);
+            buildChildren(root, list, new HashSet<>(), attachedIds);
+        }
+
+        // 兜底处理存在环或孤立关系的脏数据，避免整棵树为空或递归卡死。
+        for (T item : list) {
+            Long itemId = item.getId();
+            if (itemId != null && attachedIds.contains(itemId)) {
+                continue;
+            }
+            if (!roots.contains(item)) {
+                roots.add(item);
+            }
+            buildChildren(item, list, new HashSet<>(), attachedIds);
         }
 
         return roots;
@@ -50,12 +70,21 @@ public final class TreeBuilder {
     /**
      * 递归构建子节点
      */
-    private static <T extends TreeNode<T>> void buildChildren(T parent, List<T> all) {
+    private static <T extends TreeNode<T>> void buildChildren(
+            T parent, List<T> all, Set<Long> path, Set<Long> attachedIds) {
+        Long parentId = parent.getId();
+        if (parentId != null && !path.add(parentId)) {
+            return;
+        }
+        if (parentId != null) {
+            attachedIds.add(parentId);
+        }
+
         List<T> children = getChildList(all, parent);
         if (!children.isEmpty()) {
             parent.setChildren(children);
             for (T child : children) {
-                buildChildren(child, all);
+                buildChildren(child, all, new HashSet<>(path), attachedIds);
             }
         }
     }
@@ -71,7 +100,9 @@ public final class TreeBuilder {
         List<T> children = new ArrayList<>();
         Long parentId = parent.getId();
         for (T node : list) {
-            if (parentId.equals(node.getParentId())) {
+            if (parentId != null
+                    && !parentId.equals(node.getId())
+                    && parentId.equals(node.getParentId())) {
                 children.add(node);
             }
         }

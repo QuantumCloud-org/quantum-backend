@@ -53,11 +53,6 @@ public final class CommonConstants {
     public static final String HEADER_TENANT_ID = "X-Tenant-Id";
 
     /**
-     * 刷新token Header
-     */
-    public static final String HEADER_REFRESH_TOKEN = "X-Refresh-Token";
-
-    /**
      * Token Header
      */
     public static final String HEADER_AUTHORIZATION = "Authorization";

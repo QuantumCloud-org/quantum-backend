@@ -3,6 +3,7 @@ package com.alpha.system.convert;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserCreateRequest;
 import com.alpha.system.dto.request.UserUpdateRequest;
+import com.alpha.system.dto.response.UserEditVO;
 import com.alpha.system.dto.response.UserExportVO;
 import com.alpha.system.dto.response.UserVO;
 import org.springframework.stereotype.Component;
@@ -45,6 +46,7 @@ public class UserConvert {
         }
         SysUser user = new SysUser();
         user.setId(request.getId());
+        user.setVersion(request.getVersion());
         user.setNickname(request.getNickname());
         user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
@@ -64,21 +66,47 @@ public class UserConvert {
         }
         UserVO vo = new UserVO();
         vo.setId(user.getId());
+        vo.setVersion(user.getVersion());
         vo.setUsername(user.getUsername());
         // 敏感字段不返回
         vo.setNickname(user.getNickname());
         vo.setPhone(user.getPhone());
         vo.setEmail(user.getEmail());
+        vo.setAvatar(user.getAvatar());
         vo.setSex(user.getSex());
+        vo.setDeptName(user.getDeptName());
         vo.setStatus(user.getStatus());
         vo.setLoginIp(user.getLoginIp());
+        vo.setLoginLocation(user.getLoginLocation());
         vo.setLoginDate(user.getLoginDate());
         vo.setRemark(user.getRemark());
         vo.setCreateTime(user.getCreateTime());
-        vo.setCreateBy(user.getCreateBy());
-        vo.setUpdateTime(user.getUpdateTime());
-        vo.setUpdateBy(user.getUpdateBy());
-        vo.setDeleted(user.getDeleted());
+        return vo;
+    }
+
+    /**
+     * 实体 -> 编辑VO
+     */
+    public UserEditVO toEditVO(SysUser user) {
+        if (user == null) {
+            return null;
+        }
+        UserEditVO vo = new UserEditVO();
+        vo.setId(user.getId());
+        vo.setVersion(user.getVersion());
+        vo.setUsername(user.getUsername());
+        vo.setNickname(user.getNickname());
+        vo.setEmail(user.getEmail());
+        vo.setPhone(user.getPhone());
+        vo.setAvatar(user.getAvatar());
+        vo.setSex(user.getSex());
+        vo.setDeptId(user.getDeptId());
+        vo.setStatus(user.getStatus());
+        vo.setRemark(user.getRemark());
+        vo.setLoginIp(user.getLoginIp());
+        vo.setLoginLocation(user.getLoginLocation());
+        vo.setLoginDate(user.getLoginDate());
+        vo.setCreateTime(user.getCreateTime());
         return vo;
     }
 
@@ -101,6 +129,7 @@ public class UserConvert {
         vo.setNickname(user.getNickname());
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
+        vo.setDeptName(user.getDeptName());
         vo.setSexLabel(convertSex(user.getSex()));
         vo.setStatusLabel(convertStatus(user.getStatus()));
         vo.setCreateTime(user.getCreateTime());

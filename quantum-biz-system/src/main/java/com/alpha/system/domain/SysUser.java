@@ -1,6 +1,7 @@
 package com.alpha.system.domain;
 
 import com.alpha.orm.entity.BaseEntity;
+import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
 import lombok.EqualsAndHashCode;
@@ -60,6 +61,12 @@ public class SysUser extends BaseEntity implements Serializable {
     private Long deptId;
 
     /**
+     * 部门名称（非数据库字段，列表/导出回填）
+     */
+    @Column(ignore = true)
+    private String deptName;
+
+    /**
      * 状态（0-禁用 1-正常）
      */
     private Integer status;
@@ -73,6 +80,11 @@ public class SysUser extends BaseEntity implements Serializable {
      * 登录IP
      */
     private String loginIp;
+
+    /**
+     * 登录地点
+     */
+    private String loginLocation;
 
     /**
      * 登录时间

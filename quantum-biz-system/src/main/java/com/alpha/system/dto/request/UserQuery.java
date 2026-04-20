@@ -29,9 +29,19 @@ public class UserQuery extends PageQuery implements Serializable {
     private String nickname;
 
     /**
+     * 邮箱
+     */
+    private String email;
+
+    /**
      * 手机号
      */
     private String phone;
+
+    /**
+     * 性别
+     */
+    private Integer sex;
 
     /**
      * 部门ID

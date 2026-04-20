@@ -18,6 +18,7 @@ import com.alpha.system.domain.SysLoginLog;
 import com.alpha.system.dto.request.LoginRequest;
 import com.alpha.system.dto.response.LoginResponse;
 import com.alpha.system.service.ISysLoginLogService;
+import com.alpha.system.service.ISysUserService;
 import com.nimbusds.jose.JOSEException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -42,6 +43,7 @@ public class LoginServiceImpl {
     private final SecurityProperties securityProperties;
     private final ISysLoginLogService loginLogService;
     private final ICaptchaService captchaService;
+    private final ISysUserService sysUserService;
 
     /**
      * 登录
@@ -50,20 +52,30 @@ public class LoginServiceImpl {
         String username = request.getUsername();
         String password = request.getPassword();
 
+        String clientIpEarly = UserContext.getIp();
+        UserAgent uaEarly = parseUserAgent(UserContext.getUserAgent());
+
         // 1. 校验验证码
         if (securityProperties.isCaptchaRequired()) {
             if (StrUtil.isBlank(request.getCaptchaKey()) || StrUtil.isBlank(request.getCaptchaCode())) {
                 recordLoginFail(username);
+                recordLoginLog(username, clientIpEarly, uaEarly, false, "验证码错误");
                 throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");
             }
             if (!captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode())) {
                 recordLoginFail(username);
+                recordLoginLog(username, clientIpEarly, uaEarly, false, "验证码错误");
                 throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");
             }
         }
 
         // 2. 检查账号是否被锁定
-        checkAccountLock(username);
+        try {
+            checkAccountLock(username);
+        } catch (BizException e) {
+            recordLoginLog(username, clientIpEarly, uaEarly, false, e.getMessage());
+            throw e;
+        }
 
         // 3. 执行认证
         LoginUser loginUser;
@@ -71,7 +83,7 @@ public class LoginServiceImpl {
         String userAgent = UserContext.getUserAgent();
         UserAgent ua = parseUserAgent(userAgent);
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, password));
+            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, username + password));
             loginUser = (LoginUser) authentication.getPrincipal();
         } catch (BadCredentialsException e) {
             recordLoginFail(username);
@@ -102,7 +114,13 @@ public class LoginServiceImpl {
         // 7. 生成 Token
         String deviceId = request.getDeviceId();
         String clientIp = UserContext.getIp();
-        TokenInfo tokenInfo = tokenService.createToken(loginUser, deviceId, clientIp, userAgent);
+        TokenInfo tokenInfo = tokenService.createToken(
+                loginUser,
+                deviceId,
+                clientIp,
+                userAgent,
+                Boolean.TRUE.equals(request.getRememberMe())
+        );
 
         return LoginResponse.of(loginUser, tokenInfo);
     }
@@ -151,8 +169,10 @@ public class LoginServiceImpl {
      * 设置登录信息
      */
     private void setLoginInfo(LoginUser loginUser) {
-        loginUser.setLoginIp(UserContext.getIp());
-        loginUser.setLoginLocation(IpUtil.getIpAddress(UserContext.getIp()));
+        String ip = UserContext.getIp();
+
+        loginUser.setLoginIp(ip);
+        loginUser.setLoginLocation(IpUtil.getIpAddress(ip));
 
         String userAgent = UserContext.getUserAgent();
         if (StrUtil.isNotBlank(userAgent)) {
@@ -161,6 +181,11 @@ public class LoginServiceImpl {
                 loginUser.setBrowser(ua.getBrowser().getName());
                 loginUser.setOs(ua.getPlatform().getName());
             }
+        }
+        try {
+            sysUserService.updateLoginInfo(loginUser.getUserId(), loginUser);
+        } catch (Exception e) {
+            log.warn("更新用户最近登录信息失败 | UserId: {}", loginUser.getUserId(), e);
         }
     }
 

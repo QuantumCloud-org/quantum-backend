@@ -9,6 +9,7 @@ import com.alpha.system.dto.response.RouterVO;
 import com.alpha.system.dto.response.TreeSelectVO;
 import com.alpha.system.mapper.SysMenuMapper;
 import com.alpha.system.mapper.SysRoleMenuMapper;
+import com.alpha.system.mapper.SysUserRoleMapper;
 import com.alpha.system.service.ISysMenuService;
 import com.alpha.system.support.TreeBuilder;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -16,14 +17,19 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.lang3.StringUtils;
-import com.alpha.system.security.MenuSessionInvalidationEvent;
+import com.alpha.system.security.UserCacheRefreshEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -40,6 +46,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
     private final SysMenuMapper menuMapper;
     private final SysRoleMenuMapper roleMenuMapper;
+    private final SysUserRoleMapper userRoleMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     /**
@@ -126,6 +133,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long insertMenu(SysMenu menu) {
+        menu.setParentId(normalizeParentId(menu.getParentId()));
+        menu.setOrderNum(normalizeOrderNum(menu.getOrderNum()));
+
         // 检查名称唯一
         if (!checkMenuNameUnique(menu.getMenuName(), menu.getParentId(), null)) {
             throw new BizException("菜单名称已存在");
@@ -138,27 +148,68 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateMenu(SysMenu menu) {
+        SysMenu oldMenu = getById(menu.getId());
+        if (oldMenu == null) {
+            throw new BizException("菜单不存在");
+        }
+
+        // parentId/orderNum 缺省时保留旧值，避免误将菜单移到根或清零排序
+        Long effectiveParentId = menu.getParentId() != null
+                ? normalizeParentId(menu.getParentId())
+                : oldMenu.getParentId();
+        Integer effectiveOrderNum = menu.getOrderNum() != null
+                ? normalizeOrderNum(menu.getOrderNum())
+                : oldMenu.getOrderNum();
+
         // 检查名称唯一
-        if (!checkMenuNameUnique(menu.getMenuName(), menu.getParentId(), menu.getId())) {
+        if (!checkMenuNameUnique(menu.getMenuName(), effectiveParentId, menu.getId())) {
             throw new BizException("菜单名称已存在");
         }
 
         // 不能设置自己为父菜单
-        if (java.util.Objects.equals(menu.getId(), menu.getParentId())) {
+        if (java.util.Objects.equals(menu.getId(), effectiveParentId)) {
             throw new BizException("父菜单不能是自己");
         }
 
         // 对比旧菜单，perms/status/menuType 变更时失效关联用户会话
-        SysMenu oldMenu = getById(menu.getId());
-        boolean securityFieldChanged = oldMenu != null && (
+        boolean securityFieldChanged = (
                 !java.util.Objects.equals(oldMenu.getPerms(), menu.getPerms())
                 || !java.util.Objects.equals(oldMenu.getStatus(), menu.getStatus())
                 || !java.util.Objects.equals(oldMenu.getMenuType(), menu.getMenuType())
         );
 
-        boolean result = updateById(menu);
-        if (result && securityFieldChanged) {
-            eventPublisher.publishEvent(new MenuSessionInvalidationEvent(menu.getId()));
+        oldMenu.setParentId(effectiveParentId);
+        oldMenu.setMenuName(menu.getMenuName());
+        oldMenu.setOrderNum(effectiveOrderNum);
+        oldMenu.setPath(menu.getPath());
+        oldMenu.setComponent(menu.getComponent());
+        oldMenu.setQueryParam(menu.getQueryParam());
+        oldMenu.setIsFrame(menu.getIsFrame());
+        oldMenu.setIsCache(menu.getIsCache());
+        oldMenu.setMenuType(menu.getMenuType());
+        oldMenu.setVisible(menu.getVisible());
+        oldMenu.setPerms(menu.getPerms());
+        oldMenu.setIcon(menu.getIcon());
+        oldMenu.setStatus(menu.getStatus());
+        oldMenu.setRemark(menu.getRemark());
+
+        boolean result = updateById(oldMenu);
+        if (!result) {
+            throw new BizException("菜单信息已变更，请刷新后重试");
+        }
+
+        if (securityFieldChanged) {
+            Set<Long> roleIds = roleMenuMapper.selectRoleIdsByMenuId(menu.getId());
+            if (CollUtil.isNotEmpty(roleIds)) {
+                Set<Long> userIds = new LinkedHashSet<>();
+                for (Long rid : roleIds) {
+                    Set<Long> ids = userRoleMapper.selectUserIdsByRoleId(rid);
+                    if (CollUtil.isNotEmpty(ids)) userIds.addAll(ids);
+                }
+                if (!userIds.isEmpty()) {
+                    eventPublisher.publishEvent(new UserCacheRefreshEvent(userIds));
+                }
+            }
         }
         return result;
     }
@@ -166,23 +217,32 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteMenuById(Long menuId) {
-        // 检查是否有子菜单
-        if (hasChildMenu(menuId)) {
-            throw new BizException("存在子菜单，不能删除");
-        }
-        // 检查是否被角色使用
-        if (isMenuUsed(menuId)) {
-            throw new BizException("菜单已分配给角色，不能删掉");
+        SysMenu targetMenu = getById(menuId);
+        if (targetMenu == null) {
+            throw new BizException("菜单不存在");
         }
 
-        return removeById(menuId);
+        List<Long> branchMenuIds = collectBranchMenuIds(menuId);
+        Set<Long> roleIds = roleMenuMapper.selectRoleIdsByMenuIds(branchMenuIds);
+        Set<Long> affectedUserIds = collectUserIdsByRoleIds(roleIds);
+
+        if (!branchMenuIds.isEmpty()) {
+            roleMenuMapper.deleteByMenuIds(branchMenuIds);
+        }
+
+        boolean removed = removeByIds(branchMenuIds);
+        if (removed && !affectedUserIds.isEmpty()) {
+            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
+        }
+        return removed;
     }
 
     @Override
     public boolean checkMenuNameUnique(String menuName, Long parentId, Long excludeId) {
+        Long normalizedParentId = normalizeParentId(parentId);
         QueryWrapper wrapper = QueryWrapper.create()
                 .where(SYS_MENU.MENU_NAME.eq(menuName))
-                .and(SYS_MENU.PARENT_ID.eq(parentId))
+                .and(SYS_MENU.PARENT_ID.eq(normalizedParentId))
                 .and(SYS_MENU.DELETED.eq(0))
                 .and(excludeId != null ? SYS_MENU.ID.ne(excludeId) : null);
         return count(wrapper) == 0;
@@ -199,7 +259,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     @Override
     public boolean isMenuUsed(Long menuId) {
         QueryWrapper wrapper = QueryWrapper.create().where(SYS_ROLE_MENU.MENU_ID.eq(menuId));
-        return count(wrapper) > 0;
+        return roleMenuMapper.selectCountByQuery(wrapper) > 0;
     }
 
     @Override
@@ -349,6 +409,67 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
      */
     private String innerLinkReplaceEach(String path) {
         return StringUtils.replaceEach(path, new String[]{"http://", "https://", "www.", "."}, new String[]{"", "", "", "/"});
+    }
+
+    private Long normalizeParentId(Long parentId) {
+        return parentId == null ? 0L : parentId;
+    }
+
+    private Integer normalizeOrderNum(Integer orderNum) {
+        return orderNum == null ? 0 : orderNum;
+    }
+
+    private List<Long> collectBranchMenuIds(Long menuId) {
+        QueryWrapper wrapper = QueryWrapper.create()
+                .select(SYS_MENU.ID, SYS_MENU.PARENT_ID)
+                .where(SYS_MENU.DELETED.eq(0))
+                .orderBy(SYS_MENU.PARENT_ID.asc(), SYS_MENU.ORDER_NUM.asc());
+        List<SysMenu> menus = list(wrapper);
+
+        Map<Long, List<Long>> childrenByParentId = new HashMap<>();
+        boolean targetFound = false;
+        for (SysMenu menu : menus) {
+            if (Objects.equals(menu.getId(), menuId)) {
+                targetFound = true;
+            }
+            childrenByParentId
+                    .computeIfAbsent(menu.getParentId(), ignored -> new ArrayList<>())
+                    .add(menu.getId());
+        }
+
+        if (!targetFound) {
+            throw new BizException("菜单不存在");
+        }
+
+        List<Long> branchMenuIds = new ArrayList<>();
+        collectDescendantMenuIds(menuId, childrenByParentId, branchMenuIds);
+        return branchMenuIds;
+    }
+
+    private void collectDescendantMenuIds(
+            Long currentMenuId,
+            Map<Long, List<Long>> childrenByParentId,
+            Collection<Long> collector
+    ) {
+        collector.add(currentMenuId);
+        for (Long childMenuId : childrenByParentId.getOrDefault(currentMenuId, List.of())) {
+            collectDescendantMenuIds(childMenuId, childrenByParentId, collector);
+        }
+    }
+
+    private Set<Long> collectUserIdsByRoleIds(Set<Long> roleIds) {
+        Set<Long> userIds = new LinkedHashSet<>();
+        if (CollUtil.isEmpty(roleIds)) {
+            return userIds;
+        }
+
+        for (Long roleId : roleIds) {
+            Set<Long> ids = userRoleMapper.selectUserIdsByRoleId(roleId);
+            if (CollUtil.isNotEmpty(ids)) {
+                userIds.addAll(ids);
+            }
+        }
+        return userIds;
     }
 
 }

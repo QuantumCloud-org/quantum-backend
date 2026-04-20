@@ -18,7 +18,7 @@ public class UserDetailVO implements Serializable {
     /**
      * 用户信息
      */
-    private UserVO user;
+    private UserEditVO user;
 
     /**
      * 角色ID列表

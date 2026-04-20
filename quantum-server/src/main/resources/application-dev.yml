@@ -1,9 +1,9 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
-    username: baseweb
-    password: "BaseWeb123"
+    url: jdbc:postgresql://100.107.62.19:15432/talent_manger?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+    username: talent_manger
+    password: 1qaz@WSX
     hikari:
       maximum-pool-size: 20
       minimum-idle: 5
@@ -13,10 +13,10 @@ spring:
       connection-test-query: SELECT 1
   data:
     redis:
-      host: 192.168.31.10
+      host: 100.107.62.19
       port: 16379
-      database: 12
-      password: password!
+      database: 11
+      password: 1qaz!WSX
       redisson:
         connection-minimum-idle-size: 8
         connection-pool-size: 32
@@ -38,7 +38,7 @@ mybatis-flex:
     enabled: true
     log-all-sql: true
   sql-print:
-    enabled: true
+    enabled: false
 
 # SpringDoc 配置
 springdoc:

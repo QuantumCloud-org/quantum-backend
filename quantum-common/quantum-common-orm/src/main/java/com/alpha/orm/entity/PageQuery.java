@@ -35,7 +35,7 @@ public class PageQuery implements Serializable {
      * 每页条数
      */
     @Min(value = 1, message = "每页条数最小为 1")
-    @Max(value = 1000, message = "每页条数最大为 1000")
+    @Max(value = 2000, message = "每页条数最大为 2000")
     private Integer pageSize = 10;
 
     /**

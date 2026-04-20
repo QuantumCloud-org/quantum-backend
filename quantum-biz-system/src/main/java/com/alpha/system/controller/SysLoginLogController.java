@@ -28,7 +28,7 @@ public class SysLoginLogController {
 
     @Operation(summary = "分页查询登录日志")
     @SystemLog(title = "登录日志", businessType = BusinessType.SELECT)
-    @RequiresPermission("monitor:logininfor:list")
+    @RequiresPermission("monitor:loginlog:list")
     @GetMapping("/list")
     public Result<PageResult<SysLoginLog>> list(LoginLogQuery query) {
         return Result.ok(PageResult.of(loginLogService.selectLoginLogPage(query)));
@@ -36,7 +36,7 @@ public class SysLoginLogController {
 
     @Operation(summary = "删除登录日志")
     @SystemLog(title = "登录日志", businessType = BusinessType.DELETE)
-    @RequiresPermission("monitor:logininfor:remove")
+    @RequiresPermission("monitor:loginlog:remove")
     @DeleteMapping("/{infoIds}")
     public Result<Void> remove(@PathVariable List<Long> infoIds) {
         loginLogService.deleteLoginLogByIds(infoIds);
@@ -45,7 +45,7 @@ public class SysLoginLogController {
 
     @Operation(summary = "清空登录日志")
     @SystemLog(title = "登录日志", businessType = BusinessType.CLEAN)
-    @RequiresPermission("monitor:logininfor:remove")
+    @RequiresPermission("monitor:loginlog:remove")
     @DeleteMapping("/clean")
     public Result<Void> clean() {
         loginLogService.cleanLoginLog();

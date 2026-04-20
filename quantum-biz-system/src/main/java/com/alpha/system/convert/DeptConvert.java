@@ -72,10 +72,11 @@ public class DeptConvert {
         vo.setEmail(dept.getEmail());
         vo.setStatus(dept.getStatus());
         vo.setCreateTime(dept.getCreateTime());
-        vo.setCreateBy(dept.getCreateBy());
-        vo.setUpdateTime(dept.getUpdateTime());
-        vo.setUpdateBy(dept.getUpdateBy());
-        vo.setDeleted(dept.getDeleted());
+        if (dept.getChildren() != null && !dept.getChildren().isEmpty()) {
+            vo.setChildren(dept.getChildren().stream()
+                    .map(this::toVO)
+                    .collect(Collectors.toList()));
+        }
         return vo;
     }
 
@@ -98,7 +99,13 @@ public class DeptConvert {
         if (dept == null) {
             return null;
         }
-        return TreeSelectVO.fromDept(dept);
+        TreeSelectVO treeSelect = TreeSelectVO.fromDept(dept);
+        if (dept.getChildren() != null && !dept.getChildren().isEmpty()) {
+            treeSelect.setChildren(dept.getChildren().stream()
+                    .map(this::toTreeSelect)
+                    .collect(Collectors.toList()));
+        }
+        return treeSelect;
     }
 
     /**

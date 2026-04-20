@@ -1,19 +1,17 @@
 package com.alpha.system.dto.response;
 
 import cn.idev.excel.annotation.ExcelProperty;
-import com.alpha.orm.entity.BaseEntity;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 
 /**
  * 用户导出视图对象
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class UserExportVO extends BaseEntity implements Serializable {
+public class UserExportVO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -59,5 +57,11 @@ public class UserExportVO extends BaseEntity implements Serializable {
      */
     @ExcelProperty("状态")
     private String statusLabel;
+
+    /**
+     * 创建时间
+     */
+    @ExcelProperty("创建时间")
+    private LocalDateTime createTime;
 
 }

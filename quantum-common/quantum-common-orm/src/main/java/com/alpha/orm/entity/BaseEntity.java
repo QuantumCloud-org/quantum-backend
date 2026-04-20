@@ -65,6 +65,6 @@ public abstract class BaseEntity implements Serializable {
      * 用于并发控制，每次更新自动 +1
      */
     @Column(version = true)
-    private Integer version;
+    private Long version;
 
 }

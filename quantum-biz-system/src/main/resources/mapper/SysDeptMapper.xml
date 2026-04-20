@@ -33,9 +33,10 @@
     <select id="selectDeptAndChildren" resultType="com.alpha.system.domain.SysDept">
         SELECT * FROM sys_dept
         WHERE deleted = 0
-        AND (id = #{deptId} OR ancestors LIKE CONCAT('%,', #{deptId}, ',%')
-             OR ancestors LIKE CONCAT(#{deptId}, ',%')
-             OR ancestors LIKE CONCAT('%,', #{deptId}))
+        AND (id = #{deptId}
+             OR ancestors LIKE ('%,' || CAST(#{deptId} AS VARCHAR) || ',%')
+             OR ancestors LIKE (CAST(#{deptId} AS VARCHAR) || ',%')
+             OR ancestors LIKE ('%,' || CAST(#{deptId} AS VARCHAR)))
         ORDER BY parent_id, order_num
     </select>
 
@@ -62,7 +63,7 @@
     <update id="updateChildrenAncestors">
         UPDATE sys_dept
         SET ancestors = REPLACE(ancestors, #{oldAncestors}, #{newAncestors})
-        WHERE ancestors LIKE CONCAT(#{oldAncestors}, ',%')
+        WHERE ancestors LIKE (#{oldAncestors} || ',%')
     </update>
 
     <!-- 根据ID查询部门名称 -->

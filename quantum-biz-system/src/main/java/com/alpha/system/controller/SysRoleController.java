@@ -11,6 +11,7 @@ import com.alpha.system.dto.request.RoleQuery;
 import com.alpha.system.dto.request.RoleUpdateRequest;
 import com.alpha.system.dto.response.RoleVO;
 import com.alpha.system.domain.SysRole;
+import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.service.ISysMenuService;
 import com.alpha.system.service.ISysRoleService;
 import com.mybatisflex.core.paginate.Page;
@@ -34,6 +35,7 @@ public class SysRoleController {
 
     private final ISysRoleService roleService;
     private final ISysMenuService menuService;
+    private final SysDeptMapper deptMapper;
     private final RoleConvert roleConvert;
 
     @Operation(summary = "分页查询角色")
@@ -68,6 +70,15 @@ public class SysRoleController {
     @GetMapping("/{roleId}/menus")
     public Result<Set<Long>> getRoleMenus(@PathVariable Long roleId) {
         return Result.ok(menuService.selectMenuIdsByRoleId(roleId));
+    }
+
+    @Operation(summary = "查询角色关联的部门ID")
+    @SystemLog(title = "角色管理", businessType = BusinessType.SELECT)
+    @RequiresPermission("system:role:query")
+    @GetMapping("/{roleId}/depts")
+    public Result<Set<Long>> getRoleDepts(@PathVariable Long roleId) {
+        Set<Long> deptIds = deptMapper.selectDeptIdsByRoleId(roleId);
+        return Result.ok(deptIds == null ? java.util.Collections.emptySet() : deptIds);
     }
 
     @Operation(summary = "新增角色")

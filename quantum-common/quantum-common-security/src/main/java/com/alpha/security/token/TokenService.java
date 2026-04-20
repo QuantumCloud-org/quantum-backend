@@ -39,6 +39,7 @@ public class TokenService {
 
     private static final String ACCESS_TOKEN_PREFIX = CommonConstants.REDIS_TOKEN_PREFIX + "access:";
     private static final String REFRESH_TOKEN_PREFIX = CommonConstants.REDIS_TOKEN_PREFIX + "refresh:";
+    private static final String REFRESH_REMEMBER_PREFIX = CommonConstants.REDIS_TOKEN_PREFIX + "refresh-remember:";
     private static final String USER_TOKEN_PREFIX = CommonConstants.USER_TOKEN_PREFIX;
 
     private final RedisUtil redisUtil;
@@ -50,6 +51,13 @@ public class TokenService {
      * 创建 Token
      */
     public TokenInfo createToken(LoginUser loginUser, String deviceId, String clientIp, String userAgent) throws JOSEException {
+        return createToken(loginUser, deviceId, clientIp, userAgent, false);
+    }
+
+    /**
+     * 创建 Token
+     */
+    public TokenInfo createToken(LoginUser loginUser, String deviceId, String clientIp, String userAgent, boolean rememberMe) throws JOSEException {
         String normalizedDeviceId = StrUtil.blankToDefault(deviceId, "default");
         String tokenId = IdUtil.fastSimpleUUID();
         String refreshTokenId = IdUtil.fastSimpleUUID();
@@ -57,7 +65,7 @@ public class TokenService {
         String accessToken = generateAccessToken(tokenId, loginUser.getUserId(), loginUser.getUsername(),
                 normalizedDeviceId, clientIp, userAgent);
         String refreshToken = generateRefreshToken(refreshTokenId, loginUser.getUserId(), loginUser.getUsername(),
-                normalizedDeviceId, clientIp, userAgent);
+                normalizedDeviceId, clientIp, userAgent, rememberMe);
 
         LocalDateTime expireTime = LocalDateTime.now().plusMinutes(tokenProperties.getAccessTokenExpire());
 
@@ -86,6 +94,8 @@ public class TokenService {
             kickOtherDevices(loginUser.getUserId(), tokenId);
         }
 
+        saveRefreshRememberState(refreshTokenId, rememberMe);
+
         return new TokenInfo()
                 .setAccessToken(accessToken)
                 .setRefreshToken(refreshToken)
@@ -93,10 +103,12 @@ public class TokenService {
                 .setUsername(loginUser.getUsername())
                 .setTokenId(tokenId)
                 .setDeviceId(normalizedDeviceId)
+                .setRefreshTokenId(refreshTokenId)
                 .setClientIp(clientIp)
                 .setUserAgent(userAgent)
                 .setCreatedAt(System.currentTimeMillis())
                 .setRefreshCount(0)
+                .setRememberMe(rememberMe)
                 .setExpireTime(expireTime);
     }
 
@@ -183,6 +195,7 @@ public class TokenService {
         }
 
         String username = claims.getStringClaim("username");
+        boolean rememberMe = loadRefreshRememberState(refreshTokenId);
         LoginUser loginUser;
         try {
             loginUser = loadLoginUser(username);
@@ -204,7 +217,7 @@ public class TokenService {
 
         TokenInfo tokenInfo;
         try {
-            tokenInfo = createToken(loginUser, normalizedDeviceId, clientIp, userAgent);
+            tokenInfo = createToken(loginUser, normalizedDeviceId, clientIp, userAgent, rememberMe);
         } catch (JOSEException e) {
             log.error("createToken failed after refresh consume, session degraded to access-only", e);
             throw e;
@@ -255,6 +268,76 @@ public class TokenService {
         log.info("强制下线用户 | UserId: {} | Count: {}", userId, tokens.size());
     }
 
+    /**
+     * 刷新用户会话缓存（不踢下线）
+     * <p>
+     * 适用于资料、角色、部门、权限变更场景：保留原 JWT 与会话字段，
+     * 仅重新加载 LoginUser 的权限/资料部分并回写 Redis，用户无感。
+     */
+    public void refreshUserCache(Long userId) {
+        if (userId == null) return;
+        String userKey = USER_TOKEN_PREFIX + userId;
+        Set<String> tokens = redisUtil.sMembers(userKey);
+        if (tokens == null || tokens.isEmpty()) return;
+
+        int refreshed = 0;
+        for (String tokenId : tokens) {
+            String tokenKey = buildAccessTokenKey(tokenId);
+            LoginUser oldUser = redisUtil.get(tokenKey);
+            if (oldUser == null) continue;
+
+            LoginUser fresh;
+            try {
+                fresh = loadLoginUser(oldUser.getUsername());
+            } catch (Exception e) {
+                log.warn("刷新用户缓存失败 | userId: {} | tokenId: {} | err: {}", userId, tokenId, e.getMessage());
+                continue;
+            }
+
+            // 保留原有会话字段（JWT、登录上下文），覆盖资料/权限字段
+            fresh.setTokenId(oldUser.getTokenId());
+            fresh.setRefreshTokenId(oldUser.getRefreshTokenId());
+            fresh.setLoginTime(oldUser.getLoginTime());
+            fresh.setExpireTime(oldUser.getExpireTime());
+            fresh.setLoginIp(oldUser.getLoginIp());
+            fresh.setLoginLocation(oldUser.getLoginLocation());
+            fresh.setBrowser(oldUser.getBrowser());
+            fresh.setOs(oldUser.getOs());
+
+            long ttl = redisUtil.getExpire(tokenKey);
+            if (ttl > 0) {
+                redisUtil.set(tokenKey, fresh, Duration.ofSeconds(ttl));
+                refreshed++;
+            }
+        }
+        log.info("刷新用户缓存 | userId: {} | tokenCount: {}", userId, refreshed);
+    }
+
+    public int getRefreshTokenExpireSeconds() {
+        return tokenProperties.getRefreshTokenExpire() * 60;
+    }
+
+    public void saveRefreshRememberState(String refreshTokenId, boolean rememberMe) {
+        if (StrUtil.isBlank(refreshTokenId)) {
+            return;
+        }
+
+        redisUtil.set(
+                buildRefreshRememberKey(refreshTokenId),
+                rememberMe,
+                Duration.ofMinutes(tokenProperties.getRefreshTokenExpire())
+        );
+    }
+
+    public boolean loadRefreshRememberState(String refreshTokenId) {
+        if (StrUtil.isBlank(refreshTokenId)) {
+            return false;
+        }
+
+        Boolean rememberMe = redisUtil.get(buildRefreshRememberKey(refreshTokenId));
+        return Boolean.TRUE.equals(rememberMe);
+    }
+
     private LoginUser loadLoginUser(String username) {
         UserDetails userDetails = userDetailsService.loadUserByUsername(username);
         if (!(userDetails instanceof LoginUser loginUser)) {
@@ -282,6 +365,7 @@ public class TokenService {
         }
         if (StrUtil.isNotBlank(refreshTokenId)) {
             redisUtil.delete(buildRefreshTokenKey(refreshTokenId));
+            redisUtil.delete(buildRefreshRememberKey(refreshTokenId));
         }
         redisUtil.delete(refreshMapKey);
 
@@ -314,7 +398,8 @@ public class TokenService {
     }
 
     private String generateRefreshToken(String tokenId, Long userId, String username,
-                                        String deviceId, String clientIp, String userAgent) throws JOSEException {
+                                        String deviceId, String clientIp, String userAgent,
+                                        boolean rememberMe) throws JOSEException {
         return generateJwtToken(tokenId, userId, username, deviceId, clientIp, userAgent,
                 tokenProperties.getRefreshTokenExpire());
     }
@@ -406,6 +491,10 @@ public class TokenService {
 
     private String buildRefreshMapKey(String tokenId) {
         return CommonConstants.REDIS_TOKEN_PREFIX + "refresh-map:" + tokenId;
+    }
+
+    private String buildRefreshRememberKey(String refreshTokenId) {
+        return REFRESH_REMEMBER_PREFIX + refreshTokenId;
     }
 
     private String buildUserMapKey(String tokenId) {

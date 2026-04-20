@@ -26,6 +26,20 @@ public interface SysRoleMenuMapper extends BaseMapper<SysRoleMenu> {
     int deleteByMenuId(@Param("menuId") Long menuId);
 
     /**
+     * 批量删除菜单的所有角色关联
+     */
+    @Delete("""
+            <script>
+            DELETE FROM sys_role_menu
+            WHERE menu_id IN
+            <foreach collection="menuIds" item="menuId" open="(" separator="," close=")">
+                #{menuId}
+            </foreach>
+            </script>
+            """)
+    int deleteByMenuIds(@Param("menuIds") List<Long> menuIds);
+
+    /**
      * 批量插入角色菜单关联
      */
     @Insert("""
@@ -43,4 +57,19 @@ public interface SysRoleMenuMapper extends BaseMapper<SysRoleMenu> {
      */
     @Select("SELECT DISTINCT role_id FROM sys_role_menu WHERE menu_id = #{menuId}")
     Set<Long> selectRoleIdsByMenuId(@Param("menuId") Long menuId);
+
+    /**
+     * 根据菜单ID集合查询关联的角色ID集合
+     */
+    @Select("""
+            <script>
+            SELECT DISTINCT role_id
+            FROM sys_role_menu
+            WHERE menu_id IN
+            <foreach collection="menuIds" item="menuId" open="(" separator="," close=")">
+                #{menuId}
+            </foreach>
+            </script>
+            """)
+    Set<Long> selectRoleIdsByMenuIds(@Param("menuIds") List<Long> menuIds);
 }

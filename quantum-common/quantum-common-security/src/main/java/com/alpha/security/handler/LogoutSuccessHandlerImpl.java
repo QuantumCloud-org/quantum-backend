@@ -5,6 +5,7 @@ import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.util.JsonUtil;
 import com.alpha.security.token.TokenService;
+import com.alpha.security.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
@@ -40,6 +41,7 @@ public class LogoutSuccessHandlerImpl implements LogoutSuccessHandler {
             }
         }
 
+        CookieUtil.clearRefreshCookie(response);
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");

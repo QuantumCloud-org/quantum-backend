@@ -1,5 +1,6 @@
 package com.alpha.system.service;
 
+import com.alpha.framework.entity.LoginUser;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserQuery;
 import com.mybatisflex.core.paginate.Page;
@@ -33,6 +34,11 @@ public interface ISysUserService extends IService<SysUser> {
     SysUser selectUserById(Long userId);
 
     /**
+     * 查询部门名称
+     */
+    String selectDeptNameById(Long deptId);
+
+    /**
      * 新增用户
      */
     Long insertUser(SysUser user, List<Long> roleIds);
@@ -50,12 +56,12 @@ public interface ISysUserService extends IService<SysUser> {
     /**
      * 重置密码
      */
-    boolean resetPassword(Long userId, String password);
+    boolean resetPassword(Long userId, Long version, String password);
 
     /**
      * 修改用户状态
      */
-    boolean updateStatus(Long userId, Integer status);
+    boolean updateStatus(Long userId, Long version, Integer status);
 
     /**
      * 检查用户名是否唯一
@@ -75,7 +81,7 @@ public interface ISysUserService extends IService<SysUser> {
     /**
      * 更新用户登录信息
      */
-    void updateLoginInfo(Long userId, String ip);
+    void updateLoginInfo(Long userId, LoginUser loginUser);
 
     /**
      * 导入用户

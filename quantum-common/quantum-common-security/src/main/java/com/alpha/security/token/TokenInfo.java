@@ -60,6 +60,11 @@ public class TokenInfo implements Serializable {
     private String deviceId;
 
     /**
+     * Refresh Token ID（JWT 的 jti 字段）
+     */
+    private String refreshTokenId;
+
+    /**
      * 客户端 IP
      */
     private String clientIp;
@@ -78,4 +83,11 @@ public class TokenInfo implements Serializable {
      * 刷新次数
      */
     private Integer refreshCount;
+
+    /**
+     * 是否持久化会话。
+     * true: refresh cookie 带 Max-Age
+     * false: Session Cookie
+     */
+    private Boolean rememberMe;
 }

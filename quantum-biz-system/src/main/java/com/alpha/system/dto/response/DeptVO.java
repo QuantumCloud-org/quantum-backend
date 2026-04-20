@@ -1,24 +1,27 @@
 package com.alpha.system.dto.response;
 
 import com.alpha.framework.enums.SensitiveStrategy;
-import com.alpha.orm.entity.BaseEntity;
 import com.alpha.security.annotation.Sensitive;
 import lombok.Data;
-import lombok.EqualsAndHashCode;
 
 import java.io.Serial;
 import java.io.Serializable;
+import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 部门视图对象
  */
 @Data
-@EqualsAndHashCode(callSuper = true)
-public class DeptVO extends BaseEntity implements Serializable {
+public class DeptVO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
+
+    /**
+     * 部门ID
+     */
+    private Long id;
 
     /**
      * 子部门（非数据库字段）
@@ -66,4 +69,9 @@ public class DeptVO extends BaseEntity implements Serializable {
      * 状态（0-禁用 1-正常）
      */
     private Integer status;
+
+    /**
+     * 创建时间
+     */
+    private LocalDateTime createTime;
 }

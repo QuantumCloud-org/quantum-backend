@@ -28,11 +28,14 @@ import org.springframework.web.context.request.RequestContextHolder;
 import org.springframework.web.context.request.ServletRequestAttributes;
 import org.springframework.web.multipart.MultipartFile;
 import tools.jackson.databind.ObjectMapper;
+import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.cfg.MapperConfig;
 import tools.jackson.databind.introspect.Annotated;
 import tools.jackson.databind.introspect.JacksonAnnotationIntrospector;
 import tools.jackson.databind.json.JsonMapper;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.ObjectNode;
 import tools.jackson.databind.ser.std.SimpleFilterProvider;
 
 import java.time.LocalDateTime;
@@ -182,6 +185,7 @@ public class LogAspect {
         }
 
         Set<String> excludeSet = buildExcludeSet(excludeParams);
+        Set<String> sensitiveFields = buildSensitiveFieldSet();
 
         Map<String, Object> params = new LinkedHashMap<>();
         for (int i = 0; i < paramNames.length; i++) {
@@ -209,19 +213,22 @@ public class LogAspect {
                 continue;
             }
 
-            params.put(paramName, arg);
+            params.put(paramName, sanitizeRequestParamValue(arg, sensitiveFields));
         }
 
-        return serializeSensitiveAware(params);
+        return jsonUtil.toJson(params);
     }
 
+    /**
+     * 构建顶层方法参数 mask 名单。
+     * <p>
+     * 这里只处理方法参数名级别的显式排除；对象内部的敏感字段由
+     * {@link #sanitizeRequestParamValue(Object, Set)} 递归改写为
+     * {@code [PROTECTED]}，避免和响应结果的 {@link SensitiveFieldFilter}
+     * “直接删 key” 语义冲突。
+     */
     private Set<String> buildExcludeSet(String[] excludeParams) {
         Set<String> excludeSet = new LinkedHashSet<>();
-        for (String field : operLogProperties.getSensitiveFields()) {
-            if (field != null && !field.isBlank()) {
-                excludeSet.add(field.toLowerCase(Locale.ROOT));
-            }
-        }
         if (excludeParams != null) {
             for (String field : excludeParams) {
                 if (field != null && !field.isBlank()) {
@@ -230,6 +237,16 @@ public class LogAspect {
             }
         }
         return excludeSet;
+    }
+
+    private Set<String> buildSensitiveFieldSet() {
+        Set<String> sensitiveFieldSet = new LinkedHashSet<>();
+        for (String field : operLogProperties.getSensitiveFields()) {
+            if (field != null && !field.isBlank()) {
+                sensitiveFieldSet.add(field.toLowerCase(Locale.ROOT));
+            }
+        }
+        return sensitiveFieldSet;
     }
 
     private String serializeSensitiveAware(Object value) {
@@ -261,6 +278,44 @@ public class LogAspect {
         });
         builder.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
         return builder.build();
+    }
+
+    private Object sanitizeRequestParamValue(Object value, Set<String> sensitiveFields) {
+        if (value == null) {
+            return null;
+        }
+        try {
+            JsonNode tree = jsonUtil.getObjectMapper().valueToTree(value);
+            return sanitizeRequestJsonNode(tree, sensitiveFields);
+        } catch (IllegalArgumentException e) {
+            log.debug("请求参数脱敏失败，回退原值 | type={}", value.getClass().getName(), e);
+            return value;
+        }
+    }
+
+    private JsonNode sanitizeRequestJsonNode(JsonNode node, Set<String> sensitiveFields) {
+        if (node == null || node.isNull() || node.isValueNode()) {
+            return node;
+        }
+        if (node.isObject()) {
+            ObjectNode objectNode = ((ObjectNode) node).deepCopy();
+            for (String fieldName : new ArrayList<>(objectNode.propertyNames())) {
+                if (sensitiveFields.contains(fieldName.toLowerCase(Locale.ROOT))) {
+                    objectNode.put(fieldName, "[PROTECTED]");
+                    continue;
+                }
+                objectNode.set(fieldName, sanitizeRequestJsonNode(objectNode.get(fieldName), sensitiveFields));
+            }
+            return objectNode;
+        }
+        if (node.isArray()) {
+            ArrayNode arrayNode = ((ArrayNode) node).deepCopy();
+            for (int i = 0; i < arrayNode.size(); i++) {
+                arrayNode.set(i, sanitizeRequestJsonNode(arrayNode.get(i), sensitiveFields));
+            }
+            return arrayNode;
+        }
+        return node;
     }
 
     private boolean isExcludedType(Object arg) {

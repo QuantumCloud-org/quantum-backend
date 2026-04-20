@@ -47,6 +47,12 @@ springdoc:
   swagger-ui:
     enabled: false
 
+security:
+  trusted-proxies:
+    cidrs:
+      - 10.0.0.0/8
+      - 172.16.0.0/12
+
 logging:
   level:
     root: WARN

@@ -9,13 +9,15 @@ import com.alpha.system.dto.request.RoleQuery;
 import com.alpha.system.mapper.SysRoleDeptMapper;
 import com.alpha.system.mapper.SysRoleMapper;
 import com.alpha.system.mapper.SysRoleMenuMapper;
+import com.alpha.system.mapper.SysUserRoleMapper;
 import com.alpha.system.service.ISysRoleService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.alpha.system.security.RoleSessionInvalidationEvent;
+import com.alpha.system.security.UserCacheRefreshEvent;
+import cn.hutool.core.collection.CollUtil;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -36,6 +38,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     private final SysRoleMapper roleMapper;
     private final SysRoleMenuMapper roleMenuMapper;
     private final SysRoleDeptMapper roleDeptMapper;
+    private final SysUserRoleMapper userRoleMapper;
     private final ApplicationEventPublisher eventPublisher;
 
     @Override
@@ -113,8 +116,22 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             throw new BizException("角色标识已存在");
         }
 
-        // 更新角色
-        updateById(role);
+        SysRole oldRole = getById(role.getId());
+        if (oldRole == null) {
+            throw new BizException("角色不存在");
+        }
+
+        oldRole.setRoleName(role.getRoleName());
+        oldRole.setRoleKey(role.getRoleKey());
+        oldRole.setOrderNum(role.getOrderNum());
+        oldRole.setDataScope(role.getDataScope());
+        oldRole.setStatus(role.getStatus());
+        oldRole.setRemark(role.getRemark());
+
+        boolean updated = updateById(oldRole);
+        if (!updated) {
+            throw new BizException("角色信息已变更，请刷新后重试");
+        }
 
         // 更新角色菜单关联
         if (menuIds != null) {
@@ -127,13 +144,16 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         // 更新角色部门关联
         if (deptIds != null) {
             roleDeptMapper.deleteByRoleId(role.getId());
-            if (role.getDataScope() != null && role.getDataScope() == 4 && CollUtil.isNotEmpty(deptIds)) {
+            if (oldRole.getDataScope() != null && oldRole.getDataScope() == 4 && CollUtil.isNotEmpty(deptIds)) {
                 roleDeptMapper.batchInsert(role.getId(), deptIds);
             }
         }
 
-        // 角色变更后失效关联用户会话
-        eventPublisher.publishEvent(new RoleSessionInvalidationEvent(role.getId()));
+        // 角色变更后刷新关联用户缓存
+        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(role.getId());
+        if (CollUtil.isNotEmpty(affectedUserIds)) {
+            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
+        }
         return true;
     }
 
@@ -145,14 +165,20 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         }
         checkRoleAllowed(roleId);
 
-        SysRole role = new SysRole();
-        role.setId(roleId);
-        role.setStatus(status);
-        boolean result = updateById(role);
-        if (result) {
-            eventPublisher.publishEvent(new RoleSessionInvalidationEvent(roleId));
+        SysRole oldRole = getById(roleId);
+        if (oldRole == null) {
+            throw new BizException("角色不存在");
         }
-        return result;
+        oldRole.setStatus(status);
+        boolean result = updateById(oldRole);
+        if (!result) {
+            throw new BizException("角色状态更新失败，请刷新后重试");
+        }
+        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(roleId);
+        if (CollUtil.isNotEmpty(affectedUserIds)) {
+            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
+        }
+        return true;
     }
 
     @Override
@@ -163,10 +189,15 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         }
         checkRoleAllowed(roleId);
 
-        SysRole role = new SysRole();
-        role.setId(roleId);
-        role.setDataScope(dataScope);
-        updateById(role);
+        SysRole oldRole = getById(roleId);
+        if (oldRole == null) {
+            throw new BizException("角色不存在");
+        }
+        oldRole.setDataScope(dataScope);
+        boolean updated = updateById(oldRole);
+        if (!updated) {
+            throw new BizException("数据权限更新失败，请刷新后重试");
+        }
 
         // 更新角色部门关联
         roleDeptMapper.deleteByRoleId(roleId);
@@ -174,8 +205,11 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             roleDeptMapper.batchInsert(roleId, deptIds);
         }
 
-        // 数据权限变更后失效关联用户会话
-        eventPublisher.publishEvent(new RoleSessionInvalidationEvent(roleId));
+        // 数据权限变更后刷新关联用户缓存
+        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(roleId);
+        if (CollUtil.isNotEmpty(affectedUserIds)) {
+            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
+        }
         return true;
     }
 

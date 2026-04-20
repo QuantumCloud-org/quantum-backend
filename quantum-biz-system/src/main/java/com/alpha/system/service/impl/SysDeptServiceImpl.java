@@ -94,9 +94,15 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         }
 
         SysDept oldDept = getById(dept.getId());
+        if (oldDept == null) {
+            throw new BizException("部门不存在");
+        }
+
+        Long originalParentId = oldDept.getParentId();
+        String originalAncestors = oldDept.getAncestors();
 
         // 如果父部门变更，更新祖级列表
-        if (!java.util.Objects.equals(oldDept.getParentId(), dept.getParentId())) {
+        if (!java.util.Objects.equals(originalParentId, dept.getParentId())) {
             String newAncestors;
             if (dept.getParentId() == 0) {
                 newAncestors = "0";
@@ -111,15 +117,26 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
                 }
                 newAncestors = newParent.getAncestors() + "," + dept.getParentId();
             }
-            dept.setAncestors(newAncestors);
+            oldDept.setAncestors(newAncestors);
 
             // 更新子部门的祖级列表
-            String oldAncestors = oldDept.getAncestors() + "," + oldDept.getId();
+            String oldAncestors = originalAncestors + "," + oldDept.getId();
             String newChildAncestors = newAncestors + "," + dept.getId();
             deptMapper.updateChildrenAncestors(oldAncestors, newChildAncestors);
         }
+        oldDept.setParentId(dept.getParentId());
+        oldDept.setDeptName(dept.getDeptName());
+        oldDept.setOrderNum(dept.getOrderNum());
+        oldDept.setLeader(dept.getLeader());
+        oldDept.setPhone(dept.getPhone());
+        oldDept.setEmail(dept.getEmail());
+        oldDept.setStatus(dept.getStatus());
 
-        return updateById(dept);
+        boolean updated = updateById(oldDept);
+        if (!updated) {
+            throw new BizException("部门信息已变更，请刷新后重试");
+        }
+        return true;
     }
 
     @Override
@@ -158,9 +175,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     private TreeSelectVO convertToTreeSelect(SysDept dept) {
         TreeSelectVO treeSelect = TreeSelectVO.fromDept(dept);
         if (CollUtil.isNotEmpty(dept.getChildren())) {
-            List<TreeSelectVO> children = dept.getChildren().stream()
-                    .map(this::convertToTreeSelect)
-                    .toList();
+            List<TreeSelectVO> children = dept.getChildren().stream().map(this::convertToTreeSelect).toList();
             treeSelect.setChildren(children);
         }
         return treeSelect;

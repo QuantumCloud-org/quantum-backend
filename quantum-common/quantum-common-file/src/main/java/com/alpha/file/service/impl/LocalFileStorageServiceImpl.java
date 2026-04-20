@@ -21,6 +21,9 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.Date;
@@ -57,10 +60,15 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         FileUtils.validatePath(path, basePath);
         String datePath = DateUtil.format(new Date(), "yyyy/MM/dd");
         String storagePath = StrUtil.isNotBlank(path) ? path : datePath;
-        String fullPath = basePath + "/" + storagePath;
+        Path directoryPath = Paths.get(basePath, storagePath).normalize();
 
         // 3. 确保目录存在
-        FileUtil.mkdir(fullPath);
+        try {
+            Files.createDirectories(directoryPath);
+        } catch (IOException e) {
+            log.error("创建文件目录失败: {}", directoryPath, e);
+            throw new BizException("文件上传失败: 无法创建存储目录");
+        }
 
         // 4. 生成文件名
         String originalName = file.getOriginalFilename();
@@ -70,16 +78,18 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
                 : IdUtil.fastSimpleUUID() + "." + extension;
 
         // 5. 保存文件
-        String filePath = fullPath + "/" + storageName;
+        Path targetPath = directoryPath.resolve(storageName).normalize();
+        String filePath = targetPath.toString();
         try {
-            file.transferTo(new File(filePath));
+            Files.createDirectories(targetPath.getParent());
+            file.transferTo(targetPath);
         } catch (IOException e) {
             log.error("文件保存失败: {}", e.getMessage(), e);
-            throw new BizException("文件上传失败");
+            throw new BizException("文件上传失败: " + e.getMessage());
         }
 
         // 6. 计算 MD5
-        String md5 = DigestUtil.md5Hex(new File(filePath));
+        String md5 = DigestUtil.md5Hex(targetPath.toFile());
 
         // 7. 构建返回信息
         FileInfo fileInfo = new FileInfo();

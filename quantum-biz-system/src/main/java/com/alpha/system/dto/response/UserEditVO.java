@@ -1,19 +1,16 @@
 package com.alpha.system.dto.response;
 
-import com.alpha.framework.enums.SensitiveStrategy;
-import com.alpha.security.annotation.Sensitive;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.time.LocalDateTime;
-import java.util.Set;
 
 /**
- * 用户视图对象
+ * 用户编辑视图对象
  */
 @Data
-public class UserVO implements Serializable {
+public class UserEditVO implements Serializable {
 
     @Serial
     private static final long serialVersionUID = 1L;
@@ -24,7 +21,7 @@ public class UserVO implements Serializable {
     private Long id;
 
     /**
-     * 版本号
+     * 乐观锁版本号
      */
     private Long version;
 
@@ -41,13 +38,11 @@ public class UserVO implements Serializable {
     /**
      * 邮箱
      */
-    @Sensitive(SensitiveStrategy.EMAIL)
     private String email;
 
     /**
      * 手机号
      */
-    @Sensitive(SensitiveStrategy.PHONE)
     private String phone;
 
     /**
@@ -61,6 +56,11 @@ public class UserVO implements Serializable {
     private Integer sex;
 
     /**
+     * 部门ID
+     */
+    private Long deptId;
+
+    /**
      * 部门名称
      */
     private String deptName;
@@ -69,6 +69,11 @@ public class UserVO implements Serializable {
      * 状态（0-禁用 1-正常）
      */
     private Integer status;
+
+    /**
+     * 备注
+     */
+    private String remark;
 
     /**
      * 登录IP
@@ -86,23 +91,7 @@ public class UserVO implements Serializable {
     private LocalDateTime loginDate;
 
     /**
-     * 备注
-     */
-    private String remark;
-
-    /**
      * 创建时间
      */
     private LocalDateTime createTime;
-
-    /**
-     * 角色列表
-     */
-    private Set<String> roles;
-
-    /**
-     * 权限标识列表
-     */
-    private Set<String> permissions;
-
 }

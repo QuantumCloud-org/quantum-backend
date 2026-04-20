@@ -77,13 +77,16 @@ public class ServerInfo implements Serializable {
         // JVM 内存
         MemoryMXBean memoryMXBean = ManagementFactory.getMemoryMXBean();
         long heapUsed = memoryMXBean.getHeapMemoryUsage().getUsed();
+        long heapCommitted = memoryMXBean.getHeapMemoryUsage().getCommitted();
         long heapMax = memoryMXBean.getHeapMemoryUsage().getMax();
-        long nonHeapUsed = memoryMXBean.getNonHeapMemoryUsage().getUsed();
 
-        jvm.setTotal(formatByte(heapMax));
+        jvm.setTotal(formatByte(heapCommitted));
+        jvm.setMax(formatByte(heapMax));
         jvm.setUsed(formatByte(heapUsed));
-        jvm.setFree(formatByte(heapMax - heapUsed));
-        jvm.setUsage(NumberUtil.round((double) heapUsed / heapMax * 100, 2).doubleValue());
+        jvm.setFree(formatByte(Math.max(heapMax - heapUsed, 0)));
+        jvm.setUsage(heapMax > 0
+                ? NumberUtil.round((double) heapUsed / heapMax * 100, 2).doubleValue()
+                : 0D);
     }
 
     private void collectMemInfo() {

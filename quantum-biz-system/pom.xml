@@ -5,7 +5,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.alpha</groupId>
-        <artifactId>quantum-backend</artifactId>
+        <artifactId>talent_manger_backend</artifactId>
         <version>${revision}</version>
     </parent>
 

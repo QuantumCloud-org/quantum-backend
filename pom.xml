@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alpha</groupId>
-    <artifactId>quantum-backend</artifactId>
+    <artifactId> quantum_backend</artifactId>
     <version>${revision}</version>
-    <name>quantum-backend</name>
-    <description>基础开发脚手架</description>
+    <name>talent_manger</name>
+    <description>后端基础开发框架</description>
     <packaging>pom</packaging>
 
     <modules>
@@ -201,7 +201,7 @@
         </dependency>
     </dependencies>
     <build>
-        <finalName>${project.artifactId}</finalName>
+        <finalName>${project.name}</finalName>
         <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>

@@ -12,7 +12,9 @@ import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.ResetPasswordRequest;
 import com.alpha.system.dto.request.UserCreateRequest;
 import com.alpha.system.dto.request.UserQuery;
+import com.alpha.system.dto.request.UserStatusUpdateRequest;
 import com.alpha.system.dto.request.UserUpdateRequest;
+import com.alpha.system.dto.response.UserEditVO;
 import com.alpha.system.dto.response.UserExportVO;
 import com.alpha.system.dto.response.UserVO;
 import com.alpha.system.service.ISysRoleService;
@@ -59,9 +61,13 @@ public class SysUserController {
     @SystemLog(title = "用户管理", businessType = BusinessType.SELECT)
     @RequiresPermission("system:user:query")
     @GetMapping("/{userId}")
-    public Result<UserVO> getInfo(@PathVariable Long userId) {
+    public Result<UserEditVO> getInfo(@PathVariable Long userId) {
         SysUser user = userService.selectUserById(userId);
-        return Result.ok(userConvert.toVO(user));
+        UserEditVO vo = userConvert.toEditVO(user);
+        if (vo != null && vo.getDeptId() != null) {
+            vo.setDeptName(userService.selectDeptNameById(vo.getDeptId()));
+        }
+        return Result.ok(vo);
     }
 
     @Operation(summary = "新增用户")
@@ -97,7 +103,7 @@ public class SysUserController {
     @RequiresPermission("system:user:resetPwd")
     @PutMapping("/resetPwd")
     public Result<Void> resetPwd(@Validated @RequestBody ResetPasswordRequest request) {
-        userService.resetPassword(request.getUserId(), request.getPassword());
+        userService.resetPassword(request.getUserId(), request.getVersion(), request.getPassword());
         return Result.ok();
     }
 
@@ -105,8 +111,8 @@ public class SysUserController {
     @SystemLog(title = "用户管理", businessType = BusinessType.UPDATE)
     @RequiresPermission("system:user:edit")
     @PutMapping("/changeStatus")
-    public Result<Void> changeStatus(@RequestParam Long userId, @RequestParam Integer status) {
-        userService.updateStatus(userId, status);
+    public Result<Void> changeStatus(@Validated @RequestBody UserStatusUpdateRequest request) {
+        userService.updateStatus(request.getUserId(), request.getVersion(), request.getStatus());
         return Result.ok();
     }
 

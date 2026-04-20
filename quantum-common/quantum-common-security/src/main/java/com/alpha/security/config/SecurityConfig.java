@@ -73,7 +73,7 @@ public class SecurityConfig {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder(11);
+        return new BCryptPasswordEncoder();
     }
 
     /**
@@ -186,7 +186,7 @@ public class SecurityConfig {
         config.setAllowedOriginPatterns(securityProperties.getCorsAllowedOrigins());
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
-        config.setExposedHeaders(Arrays.asList("Authorization", "X-Trace-Id", "X-Refresh-Token"));
+        config.setExposedHeaders(Arrays.asList("Authorization", "X-Trace-Id"));
         config.setAllowCredentials(true);
         config.setMaxAge(3600L);
 

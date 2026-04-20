@@ -1,36 +1,42 @@
 package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.entity.LoginUser;
+import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
 import com.alpha.orm.enums.DataScopeType;
 import com.alpha.orm.interceptor.DataPermissionInterceptor;
 import com.alpha.orm.permission.DataScope;
 import com.alpha.security.config.SecurityProperties;
+import com.alpha.system.domain.SysDept;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserQuery;
 import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.mapper.SysUserMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
+import com.alpha.system.security.ForceLogoutEvent;
+import com.alpha.system.security.UserCacheRefreshEvent;
 import com.alpha.system.service.ISysUserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.alpha.system.security.SessionInvalidationEvent;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.LinkedHashSet;
 import java.util.List;
-import java.util.Objects;
+import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
+import static com.alpha.system.domain.table.SysDeptTableDef.SYS_DEPT;
 import static com.alpha.system.domain.table.SysUserTableDef.SYS_USER;
 
 /**
@@ -41,6 +47,7 @@ import static com.alpha.system.domain.table.SysUserTableDef.SYS_USER;
 @RequiredArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
 
+    private final static String first_pass = "123456";
     private final SysUserMapper userMapper;
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -53,7 +60,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     public Page<SysUser> selectUserPage(UserQuery query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         DataPermissionInterceptor.applyDataScope(wrapper, "");
-        return page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        Page<SysUser> pageResult =
+                page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+        fillDeptNames(pageResult.getRecords());
+        return pageResult;
     }
 
     @Override
@@ -61,7 +71,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     public List<SysUser> selectUserList(UserQuery query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         DataPermissionInterceptor.applyDataScope(wrapper, "");
-        return list(wrapper);
+        List<SysUser> users = list(wrapper);
+        fillDeptNames(users);
+        return users;
     }
 
     @Override
@@ -72,6 +84,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     @Override
     public SysUser selectUserById(Long userId) {
         return getById(userId);
+    }
+
+    @Override
+    public String selectDeptNameById(Long deptId) {
+        if (deptId == null) {
+            return null;
+        }
+        return userMapper.selectDeptNameById(deptId);
     }
 
     @Override
@@ -93,7 +113,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         validatePassword(user.getPassword());
 
         // 加密密码
-        user.setPassword(passwordEncoder.encode(user.getPassword()));
+        user.setPassword(passwordEncoder.encode(user.getUsername() + user.getPassword()));
 
         // 保存用户
         save(user);
@@ -119,26 +139,26 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
 
         SysUser oldUser = getById(user.getId());
-        boolean deptChanged = oldUser != null && !Objects.equals(oldUser.getDeptId(), user.getDeptId());
+        if (oldUser == null) {
+            throw new BizException("用户不存在");
+        }
 
         // 更新用户
-        updateById(user);
+        boolean updated = updateById(user);
+        if (!updated) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "用户信息已变更，请刷新后重试");
+        }
 
         // 更新用户角色关联
-        boolean roleChanged = false;
         if (roleIds != null) {
             userRoleMapper.deleteByUserId(user.getId());
             if (CollUtil.isNotEmpty(roleIds)) {
                 userRoleMapper.batchInsert(user.getId(), roleIds);
             }
-            roleChanged = true;
         }
 
-        // 角色、状态或部门变更时失效会话
-        if (roleChanged || user.getStatus() != null || deptChanged) {
-            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(user.getId())));
-        }
-
+        // 资料/角色/部门变更时刷新缓存
+        eventPublisher.publishEvent(new UserCacheRefreshEvent(Set.of(user.getId())));
         return true;
     }
 
@@ -158,28 +178,36 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         // 逻辑删除用户
         boolean result = removeByIds(userIds);
         if (result) {
-            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.copyOf(userIds)));
+            eventPublisher.publishEvent(new ForceLogoutEvent(Set.copyOf(userIds)));
         }
         return result;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean resetPassword(Long userId, String password) {
+    public boolean resetPassword(Long userId, Long version, String password) {
         validatePassword(password);
+        SysUser existUser = getById(userId);
+        if (existUser == null) {
+            throw new BizException("用户不存在");
+        }
         SysUser user = new SysUser();
         user.setId(userId);
-        user.setPassword(passwordEncoder.encode(password));
+        user.setPassword(passwordEncoder.encode(existUser.getUsername() + password));
+        user.setVersion(version);
         boolean result = updateById(user);
+        if (!result) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "用户信息已变更，请刷新后重试");
+        }
         if (result) {
-            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(userId)));
+            eventPublisher.publishEvent(new ForceLogoutEvent(Set.of(userId)));
         }
         return result;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public boolean updateStatus(Long userId, Integer status) {
+    public boolean updateStatus(Long userId, Long version, Integer status) {
         if (status != 0 && status != 1) {
             throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
         }
@@ -188,12 +216,25 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BizException("不能禁用超级管理员");
         }
 
+        SysUser existUser = getById(userId);
+        if (existUser == null) {
+            throw new BizException("用户不存在");
+        }
+
         SysUser user = new SysUser();
         user.setId(userId);
         user.setStatus(status);
+        user.setVersion(version);
         boolean result = updateById(user);
+        if (!result) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "用户状态已变更，请刷新后重试");
+        }
         if (result) {
-            eventPublisher.publishEvent(new SessionInvalidationEvent(Set.of(userId)));
+            if (CommonConstants.STATUS_DISABLE.equals(status)) {
+                eventPublisher.publishEvent(new ForceLogoutEvent(Set.of(userId)));
+            } else {
+                eventPublisher.publishEvent(new UserCacheRefreshEvent(Set.of(userId)));
+            }
         }
         return result;
     }
@@ -214,12 +255,15 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     }
 
     @Override
-    public void updateLoginInfo(Long userId, String ip) {
-        SysUser user = new SysUser();
-        user.setId(userId);
-        user.setLoginIp(ip);
-        user.setLoginDate(LocalDateTime.now());
-        updateById(user);
+    public void updateLoginInfo(Long userId, LoginUser loginUser) {
+        SysUser existUser = getById(userId);
+        if (existUser == null) {
+            return;
+        }
+        existUser.setLoginIp(loginUser.getLoginIp());
+        existUser.setLoginLocation(loginUser.getLoginLocation());
+        existUser.setLoginDate(LocalDateTime.now());
+        updateById(existUser);
     }
 
     @Override
@@ -239,28 +283,25 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
                 SysUser existUser = selectByUsername(user.getUsername());
                 if (existUser == null) {
                     // 新增
-                    user.setPassword(passwordEncoder.encode(RandomUtil.randomString(8)));
+                    user.setPassword(passwordEncoder.encode(user.getUsername() + first_pass));
                     save(user);
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append("、账号 ")
-                            .append(user.getUsername()).append(" 导入成功");
+                    successMsg.append("<br/>").append(successNum).append("、账号 ").append(user.getUsername()).append(" 导入成功");
                 } else if (updateSupport) {
                     // 更新
                     user.setId(existUser.getId());
                     user.setPassword(null);
+                    user.setVersion(existUser.getVersion());
                     updateById(user);
                     successNum++;
-                    successMsg.append("<br/>").append(successNum).append("、账号 ")
-                            .append(user.getUsername()).append(" 更新成功");
+                    successMsg.append("<br/>").append(successNum).append("、账号 ").append(user.getUsername()).append(" 更新成功");
                 } else {
                     failureNum++;
-                    failureMsg.append("<br/>").append(failureNum).append("、账号 ")
-                            .append(user.getUsername()).append(" 已存在");
+                    failureMsg.append("<br/>").append(failureNum).append("、账号 ").append(user.getUsername()).append(" 已存在");
                 }
             } catch (Exception e) {
                 failureNum++;
-                failureMsg.append("<br/>").append(failureNum).append("、账号 ")
-                        .append(user.getUsername()).append(" 导入失败：").append(e.getMessage());
+                failureMsg.append("<br/>").append(failureNum).append("、账号 ").append(user.getUsername()).append(" 导入失败：").append(e.getMessage());
             }
         }
 
@@ -286,8 +327,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (StrUtil.isNotBlank(query.getNickname())) {
             wrapper.and(SYS_USER.NICKNAME.like(query.getNickname()));
         }
+        if (StrUtil.isNotBlank(query.getEmail())) {
+            wrapper.and(SYS_USER.EMAIL.like(query.getEmail()));
+        }
         if (StrUtil.isNotBlank(query.getPhone())) {
             wrapper.and(SYS_USER.PHONE.like(query.getPhone()));
+        }
+        if (query.getSex() != null) {
+            wrapper.and(SYS_USER.SEX.eq(query.getSex()));
         }
         if (query.getStatus() != null) {
             wrapper.and(SYS_USER.STATUS.eq(query.getStatus()));
@@ -308,6 +355,31 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         return wrapper;
     }
 
+    private void fillDeptNames(List<SysUser> users) {
+        if (CollUtil.isEmpty(users)) {
+            return;
+        }
+
+        Set<Long> deptIds = users.stream()
+                .map(SysUser::getDeptId)
+                .filter(id -> id != null && id > 0)
+                .collect(Collectors.toCollection(LinkedHashSet::new));
+
+        if (deptIds.isEmpty()) {
+            return;
+        }
+
+        QueryWrapper wrapper = QueryWrapper.create()
+                .select(SYS_DEPT.ID, SYS_DEPT.DEPT_NAME)
+                .where(SYS_DEPT.ID.in(deptIds))
+                .and(SYS_DEPT.DELETED.eq(0));
+
+        Map<Long, String> deptNameMap = deptMapper.selectListByQuery(wrapper).stream()
+                .collect(Collectors.toMap(SysDept::getId, SysDept::getDeptName, (left, right) -> left));
+
+        users.forEach(user -> user.setDeptName(deptNameMap.get(user.getDeptId())));
+    }
+
     private void validatePassword(String password) {
         if (StrUtil.isBlank(password)) {
             throw new BizException("密码不能为空");
@@ -315,8 +387,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         int length = password.length();
         if (length < securityProperties.getPasswordMinLength() || length > securityProperties.getPasswordMaxLength()) {
-            throw new BizException(String.format("密码长度必须在%d-%d位之间",
-                    securityProperties.getPasswordMinLength(), securityProperties.getPasswordMaxLength()));
+            throw new BizException(String.format("密码长度必须在%d-%d位之间", securityProperties.getPasswordMinLength(), securityProperties.getPasswordMaxLength()));
         }
     }
+
 }

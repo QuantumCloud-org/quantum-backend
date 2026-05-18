@@ -22,13 +22,13 @@ public class TokenProperties {
     /**
      * Access Token 有效期（分钟）
      */
-    private int accessTokenExpire = 10;
+    private int accessTokenExpire = 240;
 
     /**
      * Refresh Token 有效期（分钟）
      * 默认30分钟
      */
-    private int refreshTokenExpire = 30;
+    private int refreshTokenExpire = 240;
 
     /**
      * Token 自动续期阈值（百分比 0-1）
@@ -46,7 +46,7 @@ public class TokenProperties {
      * 是否验证 IP 和 User-Agent
      * 启用后，RefreshToken 使用时的 IP/UA 必须与登录时一致
      */
-    private boolean verifyClientInfo = true;
+    private boolean verifyClientInfo = false;
 
     @PostConstruct
     public void validate() {

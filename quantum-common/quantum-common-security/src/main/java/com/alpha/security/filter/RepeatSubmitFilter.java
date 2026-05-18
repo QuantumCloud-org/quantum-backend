@@ -2,7 +2,7 @@ package com.alpha.security.filter;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.crypto.digest.DigestUtil;
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.enums.ResultCode;
@@ -42,7 +42,7 @@ public class RepeatSubmitFilter extends OncePerRequestFilter {
 
     private static final String REPEAT_SUBMIT_KEY = "repeat:submit:";
 
-    private final RedisUtil redisUtil;
+    private final CacheClient cacheClient;
     private final JsonUtil jsonUtil;
     private final SecurityProperties securityProperties;
 
@@ -51,7 +51,7 @@ public class RepeatSubmitFilter extends OncePerRequestFilter {
         // 生成请求唯一标识
         String key = generateKey(request);
 
-        boolean isRepeat = !redisUtil.setIfAbsent(key, "1", Duration.ofSeconds(securityProperties.getRepeatSubmitInterval()));
+        boolean isRepeat = !cacheClient.setIfAbsent(key, "1", Duration.ofSeconds(securityProperties.getRepeatSubmitInterval()));
 
         if (isRepeat) {
             log.warn("重复提交 | URI: {} | User: {} | IP: {}", request.getRequestURI(), UserContext.getUserId(), UserContext.getIp());

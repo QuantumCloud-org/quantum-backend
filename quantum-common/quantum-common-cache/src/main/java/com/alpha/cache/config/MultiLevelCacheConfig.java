@@ -10,6 +10,7 @@ import org.jspecify.annotations.NonNull;
 import org.redisson.api.RLock;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 @Configuration(proxyBeanMethods = false)
 @EnableCaching
 @ConditionalOnBean(RedissonClient.class)
+@ConditionalOnProperty(name = "cache.mode", havingValue = "redis", matchIfMissing = true)
 @DependsOn("redisson")
 public class MultiLevelCacheConfig {
 

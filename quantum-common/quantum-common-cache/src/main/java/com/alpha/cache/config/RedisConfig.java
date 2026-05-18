@@ -9,12 +9,14 @@ import org.redisson.api.RedissonClient;
 import org.redisson.codec.JsonJacksonCodec;
 import org.redisson.config.SingleServerConfig;
 import org.redisson.spring.starter.RedissonAutoConfigurationCustomizer;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @RequiredArgsConstructor
+@ConditionalOnProperty(name = "cache.mode", havingValue = "redis", matchIfMissing = true)
 public class RedisConfig {
 
     private final RedissonPoolProperties poolProperties;

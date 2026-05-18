@@ -36,3 +36,4 @@ logs/
 /docs/.ai_state/
 /docs/superpowers/*
 /.m2/*
+.DS_Store

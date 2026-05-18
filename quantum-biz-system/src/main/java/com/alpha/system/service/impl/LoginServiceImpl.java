@@ -4,7 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.useragent.UserAgent;
 import cn.hutool.http.useragent.UserAgentUtil;
 import com.alpha.cache.constant.CacheKeyConstant;
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
@@ -39,7 +39,7 @@ public class LoginServiceImpl {
 
     private final AuthenticationManager authenticationManager;
     private final TokenService tokenService;
-    private final RedisUtil redisUtil;
+    private final CacheClient cacheClient;
     private final SecurityProperties securityProperties;
     private final ISysLoginLogService loginLogService;
     private final ICaptchaService captchaService;
@@ -131,11 +131,12 @@ public class LoginServiceImpl {
      */
     private void checkAccountLock(String username) {
         String lockKey = CacheKeyConstant.AUTH_LOGIN_FAIL + username;
-        Integer failCount = redisUtil.get(lockKey);
+        Integer failCount = cacheClient.get(lockKey);
 
         if (failCount != null && failCount >= securityProperties.getMaxLoginFailCount()) {
-            long ttl = redisUtil.getExpire(lockKey);
-            throw new BizException(ResultCode.ACCOUNT_LOCKED, String.format("账号已锁定，请 %d 分钟后重试", ttl / 60 + 1));
+            long ttl = cacheClient.getExpire(lockKey);
+            long minutes = ttl > 0 ? ttl / 60 + 1 : securityProperties.getLockTime();
+            throw new BizException(ResultCode.ACCOUNT_LOCKED, String.format("账号已锁定，请 %d 分钟后重试", minutes));
         }
     }
 
@@ -144,10 +145,10 @@ public class LoginServiceImpl {
      */
     private void recordLoginFail(String username) {
         String lockKey = CacheKeyConstant.AUTH_LOGIN_FAIL + username;
-        long count = redisUtil.increment(lockKey);
+        long count = cacheClient.increment(lockKey);
 
         if (count == 1) {
-            redisUtil.expire(lockKey, Duration.ofMinutes(securityProperties.getLockTime()));
+            cacheClient.expire(lockKey, Duration.ofMinutes(securityProperties.getLockTime()));
         }
 
         int remaining = securityProperties.getMaxLoginFailCount() - (int) count;
@@ -162,7 +163,7 @@ public class LoginServiceImpl {
      * 清除登录失败记录
      */
     private void clearLoginFail(String username) {
-        redisUtil.delete(CacheKeyConstant.AUTH_LOGIN_FAIL + username);
+        cacheClient.delete(CacheKeyConstant.AUTH_LOGIN_FAIL + username);
     }
 
     /**

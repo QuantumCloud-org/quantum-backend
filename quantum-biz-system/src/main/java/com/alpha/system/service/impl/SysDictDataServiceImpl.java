@@ -10,6 +10,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.ObjectProvider;
 import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
@@ -26,6 +27,8 @@ import static com.alpha.system.domain.table.SysDictDataTableDef.SYS_DICT_DATA;
 @Service
 @RequiredArgsConstructor
 public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDictData> implements ISysDictDataService {
+
+    private final ObjectProvider<ISysDictDataService> dictDataServiceProvider;
 
     @Override
     public List<SysDictData> selectDictDataPage(DictDataQuery query) {
@@ -51,11 +54,13 @@ public class SysDictDataServiceImpl extends ServiceImpl<SysDictDataMapper, SysDi
 
     @Override
     public SysDictData selectByTypeAndValue(String dictType, String dictValue) {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_DICT_DATA.DICT_TYPE.eq(dictType))
-                .and(SYS_DICT_DATA.DICT_VALUE.eq(dictValue))
-                .and(SYS_DICT_DATA.DELETED.eq(0));
-        return getOne(wrapper);
+        if (StrUtil.isBlank(dictType) || StrUtil.isBlank(dictValue)) {
+            return null;
+        }
+        return dictDataServiceProvider.getObject().selectDictDataByType(dictType).stream()
+                .filter(dictData -> dictValue.equals(dictData.getDictValue()))
+                .findFirst()
+                .orElse(null);
     }
 
     @Override

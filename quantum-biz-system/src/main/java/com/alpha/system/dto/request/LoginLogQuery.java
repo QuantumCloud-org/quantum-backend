@@ -31,10 +31,10 @@ public class LoginLogQuery extends PageQuery {
     /**
      * 开始时间
      */
-    private LocalDateTime beginTime;
+    private String beginTime;
 
     /**
      * 结束时间
      */
-    private LocalDateTime endTime;
+    private String endTime;
 }

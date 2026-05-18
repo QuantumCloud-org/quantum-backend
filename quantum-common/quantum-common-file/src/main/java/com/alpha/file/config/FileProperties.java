@@ -111,6 +111,8 @@ public class FileProperties {
                 "doc", "docx", "xls", "xlsx", "ppt", "pptx", "pdf", "txt", "md",
                 // 压缩包
                 "zip", "rar", "7z", "tar", "gz",
+                // 业务文件
+                "tsync",
                 // 视频
                 "mp4", "avi", "mov", "wmv", "flv", "mkv",
                 // 音频

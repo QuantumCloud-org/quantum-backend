@@ -2,6 +2,9 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import com.alpha.cache.constant.CacheKeyConstant;
+import com.alpha.framework.context.UserContext;
+import com.alpha.framework.entity.LoginUser;
+import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysDictType;
 import com.alpha.system.dto.request.DictTypeQuery;
@@ -46,9 +49,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
 
     @Override
     public List<SysDictType> selectAllDictTypes() {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_DICT_TYPE.DELETED.eq(0))
-                .orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
+        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DELETED.eq(0)).orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
         return list(wrapper);
     }
 
@@ -59,9 +60,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
 
     @Override
     public SysDictType selectByDictType(String dictType) {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType))
-                .and(SYS_DICT_TYPE.DELETED.eq(0));
+        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType)).and(SYS_DICT_TYPE.DELETED.eq(0));
         return getOne(wrapper);
     }
 
@@ -102,14 +101,12 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
     public boolean deleteDictTypeByIds(List<Long> dictIds) {
         for (Long dictId : dictIds) {
             SysDictType dictType = getById(dictId);
-            // 检查是否有字典数据
-            QueryWrapper wrapper = QueryWrapper.create()
-                    .where(SYS_DICT_DATA.DICT_TYPE.eq(dictType.getDictType()))
-                    .and(SYS_DICT_DATA.DELETED.eq(0));
-            long count = mapper.selectCountByQuery(wrapper);
-            if (count > 0) {
-                throw new BizException("字典类型【" + dictType.getDictName() + "】下存在字典数据，不能删除");
+            if (dictType == null) {
+                continue;
             }
+
+            QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_DATA.DICT_TYPE.eq(dictType.getDictType())).and(SYS_DICT_DATA.DELETED.eq(0));
+            dictDataMapper.deleteByQuery(wrapper);
         }
 
         return removeByIds(dictIds);
@@ -117,10 +114,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
 
     @Override
     public boolean checkDictTypeUnique(String dictType, Long excludeId) {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType))
-                .and(SYS_DICT_TYPE.DELETED.eq(0))
-                .and(SYS_DICT_TYPE.ID.ne(excludeId != null ? excludeId : 0L));
+        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType)).and(SYS_DICT_TYPE.DELETED.eq(0)).and(SYS_DICT_TYPE.ID.ne(excludeId != null ? excludeId : 0L));
         return count(wrapper) == 0;
     }
 
@@ -140,6 +134,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
      * 构建查询条件
      */
     private QueryWrapper buildQueryWrapper(DictTypeQuery query) {
+        LoginUser loginUser = UserContext.getUser();
         QueryWrapper wrapper = QueryWrapper.create();
 
         if (StrUtil.isNotBlank(query.getDictName())) {
@@ -151,7 +146,13 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         if (query.getStatus() != null) {
             wrapper.and(SYS_DICT_TYPE.STATUS.eq(query.getStatus()));
         }
-
+        if (StrUtil.isNotBlank(query.getBusiness())) {
+            wrapper.and(SYS_DICT_TYPE.BUSINESS.eq(query.getBusiness()));
+        }
+         // 非管理员不允许查看 admin 类型
+        if (loginUser == null || !loginUser.isAdmin()) {
+             wrapper.and(SYS_DICT_TYPE.BUSINESS.ne("admin"));
+        }
         wrapper.orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
         return wrapper;
     }

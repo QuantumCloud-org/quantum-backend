@@ -2,7 +2,7 @@ package com.alpha.security.token;
 
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
@@ -16,8 +16,6 @@ import com.nimbusds.jwt.JWTClaimsSet;
 import com.nimbusds.jwt.SignedJWT;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RBucket;
-import org.redisson.api.RedissonClient;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.stereotype.Service;
@@ -30,7 +28,7 @@ import java.util.Objects;
 import java.util.Set;
 
 /**
- * Token 服务 - JWT + Redis 混合方案
+ * Token 服务 - JWT + 缓存混合方案（支持 Redis 和 Caffeine 本地缓存）
  */
 @Slf4j
 @Service
@@ -42,10 +40,9 @@ public class TokenService {
     private static final String REFRESH_REMEMBER_PREFIX = CommonConstants.REDIS_TOKEN_PREFIX + "refresh-remember:";
     private static final String USER_TOKEN_PREFIX = CommonConstants.USER_TOKEN_PREFIX;
 
-    private final RedisUtil redisUtil;
+    private final CacheClient cacheClient;
     private final TokenProperties tokenProperties;
     private final UserDetailsService userDetailsService;
-    private final RedissonClient redissonClient;
 
     /**
      * 创建 Token
@@ -78,17 +75,16 @@ public class TokenService {
         long refreshExpireMs = tokenProperties.getRefreshTokenExpire() * 60 * 1000L;
 
         String accessTokenKey = buildAccessTokenKey(tokenId);
-        redisUtil.set(accessTokenKey, loginUser, Duration.ofMillis(accessExpireMs));
-        // 存储 tokenId 作为值，refresh 时用于 revoke 旧 accessToken
-        redisUtil.set(buildRefreshTokenKey(refreshTokenId), tokenId, Duration.ofMillis(refreshExpireMs));
-        redisUtil.set(buildRefreshMapKey(tokenId), refreshTokenId, Duration.ofMillis(refreshExpireMs));
-        redisUtil.set(buildUserMapKey(tokenId), String.valueOf(loginUser.getUserId()),
+        cacheClient.set(accessTokenKey, loginUser, Duration.ofMillis(accessExpireMs));
+        cacheClient.set(buildRefreshTokenKey(refreshTokenId), tokenId, Duration.ofMillis(refreshExpireMs));
+        cacheClient.set(buildRefreshMapKey(tokenId), refreshTokenId, Duration.ofMillis(refreshExpireMs));
+        cacheClient.set(buildUserMapKey(tokenId), String.valueOf(loginUser.getUserId()),
                 Duration.ofMillis(Math.max(accessExpireMs, refreshExpireMs)));
 
         String userKey = USER_TOKEN_PREFIX + loginUser.getUserId();
-        redisUtil.sAdd(userKey, tokenId);
-        redisUtil.expire(userKey, Duration.ofMillis(Math.max(accessExpireMs, refreshExpireMs)));
-        redisUtil.sAdd(CommonConstants.ONLINE_TOKENS_KEY, accessTokenKey);
+        cacheClient.sAdd(userKey, tokenId);
+        cacheClient.expire(userKey, Duration.ofMillis(Math.max(accessExpireMs, refreshExpireMs)));
+        cacheClient.sAdd(CommonConstants.ONLINE_TOKENS_KEY, accessTokenKey);
 
         if (tokenProperties.isSingleDevice()) {
             kickOtherDevices(loginUser.getUserId(), tokenId);
@@ -127,19 +123,18 @@ public class TokenService {
         }
 
         String tokenKey = buildAccessTokenKey(tokenId);
-        if (redisUtil.exists(CommonConstants.BLACKLIST_PREFIX + tokenId)) {
+        if (cacheClient.exists(CommonConstants.BLACKLIST_PREFIX + tokenId)) {
             log.warn("【TokenService】Token 在黑名单中 | TokenId: {}", tokenId);
             return null;
         }
 
-        LoginUser loginUser = redisUtil.get(tokenKey);
+        LoginUser loginUser = cacheClient.get(tokenKey);
         if (loginUser == null) {
-            log.warn("【TokenService】Redis 中找不到 Token | TokenKey: {}", tokenKey);
+            log.warn("【TokenService】缓存中找不到 Token | TokenKey: {}", tokenKey);
             return null;
         }
 
         if (isJwtExpired(token)) {
-            // JWT 已过期，返回 null 让 Filter 走 refreshToken 续期路径
             log.debug("【TokenService】JWT 已过期，需通过 RefreshToken 续期 | TokenId: {}", tokenId);
             return null;
         } else {
@@ -208,9 +203,9 @@ public class TokenService {
             throw new BizException(ResultCode.ACCOUNT_DISABLED);
         }
 
+        // 原子消费 refresh token，防止重放攻击
         String refreshKey = buildRefreshTokenKey(refreshTokenId);
-        RBucket<String> bucket = redissonClient.getBucket(refreshKey);
-        String oldTokenId = bucket.getAndDelete();
+        String oldTokenId = cacheClient.getAndDelete(refreshKey);
         if (oldTokenId == null) {
             return null;
         }
@@ -256,7 +251,7 @@ public class TokenService {
      */
     public void kickOut(Long userId) {
         String userKey = USER_TOKEN_PREFIX + userId;
-        Set<String> tokens = redisUtil.sMembers(userKey);
+        Set<String> tokens = cacheClient.sMembers(userKey);
         if (tokens == null || tokens.isEmpty()) {
             return;
         }
@@ -264,26 +259,23 @@ public class TokenService {
         for (String tokenId : tokens) {
             revokeTokenById(tokenId);
         }
-        redisUtil.delete(userKey);
+        cacheClient.delete(userKey);
         log.info("强制下线用户 | UserId: {} | Count: {}", userId, tokens.size());
     }
 
     /**
      * 刷新用户会话缓存（不踢下线）
-     * <p>
-     * 适用于资料、角色、部门、权限变更场景：保留原 JWT 与会话字段，
-     * 仅重新加载 LoginUser 的权限/资料部分并回写 Redis，用户无感。
      */
     public void refreshUserCache(Long userId) {
         if (userId == null) return;
         String userKey = USER_TOKEN_PREFIX + userId;
-        Set<String> tokens = redisUtil.sMembers(userKey);
+        Set<String> tokens = cacheClient.sMembers(userKey);
         if (tokens == null || tokens.isEmpty()) return;
 
         int refreshed = 0;
         for (String tokenId : tokens) {
             String tokenKey = buildAccessTokenKey(tokenId);
-            LoginUser oldUser = redisUtil.get(tokenKey);
+            LoginUser oldUser = cacheClient.get(tokenKey);
             if (oldUser == null) continue;
 
             LoginUser fresh;
@@ -294,7 +286,6 @@ public class TokenService {
                 continue;
             }
 
-            // 保留原有会话字段（JWT、登录上下文），覆盖资料/权限字段
             fresh.setTokenId(oldUser.getTokenId());
             fresh.setRefreshTokenId(oldUser.getRefreshTokenId());
             fresh.setLoginTime(oldUser.getLoginTime());
@@ -304,9 +295,9 @@ public class TokenService {
             fresh.setBrowser(oldUser.getBrowser());
             fresh.setOs(oldUser.getOs());
 
-            long ttl = redisUtil.getExpire(tokenKey);
+            long ttl = cacheClient.getExpire(tokenKey);
             if (ttl > 0) {
-                redisUtil.set(tokenKey, fresh, Duration.ofSeconds(ttl));
+                cacheClient.set(tokenKey, fresh, Duration.ofSeconds(ttl));
                 refreshed++;
             }
         }
@@ -321,8 +312,7 @@ public class TokenService {
         if (StrUtil.isBlank(refreshTokenId)) {
             return;
         }
-
-        redisUtil.set(
+        cacheClient.set(
                 buildRefreshRememberKey(refreshTokenId),
                 rememberMe,
                 Duration.ofMinutes(tokenProperties.getRefreshTokenExpire())
@@ -333,8 +323,7 @@ public class TokenService {
         if (StrUtil.isBlank(refreshTokenId)) {
             return false;
         }
-
-        Boolean rememberMe = redisUtil.get(buildRefreshRememberKey(refreshTokenId));
+        Boolean rememberMe = cacheClient.get(buildRefreshRememberKey(refreshTokenId));
         return Boolean.TRUE.equals(rememberMe);
     }
 
@@ -352,25 +341,25 @@ public class TokenService {
         }
 
         String tokenKey = buildAccessTokenKey(tokenId);
-        LoginUser loginUser = redisUtil.get(tokenKey);
-        long remainTtl = redisUtil.getExpire(tokenKey);
+        LoginUser loginUser = cacheClient.get(tokenKey);
+        long remainTtl = cacheClient.getExpire(tokenKey);
 
-        redisUtil.delete(tokenKey);
-        redisUtil.sRemove(CommonConstants.ONLINE_TOKENS_KEY, tokenKey);
+        cacheClient.delete(tokenKey);
+        cacheClient.sRemove(CommonConstants.ONLINE_TOKENS_KEY, tokenKey);
 
         String refreshMapKey = buildRefreshMapKey(tokenId);
-        String refreshTokenId = redisUtil.get(refreshMapKey);
+        String refreshTokenId = cacheClient.get(refreshMapKey);
         if (StrUtil.isBlank(refreshTokenId) && loginUser != null) {
             refreshTokenId = loginUser.getRefreshTokenId();
         }
         if (StrUtil.isNotBlank(refreshTokenId)) {
-            redisUtil.delete(buildRefreshTokenKey(refreshTokenId));
-            redisUtil.delete(buildRefreshRememberKey(refreshTokenId));
+            cacheClient.delete(buildRefreshTokenKey(refreshTokenId));
+            cacheClient.delete(buildRefreshRememberKey(refreshTokenId));
         }
-        redisUtil.delete(refreshMapKey);
+        cacheClient.delete(refreshMapKey);
 
         String userMapKey = buildUserMapKey(tokenId);
-        String userIdStr = redisUtil.get(userMapKey);
+        String userIdStr = cacheClient.get(userMapKey);
         Long userId = null;
         if (StrUtil.isNotBlank(userIdStr)) {
             try {
@@ -382,12 +371,12 @@ public class TokenService {
             userId = loginUser.getUserId();
         }
         if (userId != null) {
-            redisUtil.sRemove(USER_TOKEN_PREFIX + userId, tokenId);
+            cacheClient.sRemove(USER_TOKEN_PREFIX + userId, tokenId);
         }
-        redisUtil.delete(userMapKey);
+        cacheClient.delete(userMapKey);
 
         if (remainTtl > 0) {
-            redisUtil.set(CommonConstants.BLACKLIST_PREFIX + tokenId, "1", Duration.ofSeconds(remainTtl));
+            cacheClient.set(CommonConstants.BLACKLIST_PREFIX + tokenId, "1", Duration.ofSeconds(remainTtl));
         }
     }
 
@@ -417,18 +406,10 @@ public class TokenService {
                 .issueTime(now)
                 .expirationTime(expireAt);
 
-        if (username != null) {
-            claimsBuilder.claim("username", username);
-        }
-        if (deviceId != null) {
-            claimsBuilder.claim("deviceId", deviceId);
-        }
-        if (clientIp != null) {
-            claimsBuilder.claim("clientIp", clientIp);
-        }
-        if (userAgent != null) {
-            claimsBuilder.claim("userAgent", userAgent);
-        }
+        if (username != null) claimsBuilder.claim("username", username);
+        if (deviceId != null) claimsBuilder.claim("deviceId", deviceId);
+        if (clientIp != null) claimsBuilder.claim("clientIp", clientIp);
+        if (userAgent != null) claimsBuilder.claim("userAgent", userAgent);
 
         SignedJWT signedJWT = new SignedJWT(header, claimsBuilder.build());
         signedJWT.sign(new MACSigner(tokenProperties.getSecret().getBytes()));
@@ -451,29 +432,23 @@ public class TokenService {
         return claims.getExpirationTime() != null && claims.getExpirationTime().before(new Date());
     }
 
-    /**
-     * 自动续期 Redis TTL（非 JWT 有效期）。
-     * JWT 的 exp 不变，过期后仍需走 refreshToken 路径重建。
-     * 此处仅延长 Redis 中 LoginUser 的存活时间，避免活跃用户的会话数据在 JWT 过期前被清除。
-     */
     private void renewIfNeeded(String tokenKey, LoginUser loginUser) {
-        long ttl = redisUtil.getExpire(tokenKey);
+        long ttl = cacheClient.getExpire(tokenKey);
         long maxTtl = tokenProperties.getAccessTokenExpire() * 60L;
         if (ttl > 0 && ttl < maxTtl * tokenProperties.getRenewThreshold()) {
             Duration newExpire = Duration.ofMinutes(tokenProperties.getAccessTokenExpire());
-            redisUtil.expire(tokenKey, newExpire);
+            cacheClient.expire(tokenKey, newExpire);
             loginUser.setExpireTime(LocalDateTime.now().plusMinutes(tokenProperties.getAccessTokenExpire()));
-            redisUtil.set(tokenKey, loginUser, newExpire);
+            cacheClient.set(tokenKey, loginUser, newExpire);
         }
     }
 
     private void kickOtherDevices(Long userId, String currentTokenId) {
         String userKey = USER_TOKEN_PREFIX + userId;
-        Set<String> tokens = redisUtil.sMembers(userKey);
+        Set<String> tokens = cacheClient.sMembers(userKey);
         if (tokens == null || tokens.isEmpty()) {
             return;
         }
-
         for (String tokenId : tokens) {
             if (!tokenId.equals(currentTokenId)) {
                 revokeTokenById(tokenId);

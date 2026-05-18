@@ -29,6 +29,11 @@ public class SysDictType extends BaseEntity implements Serializable {
     private String dictType;
 
     /**
+     * 业务类型(admin 管理员，talnet 人才)
+     */
+    private String business;
+
+    /**
      * 状态（0-停用，1-正常）
      */
     private Integer status;

@@ -21,6 +21,7 @@ public interface ISysFileService {
             "avatar",
             "attachment",
             "talent_attachment",
+            "talent_template",
             "import",
             "export",
             "icon"

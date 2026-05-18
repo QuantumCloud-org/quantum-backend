@@ -1,6 +1,6 @@
 package com.alpha.security.filter;
 
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.enums.ResultCode;
@@ -33,14 +33,14 @@ public class RateLimitFilter extends OncePerRequestFilter {
 
     private static final String RATE_LIMIT_KEY = "rate:limit:";
 
-    private final RedisUtil redisUtil;
+    private final CacheClient cacheClient;
     private final JsonUtil jsonUtil;
     private final SecurityProperties securityProperties;
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
         String key = generateKey(request);
-        boolean allowed = redisUtil.tryAcquire(key, securityProperties.getDefaultRateLimit(), 1);
+        boolean allowed = cacheClient.tryAcquire(key, securityProperties.getDefaultRateLimit(), 1);
 
         if (!allowed) {
             log.warn("请求限流 | URI: {} | IP: {}", request.getRequestURI(), UserContext.getIp());

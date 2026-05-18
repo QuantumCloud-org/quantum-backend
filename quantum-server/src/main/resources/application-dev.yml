@@ -1,8 +1,8 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://100.107.62.19:15432/talent_manger?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
-    username: talent_manger
+    url: jdbc:postgresql://100.107.62.19:15432/wuxi_civil?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+    username: wuxi_civil
     password: 1qaz@WSX
     hikari:
       maximum-pool-size: 20

@@ -6,7 +6,7 @@ import cn.hutool.captcha.generator.RandomGenerator;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.cache.constant.CacheKeyConstant;
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.security.service.ICaptchaService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -18,14 +18,14 @@ import java.time.Duration;
 /**
  * 验证码服务实现
  * <p>
- * 基于 Hutool Captcha + Redis 实现
+ * 基于 Hutool Captcha + CacheClient 实现（支持 Redis 和 Caffeine 本地缓存）
  */
 @Slf4j
 @Service
 @RequiredArgsConstructor
 public class CaptchaServiceImpl implements ICaptchaService {
 
-    private final RedisUtil redisUtil;
+    private final CacheClient cacheClient;
 
     /**
      * 验证码长度
@@ -72,7 +72,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
 
         // 存入 Redis
         String cacheKey = CacheKeyConstant.AUTH_CAPTCHA + key;
-        redisUtil.set(cacheKey, code.toLowerCase(), Duration.ofSeconds(captchaExpire));
+        cacheClient.set(cacheKey, code.toLowerCase(), Duration.ofSeconds(captchaExpire));
 
         // 返回 Base64 图片
         String imageBase64 = captcha.getImageBase64Data();
@@ -89,10 +89,10 @@ public class CaptchaServiceImpl implements ICaptchaService {
         }
 
         String cacheKey = CacheKeyConstant.AUTH_CAPTCHA + key;
-        String cachedCode = redisUtil.get(cacheKey);
+        String cachedCode = cacheClient.get(cacheKey);
 
         // 验证后删除（一次性使用）
-        redisUtil.delete(cacheKey);
+        cacheClient.delete(cacheKey);
 
         if (StrUtil.isBlank(cachedCode)) {
             log.debug("验证码已过期 | Key: {}", key);

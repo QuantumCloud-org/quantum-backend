@@ -2,6 +2,7 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysDept;
 import com.alpha.system.dto.response.TreeSelectVO;
@@ -16,6 +17,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 
 import static com.alpha.system.domain.table.SysDeptTableDef.SYS_DEPT;
@@ -83,28 +85,34 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDept(SysDept dept) {
+        SysDept oldDept = getById(dept.getId());
+        if (oldDept == null) {
+            throw new BizException("部门不存在");
+        }
+
+        dept.setParentId(normalizeUpdateParentId(
+                dept.getId(),
+                dept.getParentId(),
+                oldDept.getParentId(),
+                oldDept.getAncestors()));
+
         // 检查名称唯一性
         if (!checkDeptNameUnique(dept.getDeptName(), dept.getParentId(), dept.getId())) {
             throw new BizException("部门名称已存在");
         }
 
-        // 不能设置自己为父部门
-        if (java.util.Objects.equals(dept.getId(), dept.getParentId())) {
+        // 非顶级部门不能设置自己为父部门；顶级部门保持根父级时允许保存。
+        if (shouldRejectSelfParent(dept.getId(), dept.getParentId(), oldDept.getParentId(), oldDept.getAncestors())) {
             throw new BizException("父部门不能是自己");
-        }
-
-        SysDept oldDept = getById(dept.getId());
-        if (oldDept == null) {
-            throw new BizException("部门不存在");
         }
 
         Long originalParentId = oldDept.getParentId();
         String originalAncestors = oldDept.getAncestors();
 
         // 如果父部门变更，更新祖级列表
-        if (!java.util.Objects.equals(originalParentId, dept.getParentId())) {
+        if (!Objects.equals(originalParentId, dept.getParentId())) {
             String newAncestors;
-            if (dept.getParentId() == 0) {
+            if (Objects.equals(dept.getParentId(), CommonConstants.ROOT_PARENT_ID)) {
                 newAncestors = "0";
             } else {
                 SysDept newParent = getById(dept.getParentId());
@@ -137,6 +145,32 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
             throw new BizException("部门信息已变更，请刷新后重试");
         }
         return true;
+    }
+
+    static Long normalizeUpdateParentId(Long deptId, Long requestedParentId, Long currentParentId, String currentAncestors) {
+        Long normalizedParentId = requestedParentId == null ? CommonConstants.ROOT_PARENT_ID : requestedParentId;
+
+        if (!Objects.equals(deptId, normalizedParentId)) {
+            return normalizedParentId;
+        }
+
+        if (isCurrentTopLevelDept(deptId, currentParentId, currentAncestors)) {
+            return CommonConstants.ROOT_PARENT_ID;
+        }
+
+        return normalizedParentId;
+    }
+
+    static boolean shouldRejectSelfParent(Long deptId, Long parentId, Long currentParentId, String currentAncestors) {
+        return Objects.equals(deptId, parentId)
+                && !isCurrentTopLevelDept(deptId, currentParentId, currentAncestors);
+    }
+
+    private static boolean isCurrentTopLevelDept(Long deptId, Long currentParentId, String currentAncestors) {
+        return currentParentId == null
+                || Objects.equals(currentParentId, CommonConstants.ROOT_PARENT_ID)
+                || Objects.equals(currentParentId, deptId)
+                || "0".equals(StrUtil.trimToEmpty(currentAncestors));
     }
 
     @Override

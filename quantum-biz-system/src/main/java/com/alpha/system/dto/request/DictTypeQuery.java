@@ -22,6 +22,11 @@ public class DictTypeQuery extends PageQuery {
     private String dictType;
 
     /**
+     * 业务类型(admin 管理员，talent 人才)
+     */
+    private String business;
+
+    /**
      * 状态
      */
     private Integer status;

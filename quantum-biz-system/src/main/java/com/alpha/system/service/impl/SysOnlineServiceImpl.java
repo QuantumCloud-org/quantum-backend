@@ -1,6 +1,6 @@
 package com.alpha.system.service.impl;
 
-import com.alpha.cache.util.RedisUtil;
+import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.security.token.TokenService;
@@ -8,7 +8,6 @@ import com.alpha.system.dto.response.OnlineUser;
 import com.alpha.system.service.ISysOnlineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.api.RedissonClient;
 import org.springframework.stereotype.Service;
 
 import java.util.ArrayList;
@@ -22,21 +21,20 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysOnlineServiceImpl implements ISysOnlineService {
 
-    private final RedisUtil redisUtil;
-    private final RedissonClient redissonClient;
+    private final CacheClient cacheClient;
     private final TokenService tokenService;
 
     @Override
     public List<OnlineUser> getOnlineUsers() {
         List<OnlineUser> onlineUsers = new ArrayList<>();
 
-        for (String tokenKey : redissonClient.<String>getSet(CommonConstants.ONLINE_TOKENS_KEY)) {
+        for (String tokenKey : cacheClient.<String>sMembers(CommonConstants.ONLINE_TOKENS_KEY)) {
             try {
-                LoginUser loginUser = redisUtil.get(tokenKey);
+                LoginUser loginUser = cacheClient.get(tokenKey);
                 if (loginUser != null) {
                     onlineUsers.add(convertToOnlineUser(loginUser, extractTokenId(tokenKey)));
                 } else {
-                    redissonClient.getSet(CommonConstants.ONLINE_TOKENS_KEY).remove(tokenKey);
+                    cacheClient.sRemove(CommonConstants.ONLINE_TOKENS_KEY, tokenKey);
                 }
             } catch (Exception e) {
                 log.warn("解析在线用户信息失败: {}", tokenKey, e);
@@ -45,10 +43,9 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
         return onlineUsers;
     }
 
-
     @Override
     public long getOnlineCount() {
-        return redissonClient.<String>getSet(CommonConstants.ONLINE_TOKENS_KEY).size();
+        return cacheClient.sMembers(CommonConstants.ONLINE_TOKENS_KEY).size();
     }
 
     @Override
@@ -63,9 +60,6 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
         log.info("强制下线用户 | UserId: {}", userId);
     }
 
-    /**
-     * 转换为在线用户信息
-     */
     private OnlineUser convertToOnlineUser(LoginUser loginUser, String tokenId) {
         return new OnlineUser()
                 .setUserId(loginUser.getUserId())

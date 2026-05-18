@@ -28,10 +28,8 @@ public class LogPageQuery implements Serializable {
     private Integer pageSize = 10;
 
     /** 起始时间 */
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private LocalDateTime beginTime;
+    private String beginTime;
 
     /** 结束时间 */
-    @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME)
-    private LocalDateTime endTime;
+    private String endTime;
 }

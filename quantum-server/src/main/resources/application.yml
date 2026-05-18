@@ -3,7 +3,7 @@ server:
   port: 8080
   shutdown: graceful
   servlet:
-    context-path: /talent_manger
+    context-path: /wuxi_civil
     multipart:
       max-file-size: 50MB
       max-request-size: 200MB
@@ -17,7 +17,7 @@ server:
       min-spare: 10
 spring:
   application:
-    name: quantum
+    name: wuxi_civil_servant
   profiles:
     active: dev
   lifecycle:
@@ -43,7 +43,7 @@ file:
   # 文件存储配置 local / rustfs
   storage-type: local
   local:
-    base-path: /data/files
+    base-path: /opt/application/files
     domain: http://localhost:8080/api/file
   rustfs:
     endpoint: http://localhost:9000
@@ -52,6 +52,12 @@ file:
     bucket: quantum
     region: cn-north-1
     path-style-access: true
+
+# 缓存模式配置
+# redis（默认）：L1 Caffeine + L2 Redis 双级缓存，需配置 spring.data.redis.*
+# local：纯 Caffeine 内存缓存，无需 Redis，适用于本地开发/测试环境
+cache:
+  mode: local
 
 # Security 配置
 security:
@@ -67,14 +73,14 @@ security:
   password-min-length: 8
   password-max-length: 20
   # 登录失败
-  max-login-fail-count: 5
+  max-login-fail-count: 10
   # 登录失败锁定时间（分钟）
-  lock-time: 30
+  lock-time: 10
   # Token 配置
   token:
-    secret: ${JWT_SECRET}
-    access-token-expire: 10
-    refresh-token-expire: 30
+    secret: demo
+    access-token-expire: 240
+    refresh-token-expire: 240
     single-device: false
 
 # Knife4j配置

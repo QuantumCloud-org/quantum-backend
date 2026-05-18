@@ -1,7 +1,7 @@
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver
-    url: jdbc:postgresql://192.168.31.10:15432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
+    url: jdbc:postgresql://192.168.31.1:5432/baseweb?currentSchema=public&useUnicode=true&characterEncoding=utf8&serverTimezone=Asia/Shanghai&autoReconnect=true&rewriteBatchedStatements=true&prepareThreshold=5&stringtype=unspecified
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
     hikari:
@@ -13,8 +13,8 @@ spring:
       connection-test-query: SELECT 1
   data:
     redis:
-      host: 192.168.31.10
-      port: 16379
+      host: 192.168.31.1
+      port: 6379
       database: 10
       password: ${REDIS_PASSWORD}
       redisson:

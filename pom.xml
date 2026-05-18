@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
     <groupId>com.alpha</groupId>
-    <artifactId>wuxi_civil_servant_backend</artifactId>
+    <artifactId>quantum-backend</artifactId>
     <version>${revision}</version>
-    <name>wuxi_civil_servant</name>
-    <description>无锡公务员管理系统后端服务</description>
+    <name>quantum-backend</name>
+    <description>基础开发脚手架</description>
     <packaging>pom</packaging>
 
     <modules>

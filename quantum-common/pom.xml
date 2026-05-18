@@ -3,7 +3,7 @@
     <modelVersion>4.0.0</modelVersion>
     <parent>
         <groupId>com.alpha</groupId>
-        <artifactId>wuxi_civil_servant_backend</artifactId>
+        <artifactId>quantum-backend</artifactId>
         <version>${revision}</version>
     </parent>
 

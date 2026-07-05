@@ -120,11 +120,11 @@ public class FileController {
     }
 
     private void streamFile(SysFile entity, HttpServletResponse response, boolean asAttachment) throws IOException {
-        String contentType = entity.getContentType();
-        if (contentType == null || contentType.isBlank()) {
-            contentType = FileUtils.getMimeType(entity.getExtension());
-        }
+        // Content-Type 一律按扩展名推导，不使用上传时客户端自报的 contentType：
+        // 否则攻击者可上传魔术字节合法、但 contentType 为 text/html 的多义文件，内联预览时触发存储型 XSS
+        String contentType = FileUtils.getMimeType(entity.getExtension());
         response.setContentType(contentType != null ? contentType : MediaType.APPLICATION_OCTET_STREAM_VALUE);
+        response.setHeader("X-Content-Type-Options", "nosniff");
         if (entity.getSize() != null && entity.getSize() > 0) {
             response.setContentLengthLong(entity.getSize());
         }

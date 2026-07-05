@@ -59,10 +59,12 @@ public class CaptchaServiceImpl implements ICaptchaService {
 
     @Override
     public CaptchaResult generate() {
-        // 生成验证码
+        // 生成验证码（排除 i/l/o 等易混淆字符）
         RandomGenerator generator = new RandomGenerator("0123456789abcdefghjkmnpqrstuvwxyz", captchaLength);
         LineCaptcha captcha = CaptchaUtil.createLineCaptcha(captchaWidth, captchaHeight, captchaLength, lineCount);
         captcha.setGenerator(generator);
+        // 构造器已用默认字符集生成过一次 code，setGenerator 不会触发重新生成，必须显式调用
+        captcha.createCode();
 
         // 获取验证码文本
         String code = captcha.getCode();

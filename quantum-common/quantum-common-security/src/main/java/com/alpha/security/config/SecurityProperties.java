@@ -56,6 +56,11 @@ public class SecurityProperties {
     private int defaultRateLimit = 100;
 
     /**
+     * 批量导入用户时的初始密码（需满足密码长度策略，建议部署时覆盖）
+     */
+    private String initPassword = "Init@12345";
+
+    /**
      * 密码最小长度
      */
     private int passwordMinLength = 8;

@@ -4,9 +4,6 @@ server:
   shutdown: graceful
   servlet:
     context-path: /
-    multipart:
-      max-file-size: 50MB
-      max-request-size: 200MB
   compression:
     enabled: true
     mime-types: application/json,text/html,text/xml,text/plain
@@ -17,11 +14,16 @@ server:
       min-spare: 10
 spring:
   application:
-    name: wuxi_civil_servant
+    name: quantum-backend
   profiles:
     active: dev
   lifecycle:
     timeout-per-shutdown-phase: 30s
+  # multipart 必须挂在 spring.servlet 下，挂在 server.servlet 下不会生效（默认 1MB 会拦掉上传）
+  servlet:
+    multipart:
+      max-file-size: 50MB
+      max-request-size: 200MB
   autoconfigure:
     exclude:
       - org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
@@ -77,16 +79,11 @@ security:
   # 登录失败锁定时间（分钟）
   lock-time: 10
   # Token 配置
+  # secret 不在基线配置中提供默认值：dev 由 application-dev.yml 提供，
+  # prod 必须通过环境变量 SECURITY_TOKEN_SECRET 注入（HS512 至少 64 字符），缺失时启动失败
   token:
-    secret: demo
-    access-token-expire: 240
-    refresh-token-expire: 240
+    # Access Token 30 分钟，过期后由 RefreshToken（HttpOnly Cookie）自动旋转续期
+    access-token-expire: 30
+    # Refresh Token 7 天
+    refresh-token-expire: 10080
     single-device: false
-
-# Knife4j配置
-knife4j:
-  enable: false
-  setting:
-    language: zh_cn
-  # 生产环境关闭
-  production: false

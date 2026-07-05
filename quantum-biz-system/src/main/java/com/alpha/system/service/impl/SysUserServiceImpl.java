@@ -3,6 +3,7 @@ package com.alpha.system.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
@@ -47,7 +48,6 @@ import static com.alpha.system.domain.table.SysUserTableDef.SYS_USER;
 @RequiredArgsConstructor
 public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> implements ISysUserService {
 
-    private final static String first_pass = "123456";
     private final SysUserMapper userMapper;
     private final SysDeptMapper deptMapper;
     private final SysUserRoleMapper userRoleMapper;
@@ -112,6 +112,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
         validatePassword(user.getPassword());
 
+        // 数据权限：非管理员只能在自己可见的部门下创建用户
+        assertDeptInDataScope(user.getDeptId());
+
         // 加密密码
         user.setPassword(passwordEncoder.encode(user.getUsername() + user.getPassword()));
 
@@ -143,6 +146,17 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BizException("用户不存在");
         }
 
+        // 用户名不可变更：密码哈希以用户名作为组成部分，改名会导致该用户永远无法登录
+        if (StrUtil.isNotBlank(user.getUsername()) && !user.getUsername().equals(oldUser.getUsername())) {
+            throw new BizException("用户名不允许修改");
+        }
+
+        // 数据权限：目标用户当前部门、以及调整后的部门都必须在操作者可见范围内
+        assertTargetUserWritable(oldUser);
+        if (user.getDeptId() != null && !user.getDeptId().equals(oldUser.getDeptId())) {
+            assertDeptInDataScope(user.getDeptId());
+        }
+
         // 更新用户
         boolean updated = updateById(user);
         if (!updated) {
@@ -170,6 +184,14 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             throw new BizException("不能删除超级管理员");
         }
 
+        // 数据权限：只能删除可见范围内的用户
+        for (Long userId : userIds) {
+            SysUser target = getById(userId);
+            if (target != null) {
+                assertTargetUserWritable(target);
+            }
+        }
+
         // 删除用户角色关联
         for (Long userId : userIds) {
             userRoleMapper.deleteByUserId(userId);
@@ -191,6 +213,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (existUser == null) {
             throw new BizException("用户不存在");
         }
+        assertTargetUserWritable(existUser);
         SysUser user = new SysUser();
         user.setId(userId);
         user.setPassword(passwordEncoder.encode(existUser.getUsername() + password));
@@ -220,6 +243,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (existUser == null) {
             throw new BizException("用户不存在");
         }
+        assertTargetUserWritable(existUser);
 
         SysUser user = new SysUser();
         user.setId(userId);
@@ -282,8 +306,8 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             try {
                 SysUser existUser = selectByUsername(user.getUsername());
                 if (existUser == null) {
-                    // 新增
-                    user.setPassword(passwordEncoder.encode(user.getUsername() + first_pass));
+                    // 新增（初始密码来自配置 security.init-password，需满足密码策略）
+                    user.setPassword(passwordEncoder.encode(user.getUsername() + securityProperties.getInitPassword()));
                     save(user);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append("、账号 ").append(user.getUsername()).append(" 导入成功");
@@ -389,6 +413,57 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         if (length < securityProperties.getPasswordMinLength() || length > securityProperties.getPasswordMaxLength()) {
             throw new BizException(String.format("密码长度必须在%d-%d位之间", securityProperties.getPasswordMinLength(), securityProperties.getPasswordMaxLength()));
         }
+    }
+
+    /**
+     * 写操作数据权限校验：目标用户必须在操作者可见范围内。
+     * <p>
+     * 查询侧已由 @DataScope 过滤，但更新/删除/重置密码/改状态按 ID 直达，
+     * 必须在此单独校验，否则拥有对应功能权限的用户可跨部门操作任意账号。
+     */
+    private void assertTargetUserWritable(SysUser target) {
+        LoginUser current = UserContext.getUser();
+        if (current == null) {
+            throw new BizException(ResultCode.UNAUTHORIZED);
+        }
+        // 超管账号只有超管本人可以操作
+        if (CommonConstants.SUPER_ADMIN_ID.equals(target.getId()) && !current.isAdmin()) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权操作超级管理员账号");
+        }
+        if (current.isAdmin()) {
+            return;
+        }
+        // 操作自己（个人资料）始终允许
+        if (target.getId() != null && target.getId().equals(current.getUserId())) {
+            return;
+        }
+        if (!isDeptInScope(current, target.getDeptId())) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权操作该部门的用户");
+        }
+    }
+
+    /**
+     * 校验部门是否在操作者数据权限范围内（用于新增用户 / 调整用户部门）
+     */
+    private void assertDeptInDataScope(Long deptId) {
+        LoginUser current = UserContext.getUser();
+        if (current == null || current.isAdmin()) {
+            return;
+        }
+        if (!isDeptInScope(current, deptId)) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权在该部门下操作用户");
+        }
+    }
+
+    private boolean isDeptInScope(LoginUser current, Long deptId) {
+        DataScopeType scopeType = DataScopeType.fromCode(current.getDataScope());
+        return switch (scopeType) {
+            case ALL -> true;
+            case DEPT -> current.getDeptId() != null && current.getDeptId().equals(deptId);
+            case DEPT_AND_CHILD, CUSTOM -> current.getDeptIds() != null && current.getDeptIds().contains(deptId);
+            // SELF / DEFAULT：无跨用户写权限
+            default -> false;
+        };
     }
 
 }

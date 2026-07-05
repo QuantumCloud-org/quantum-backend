@@ -13,8 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
@@ -23,10 +21,13 @@ import java.io.IOException;
 
 /**
  * 限流过滤器
+ * <p>
+ * 仅在 Security 过滤链内执行（TokenAuthenticationFilter 之后，此时已有用户信息，
+ * 登录用户按 userId 限流，匿名请求按 IP 限流）。Servlet 容器级自动注册已在
+ * SecurityConfig 中通过 FilterRegistrationBean 禁用。
  */
 @Slf4j
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 30)
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "security", name = "rate-limit-enabled", havingValue = "true", matchIfMissing = true)
 public class RateLimitFilter extends OncePerRequestFilter {

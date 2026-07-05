@@ -70,15 +70,22 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
             throw new BizException("文件上传失败: 无法创建存储目录");
         }
 
-        // 4. 生成文件名
+        // 4. 生成文件名（自定义文件名禁止携带路径分隔符，防止穿越出存储目录）
         String originalName = file.getOriginalFilename();
         String extension = FileUtil.extName(originalName);
+        if (StrUtil.isNotBlank(fileName)
+                && (fileName.contains("/") || fileName.contains("\\") || fileName.contains(".."))) {
+            throw new BizException("非法文件名");
+        }
         String storageName = StrUtil.isNotBlank(fileName)
                 ? fileName
                 : IdUtil.fastSimpleUUID() + "." + extension;
 
-        // 5. 保存文件
+        // 5. 保存文件（二次校验最终路径仍在目标目录内）
         Path targetPath = directoryPath.resolve(storageName).normalize();
+        if (!targetPath.startsWith(directoryPath)) {
+            throw new BizException("非法文件路径");
+        }
         String filePath = targetPath.toString();
         try {
             Files.createDirectories(targetPath.getParent());

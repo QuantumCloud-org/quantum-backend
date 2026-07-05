@@ -88,7 +88,8 @@ public class SecurityRequestWrapper extends HttpServletRequestWrapper {
     }
 
     public String getBodyString() {
-        return body != null ? new String(body) : null;
+        // 显式 UTF-8：默认平台字符集在不同部署环境下不一致，会导致防重复提交的 body MD5 不稳定
+        return body != null ? new String(body, java.nio.charset.StandardCharsets.UTF_8) : null;
     }
 
     // ==================== 2. XSS 清洗逻辑 (参数 & Header) ====================

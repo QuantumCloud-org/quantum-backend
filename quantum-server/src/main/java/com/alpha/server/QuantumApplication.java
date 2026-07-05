@@ -40,7 +40,7 @@ public class QuantumApplication {
                             \tApplication '{}' is running! Access URLs:
                             \tLocal:    http://localhost:{}{}
                             \tExternal: http://{}:{}{}
-                            \tDoc:      http://{}:{}{}/doc.html
+                            \tDoc:      http://{}:{}{}/swagger-ui/index.html
                             ----------------------------------------------------------
                             """,
                     appName, port, contextPath, ip, port, contextPath, ip, port, contextPath);

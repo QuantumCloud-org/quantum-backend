@@ -1,3 +1,8 @@
+# 生产环境必须使用 redis 模式：会话/限流/防重复提交状态入 Redis，
+# 否则基线配置的 cache.mode=local 会让会话留在 JVM 内存（重启全员掉线、无法水平扩展）
+cache:
+  mode: redis
+
 spring:
   datasource:
     driver-class-name: org.postgresql.Driver

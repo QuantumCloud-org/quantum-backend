@@ -9,6 +9,7 @@ import com.alpha.security.handler.AuthenticationEntryPointImpl;
 import com.alpha.security.handler.LogoutSuccessHandlerImpl;
 import com.alpha.security.token.TokenService;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.web.servlet.FilterRegistrationBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -94,6 +95,46 @@ public class SecurityConfig {
     @Bean
     public RequestWrapperFilter requestWrapperFilter() {
         return new RequestWrapperFilter(securityProperties);
+    }
+
+    /*
+     * 以下四个 FilterRegistrationBean 用于禁用 Servlet 容器对 Filter Bean 的自动注册。
+     *
+     * 背景：Spring Boot 会把上下文中所有 Filter 类型的 Bean 自动注册为容器级过滤器，
+     * 而这四个过滤器同时又被 addFilterBefore/After 加入了 Security 过滤链。
+     * 由于它们都继承 OncePerRequestFilter（有 ALREADY_FILTERED 去重），实际会在
+     * Servlet 层（认证之前、请求包装之前）先执行一次，链内的那次被跳过，导致：
+     *  - RateLimitFilter 拿不到用户信息，限流永远按 IP 计；
+     *  - RepeatSubmitFilter 拿不到 SecurityRequestWrapper，body MD5 从未参与 Key，
+     *    同一 IP 5 秒内两个不同 POST 会被误判为重复提交。
+     * 禁用自动注册后，它们只在 Security 链内按声明顺序执行一次。
+     */
+    @Bean
+    public FilterRegistrationBean<TokenAuthenticationFilter> tokenAuthenticationFilterRegistration(TokenAuthenticationFilter filter) {
+        FilterRegistrationBean<TokenAuthenticationFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RequestWrapperFilter> requestWrapperFilterRegistration(RequestWrapperFilter filter) {
+        FilterRegistrationBean<RequestWrapperFilter> registration = new FilterRegistrationBean<>(filter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RateLimitFilter> rateLimitFilterRegistration() {
+        FilterRegistrationBean<RateLimitFilter> registration = new FilterRegistrationBean<>(rateLimitFilter);
+        registration.setEnabled(false);
+        return registration;
+    }
+
+    @Bean
+    public FilterRegistrationBean<RepeatSubmitFilter> repeatSubmitFilterRegistration() {
+        FilterRegistrationBean<RepeatSubmitFilter> registration = new FilterRegistrationBean<>(repeatSubmitFilter);
+        registration.setEnabled(false);
+        return registration;
     }
 
     /**

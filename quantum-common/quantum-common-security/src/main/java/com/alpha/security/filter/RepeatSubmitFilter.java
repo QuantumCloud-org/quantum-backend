@@ -16,8 +16,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.core.Ordered;
-import org.springframework.core.annotation.Order;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
@@ -29,13 +27,12 @@ import java.time.Duration;
 /**
  * 防重复提交过滤器
  * <p>
- * 修复内容：
- * 1. 支持 JSON Body 的 MD5 计算
- * 2. 使用 RepeatableReadRequestWrapper 解决流重复读问题
+ * 仅在 Security 过滤链内执行（RequestWrapperFilter 之后，此时请求已被包装为
+ * SecurityRequestWrapper，body MD5 参与重复判定）。Servlet 容器级自动注册已在
+ * SecurityConfig 中通过 FilterRegistrationBean 禁用。
  */
 @Slf4j
 @Component
-@Order(Ordered.HIGHEST_PRECEDENCE + 40)
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "security", name = "repeat-submit-enabled", havingValue = "true", matchIfMissing = true)
 public class RepeatSubmitFilter extends OncePerRequestFilter {

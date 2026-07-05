@@ -20,15 +20,16 @@ public class TokenProperties {
     private String secret;
 
     /**
-     * Access Token 有效期（分钟）
+     * Access Token 有效期（分钟），默认 30 分钟。
+     * 过期后由 RefreshToken 自动旋转续期，不宜设置过长。
      */
-    private int accessTokenExpire = 240;
+    private int accessTokenExpire = 30;
 
     /**
-     * Refresh Token 有效期（分钟）
-     * 默认30分钟
+     * Refresh Token 有效期（分钟），默认 7 天。
+     * 必须显著长于 accessTokenExpire，否则旋转续期机制失去意义。
      */
-    private int refreshTokenExpire = 240;
+    private int refreshTokenExpire = 10080;
 
     /**
      * Token 自动续期阈值（百分比 0-1）

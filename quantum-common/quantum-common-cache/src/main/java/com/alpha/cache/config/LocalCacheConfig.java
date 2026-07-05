@@ -5,8 +5,6 @@ import com.alpha.cache.util.CacheClient;
 import com.alpha.cache.util.LocalCacheClient;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import lombok.extern.slf4j.Slf4j;
-import org.redisson.spring.starter.RedissonAutoConfiguration;
-import org.springframework.boot.autoconfigure.ImportAutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
 import org.springframework.cache.annotation.EnableCaching;
@@ -20,16 +18,13 @@ import java.util.List;
  * 本地缓存配置（{@code cache.mode=local}）
  * <p>
  * 激活条件：配置 {@code cache.mode=local}，通常用于无 Redis 的开发/测试环境。
- * 通过 {@code @ImportAutoConfiguration(exclude=...)} 禁用 Redisson/Redis 自动装配，
- * 避免 Spring Boot 在找不到 Redis 时尝试建立连接。
+ * Redisson 自动装配的排除由 {@link LocalCacheEnvironmentPostProcessor} 在上下文刷新前完成，
+ * 比 {@code @ImportAutoConfiguration(exclude=...)} 更可靠（后者对组件扫描发现的配置类无效）。
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
 @EnableCaching
 @ConditionalOnProperty(name = "cache.mode", havingValue = "local")
-@ImportAutoConfiguration(exclude = {
-        RedissonAutoConfiguration.class
-})
 public class LocalCacheConfig {
 
     @Bean

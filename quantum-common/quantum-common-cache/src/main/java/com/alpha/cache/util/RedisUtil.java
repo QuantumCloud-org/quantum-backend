@@ -32,16 +32,10 @@ public class RedisUtil implements CacheClient {
         this.redisson = redisson;
     }
 
-    private static final Duration DEFAULT_EXPIRE = Duration.ofMinutes(30);
     private static final long DEFAULT_WAIT_TIME = 3L;
     private static final long DEFAULT_LEASE_TIME = 10L;
 
     // ==================== 基础 KV 操作 ====================
-
-    @Override
-    public <T> void set(String key, T value) {
-        set(key, value, DEFAULT_EXPIRE);
-    }
 
     @Override
     public boolean setIfAbsent(String key, Object value, Duration expire) {
@@ -56,11 +50,6 @@ public class RedisUtil implements CacheClient {
     }
 
     @Override
-    public <T> void set(String key, T value, long expireSeconds) {
-        set(key, value, Duration.ofSeconds(expireSeconds));
-    }
-
-    @Override
     public <T> T getAndDelete(String key) {
         RBucket<T> bucket = redisson.getBucket(key);
         return bucket.getAndDelete();
@@ -70,12 +59,6 @@ public class RedisUtil implements CacheClient {
     public <T> T get(String key) {
         RBucket<T> bucket = redisson.getBucket(key);
         return bucket.get();
-    }
-
-    @Override
-    public <T> T getOrDefault(String key, T defaultValue) {
-        T value = get(key);
-        return value != null ? value : defaultValue;
     }
 
     @Override
@@ -269,11 +252,6 @@ public class RedisUtil implements CacheClient {
                 Duration.ofSeconds(interval)
         );
         return limiter.tryAcquire(1);
-    }
-
-    @Override
-    public boolean tryAcquire(String key) {
-        return tryAcquire(key, 10, 1);
     }
 
     // ==================== 分布式锁 ====================

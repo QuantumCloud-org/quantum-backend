@@ -192,6 +192,7 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         oldMenu.setIcon(menu.getIcon());
         oldMenu.setStatus(menu.getStatus());
         oldMenu.setRemark(menu.getRemark());
+        oldMenu.setVersion(menu.getVersion());
 
         boolean result = updateById(oldMenu);
         if (!result) {

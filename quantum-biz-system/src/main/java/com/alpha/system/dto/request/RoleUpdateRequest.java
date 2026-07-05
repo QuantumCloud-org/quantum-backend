@@ -24,6 +24,12 @@ public class RoleUpdateRequest implements Serializable {
     private Long id;
 
     /**
+     * 乐观锁版本号
+     */
+    @NotNull(message = "角色版本号不能为空")
+    private Long version;
+
+    /**
      * 角色名称
      */
     @NotNull(message = "角色名称不能为空")

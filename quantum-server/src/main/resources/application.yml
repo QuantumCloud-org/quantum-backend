@@ -27,6 +27,10 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
+      # cache.mode=local 时禁用 Redisson 自动装配，避免启动时连接不存在的 Redis
+      # 切换为 redis 模式时删除以下两行，并在对应 profile 配置 spring.data.redis.*
+      - org.redisson.spring.starter.RedissonAutoConfigurationV4
+      - org.redisson.spring.starter.RedissonAutoConfigurationV2
 
 # Actuator配置
 management:
@@ -63,6 +67,7 @@ cache:
 
 # Security 配置
 security:
+  cors-allowed-origins: "*"
   xss-enabled: true
   # 允许传 HTML 的富文本字段接口
   #xss-excludes:

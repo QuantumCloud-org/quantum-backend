@@ -127,6 +127,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         oldRole.setDataScope(role.getDataScope());
         oldRole.setStatus(role.getStatus());
         oldRole.setRemark(role.getRemark());
+        oldRole.setVersion(role.getVersion());
 
         boolean updated = updateById(oldRole);
         if (!updated) {

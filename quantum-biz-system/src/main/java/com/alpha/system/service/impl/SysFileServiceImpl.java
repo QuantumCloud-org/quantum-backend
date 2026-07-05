@@ -71,6 +71,22 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
     }
 
     @Override
+    public SysFile selectByPath(String path) {
+        if (StrUtil.isBlank(path)) {
+            throw new BizException("文件不存在");
+        }
+        SysFile entity = list(QueryWrapper.create()
+                .where(SYS_FILE.FILE_PATH.eq(path.trim())))
+                .stream()
+                .findFirst()
+                .orElse(null);
+        if (entity == null || !fileStorageService.exists(entity.getFilePath())) {
+            throw new BizException("文件不存在");
+        }
+        return entity;
+    }
+
+    @Override
     public Page<SysFile> selectFilePage(SysFileQuery query) {
         return page(query.getPage(), buildQueryWrapper(query));
     }

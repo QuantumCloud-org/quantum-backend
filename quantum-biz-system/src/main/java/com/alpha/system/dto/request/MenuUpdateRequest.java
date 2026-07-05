@@ -24,6 +24,12 @@ public class MenuUpdateRequest implements Serializable {
     private Long id;
 
     /**
+     * 乐观锁版本号
+     */
+    @NotNull(message = "菜单版本号不能为空")
+    private Long version;
+
+    /**
      * 父菜单ID
      */
     private Long parentId;

@@ -24,6 +24,11 @@ public class DeptVO implements Serializable {
     private Long id;
 
     /**
+     * 乐观锁版本号
+     */
+    private Long version;
+
+    /**
      * 子部门（非数据库字段）
      */
     private List<DeptVO> children;

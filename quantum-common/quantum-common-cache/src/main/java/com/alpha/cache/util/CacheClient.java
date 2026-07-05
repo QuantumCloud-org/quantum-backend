@@ -21,17 +21,27 @@ import java.util.function.Supplier;
  */
 public interface CacheClient {
 
+    /** 无显式 TTL 时的默认过期时间（30 分钟）。 */
+    Duration DEFAULT_EXPIRE = Duration.ofMinutes(30);
+
     // ==================== KV ====================
 
-    <T> void set(String key, T value);
+    default <T> void set(String key, T value) {
+        set(key, value, DEFAULT_EXPIRE);
+    }
 
     <T> void set(String key, T value, Duration expire);
 
-    <T> void set(String key, T value, long expireSeconds);
+    default <T> void set(String key, T value, long expireSeconds) {
+        set(key, value, Duration.ofSeconds(expireSeconds));
+    }
 
     <T> T get(String key);
 
-    <T> T getOrDefault(String key, T defaultValue);
+    default <T> T getOrDefault(String key, T defaultValue) {
+        T v = get(key);
+        return v != null ? v : defaultValue;
+    }
 
     <T> T getOrLoad(String key, Supplier<T> loader, Duration expire);
 
@@ -137,5 +147,7 @@ public interface CacheClient {
     boolean tryAcquire(String key, long rate, long interval);
 
     /** 默认每秒 10 次。 */
-    boolean tryAcquire(String key);
+    default boolean tryAcquire(String key) {
+        return tryAcquire(key, 10, 1);
+    }
 }

@@ -31,8 +31,6 @@ import java.util.stream.Collectors;
 @Slf4j
 public class LocalCacheClient implements CacheClient {
 
-    private static final Duration DEFAULT_EXPIRE = Duration.ofMinutes(30);
-
     /** key → 绝对过期时刻（System.nanoTime 纳秒），所有存储类型共享。无过期时不存在。 */
     private final ConcurrentHashMap<String, Long> expiryNanos = new ConcurrentHashMap<>();
 
@@ -87,19 +85,9 @@ public class LocalCacheClient implements CacheClient {
     // ==================== 基础 KV ====================
 
     @Override
-    public <T> void set(String key, T value) {
-        set(key, value, DEFAULT_EXPIRE);
-    }
-
-    @Override
     public <T> void set(String key, T value, Duration expire) {
         recordExpiry(key, expire);
         kvCache.put(key, value);
-    }
-
-    @Override
-    public <T> void set(String key, T value, long expireSeconds) {
-        set(key, value, Duration.ofSeconds(expireSeconds));
     }
 
     /**
@@ -122,12 +110,6 @@ public class LocalCacheClient implements CacheClient {
     }
 
     @Override
-    public <T> T getOrDefault(String key, T defaultValue) {
-        T v = get(key);
-        return v != null ? v : defaultValue;
-    }
-
-    @Override
     public <T> T getOrLoad(String key, Supplier<T> loader, Duration expire) {
         T v = get(key);
         if (v == null) {
@@ -143,6 +125,10 @@ public class LocalCacheClient implements CacheClient {
         Object value = kvCache.asMap().remove(key);
         expiryNanos.remove(key);
         counters.remove(key);
+        hashStore.remove(key);
+        listStore.remove(key);
+        setStore.remove(key);
+        zsetStore.remove(key);
         return (T) value;
     }
 
@@ -443,11 +429,6 @@ public class LocalCacheClient implements CacheClient {
     @Override
     public boolean tryAcquire(String key, long rate, long interval) {
         return rateLimiters.computeIfAbsent(key, k -> new TokenBucket(rate, interval)).tryAcquire();
-    }
-
-    @Override
-    public boolean tryAcquire(String key) {
-        return tryAcquire(key, 10, 1);
     }
 
     // ==================== 内部工具 ====================

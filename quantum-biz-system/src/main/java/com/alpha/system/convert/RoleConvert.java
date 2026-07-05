@@ -41,6 +41,7 @@ public class RoleConvert {
         }
         SysRole role = new SysRole();
         role.setId(request.getId());
+        role.setVersion(request.getVersion());
         role.setRoleName(request.getRoleName());
         role.setRoleKey(request.getRoleKey());
         role.setOrderNum(request.getOrderNum());
@@ -59,6 +60,7 @@ public class RoleConvert {
         }
         RoleVO vo = new RoleVO();
         vo.setId(role.getId());
+        vo.setVersion(role.getVersion());
         vo.setRoleName(role.getRoleName());
         vo.setRoleKey(role.getRoleKey());
         vo.setOrderNum(role.getOrderNum());

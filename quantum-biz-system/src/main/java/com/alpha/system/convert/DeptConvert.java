@@ -44,6 +44,7 @@ public class DeptConvert {
         }
         SysDept dept = new SysDept();
         dept.setId(request.getId());
+        dept.setVersion(request.getVersion());
         dept.setParentId(request.getParentId());
         dept.setDeptName(request.getDeptName());
         dept.setOrderNum(request.getOrderNum());
@@ -63,6 +64,7 @@ public class DeptConvert {
         }
         DeptVO vo = new DeptVO();
         vo.setId(dept.getId());
+        vo.setVersion(dept.getVersion());
         vo.setDeptName(dept.getDeptName());
         vo.setParentId(dept.getParentId());
         vo.setAncestors(dept.getAncestors());

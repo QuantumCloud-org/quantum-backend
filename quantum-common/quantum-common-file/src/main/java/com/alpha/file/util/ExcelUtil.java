@@ -422,8 +422,8 @@ public class ExcelUtil {
     private static void setExportResponse(HttpServletResponse response, String fileName) {
         response.setContentType("application/vnd.openxmlformats-officedocument.spreadsheetml.sheet");
         response.setCharacterEncoding("utf-8");
-        String encoded = URLEncoder.encode(fileName, StandardCharsets.UTF_8).replaceAll("\\+", "%20");
-        response.setHeader("Content-Disposition", "attachment;filename=" + encoded + ".xlsx");
+        String encoded = URLEncoder.encode(fileName + ".xlsx", StandardCharsets.UTF_8).replaceAll("\\+", "%20");
+        response.setHeader("Content-Disposition", "attachment; filename=\"export.xlsx\"; filename*=UTF-8''" + encoded);
         response.setHeader("Access-Control-Expose-Headers", "Content-Disposition");
     }
 

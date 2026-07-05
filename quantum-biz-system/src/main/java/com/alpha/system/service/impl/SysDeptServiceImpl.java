@@ -139,6 +139,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         oldDept.setPhone(dept.getPhone());
         oldDept.setEmail(dept.getEmail());
         oldDept.setStatus(dept.getStatus());
+        oldDept.setVersion(dept.getVersion());
 
         boolean updated = updateById(oldDept);
         if (!updated) {

@@ -25,6 +25,12 @@ public class DeptUpdateRequest implements Serializable {
     private Long id;
 
     /**
+     * 乐观锁版本号
+     */
+    @NotNull(message = "部门版本号不能为空")
+    private Long version;
+
+    /**
      * 父部门ID
      */
     private Long parentId;

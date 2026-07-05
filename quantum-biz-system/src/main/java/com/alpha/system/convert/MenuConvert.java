@@ -50,6 +50,7 @@ public class MenuConvert {
         }
         SysMenu menu = new SysMenu();
         menu.setId(request.getId());
+        menu.setVersion(request.getVersion());
         menu.setParentId(request.getParentId());
         menu.setMenuName(request.getMenuName());
         menu.setOrderNum(request.getOrderNum());

@@ -255,12 +255,13 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ## 9. 待确认 / 依赖项
 
-- **MCP 授权流程（S3 前必须定）**：设计已确定"每次调用带用户 JWT、由 quantum-backend 裁决"，
-  但通用 agent（如 Claude Desktop）**如何获得这个 JWT** 尚未定义。候选：
-  a) MCP 规范的 OAuth 2.1 授权流程（标准、对通用 agent 最友好，但 quantum-backend 需新增授权端点）；
-  b) 用户在 agent 配置中粘贴自己的登录 token（零开发，但 token 过期体验差、有泄漏面）；
-  c) 为 MCP 单独签发长期受限 PAT（个人访问令牌，范围只读 + 可吊销）。
-  倾向 c) 起步、a) 为终态；S3 实现前需拍板。
+- **MCP 授权流程：✅ 已定案（2026-07-06 用户拍板）——直接 OAuth 2.1**（MCP 规范标准流程）。
+  用户体验：agent 首次连接 → 401 携带受保护资源元数据（RFC 9728）→ agent 自动拉起浏览器 →
+  用户以 quantum-backend 正常账号登录并同意 → 授权码 + PKCE 换短时 access token + refresh token →
+  agent 缓存并自动刷新。**用户全程不手动粘贴 token**；撤销在服务端（下线/改密即失效）。
+  S3 因此新增实现项：`/.well-known/oauth-protected-resource` 元数据、`/oauth/authorize` +
+  `/oauth/token`（授权码 + PKCE，公共客户端 + 回环/自定义 scheme redirect）、access token
+  映射回现有 LoginUser 会话体系（复用 TokenService 存储与吊销）；动态客户端注册（RFC 7591）可后置。
 - **框架加固待办（独立于 AI Sprint 的代码改动）**：`DataScopeAspect` 对"无用户上下文"当前是
   静默跳过（fail-open），建议改为 fail-closed（抛出未认证异常或注入恒假条件）。常规 HTTP 链路
   因认证前置而无法触达此路径，但它是所有非 servlet 入口（MCP / 定时任务 / 消息消费）的共同隐患。

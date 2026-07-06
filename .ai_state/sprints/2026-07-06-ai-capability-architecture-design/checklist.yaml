@@ -56,6 +56,6 @@ items:
     status: done
     evidence: runtime-verify.md
   - id: quantum-mcp-s3
-    title: "S3: quantum-mcp 标准协议只读能力适配"
-    status: blocked
-    evidence: 治理文档 §9 — MCP 授权流程 (PAT/OAuth) 待用户拍板
+    title: "S3: quantum-mcp 标准协议只读能力适配 (OAuth 2.1 已定案, 解锁)"
+    status: pending
+    evidence: 治理文档 §9 — 2026-07-06 用户拍板直接 OAuth 2.1; 交叉 review 用户线下进行

@@ -1,0 +1,38 @@
+// 模板占位：{{module}} {{Entity}} · 手写 @Component 转换器（本项目不用 MapStruct）
+package com.alpha.{{module}}.convert;
+
+import com.alpha.{{module}}.domain.{{Entity}};
+import com.alpha.{{module}}.dto.request.{{Entity}}CreateRequest;
+import com.alpha.{{module}}.dto.request.{{Entity}}UpdateRequest;
+import com.alpha.{{module}}.dto.response.{{Entity}}VO;
+import org.springframework.stereotype.Component;
+
+@Component
+public class {{Entity}}Convert {
+
+    public {{Entity}} toEntity({{Entity}}CreateRequest request) {
+        if (request == null) return null;
+        {{Entity}} entity = new {{Entity}}();
+        // TODO: 字段拷贝
+        return entity;
+    }
+
+    public {{Entity}} toEntity({{Entity}}UpdateRequest request) {
+        if (request == null) return null;
+        {{Entity}} entity = new {{Entity}}();
+        entity.setId(request.getId());
+        entity.setVersion(request.getVersion());
+        // TODO: 字段拷贝
+        return entity;
+    }
+
+    public {{Entity}}VO toVO({{Entity}} entity) {
+        if (entity == null) return null;
+        {{Entity}}VO vo = new {{Entity}}VO();
+        vo.setId(entity.getId());
+        vo.setVersion(entity.getVersion());
+        vo.setCreateTime(entity.getCreateTime());
+        // TODO: 字段拷贝
+        return vo;
+    }
+}

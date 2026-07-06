@@ -245,7 +245,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 | 阶段 | 交付 | 状态 |
 |---|---|---|
 | S0（本 Sprint，文档） | 本设计资料 + 两份契约结构定稿 + 两个 skill 起点 + BE Convention Pack 骨架 | ✅ 本 PR |
-| S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | 待办 |
+| S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | ✅ 本 PR（runtime-verify 实证：模板实例化模块一次编译通过） |
 | S2 | scaffold-module-gen skill 迁入 aether/pace + 编译闭环实跑 | 待办 |
 | S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 待办：身份透传 + DataScope 穿透 + 审计，默认关闭 |
 | S4 | quantum-front Convention Pack | 待办：验证"脚手架无关"，skill 不改只换约定包 |

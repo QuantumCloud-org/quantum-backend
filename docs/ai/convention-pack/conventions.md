@@ -72,3 +72,11 @@ quantum-biz-<module>/
 ## 校验
 
 见 `validate.md`。生成后未通过 `mvn compile` 不算完成。
+
+## 新增模块 pom（runtime-verify 实证补充）
+
+- parent：`com.alpha:quantum-backend:${revision}`；新模块自身 groupId 惯例为 `com.alpha.<module>`。
+- **依赖 common 模块时 groupId 不是统一 `com.alpha`**，而是各自的 `com.alpha.<name>`：
+  `com.alpha.logging:quantum-common-logging`、`com.alpha.security:quantum-common-security`、
+  `com.alpha.orm:quantum-common-orm`、`com.alpha.file:quantum-common-file`（version 用 `${revision}`）。
+- 新模块必须注册进根 pom `<modules>`，并被 `quantum-server` 依赖后才会参与部署。

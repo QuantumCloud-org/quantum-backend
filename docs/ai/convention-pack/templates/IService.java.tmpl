@@ -1,0 +1,22 @@
+// 模板占位：{{module}} {{Entity}}
+package com.alpha.{{module}}.service;
+
+import com.alpha.{{module}}.domain.{{Entity}};
+import com.alpha.{{module}}.dto.request.{{Entity}}Query;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.service.IService;
+
+import java.util.List;
+
+public interface I{{Entity}}Service extends IService<{{Entity}}> {
+
+    Page<{{Entity}}> selectPage({{Entity}}Query query);
+
+    {{Entity}} selectById(Long id);
+
+    Long insert({{Entity}} entity);
+
+    boolean update({{Entity}} entity);
+
+    boolean deleteByIds(List<Long> ids);
+}

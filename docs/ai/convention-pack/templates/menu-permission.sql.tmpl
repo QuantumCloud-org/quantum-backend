@@ -1,0 +1,9 @@
+-- 模板占位：{{Entity}} {{entity}} {{module}} {{menuName}} {{parentMenuId}}
+-- 菜单 + 按钮权限落库（对照 deploy/init.sql 的 sys_menu 结构；id 由实施时分配号段）
+INSERT INTO sys_menu (id, parent_id, menu_name, path, component, menu_type, perms, status, deleted, version)
+VALUES
+  ({{menuId}},   {{parentMenuId}}, '{{menuName}}管理', '{{entity}}', '{{module}}/{{entity}}/index', 'C', '{{module}}:{{entity}}:list',   1, 0, 0),
+  ({{menuId}}1,  {{menuId}}, '{{menuName}}查询', NULL, NULL, 'F', '{{module}}:{{entity}}:query',  1, 0, 0),
+  ({{menuId}}2,  {{menuId}}, '{{menuName}}新增', NULL, NULL, 'F', '{{module}}:{{entity}}:add',    1, 0, 0),
+  ({{menuId}}3,  {{menuId}}, '{{menuName}}修改', NULL, NULL, 'F', '{{module}}:{{entity}}:edit',   1, 0, 0),
+  ({{menuId}}4,  {{menuId}}, '{{menuName}}删除', NULL, NULL, 'F', '{{module}}:{{entity}}:remove', 1, 0, 0);

@@ -1,0 +1,21 @@
+// 模板占位：{{module}} {{Entity}} · 出参 VO；敏感字段用 @Sensitive / @JsonIgnore
+package com.alpha.{{module}}.dto.response;
+
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+import java.time.LocalDateTime;
+
+@Data
+public class {{Entity}}VO implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    private Long id;
+    private Long version;
+    private LocalDateTime createTime;
+
+    // TODO: 业务展示字段
+}

@@ -1,0 +1,9 @@
+sprint_slug: 2026-07-06-backend-security-fixes
+collected_evidence:
+  - tool_use_id: "call_Y46pjrBtBfuf9LZtTHZQjKFY"
+    tool: "Bash"
+    file: ""
+    kind: "test"
+    command: "mvn test"
+    result: "pass"
+    timestamp: "2026-07-06T02:29:21.382287Z"

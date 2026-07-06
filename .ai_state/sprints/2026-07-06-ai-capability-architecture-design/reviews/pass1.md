@@ -101,3 +101,31 @@ implementation (excluded) / quantum-mcp-s3 (pending) 均按状态说明处理, �
 
 ### next_action: polish
 
+
+## Delta Review — design 变更增量复核 (evaluator, 2026-07-06T12:53:47Z)
+
+### 变更清单 (pass1 之后, c0683b1..2a339f0)
+
+| 文件 | 变更性质 |
+|---|---|
+| design.md frontmatter | stage: design→ship, status: draft-for-claude-review→shipped, +superseded_by |
+| design.md 正文头部 | 新增「⚠ 本文档状态」提示块 (Round 3 F1), 指向权威文档 docs/ai-sprint-design.md |
+| design.md Round 2 段 | "blocked on 授权决策" 改为 "OAuth 2.1 已定案 + 待实现清单" (Round 3 F3) |
+| design.md 归属表 | 补 report.export.request 排除出 S3 首批一行 (Round 3 F6) |
+| design.md 追加两段 | `## Round 3 · Critic Findings` (独立 critic, VERDICT=NEEDS_REVISION, F1-F6) + `## Round 3 处置` (逐条闭环记录) |
+| docs/ai-sprint-design.md §9 | 新增「S3 前置设计项」3 条 (token 存储对齐/consent 页/跨项目冻结接口, Round 3 F4/F5 立项非实现) |
+| docs/ai/convention-pack/templates/ServiceImpl.java.tmpl | pass1 P1#1/#2 落地修复: assertWritable/assertReadable/assertInDataScope 真实调用取消注释, 非 TODO |
+| docs/ai/convention-pack/templates/menu-permission.sql.tmpl | pass1 P1#3 落地修复: `{{menuId}}1..4` 拼接改显式独立占位符 (btnQueryId 等) |
+| docs/ai/convention-pack/validate.md | 新增 §2 安全门禁 (grep G1-G4 硬性检查 + data-scope-exempt 豁免机制), 呼应 pass1 P1#1 建议(a) |
+
+checklist.yaml 未被本次 commit 触碰, S1(Convention Pack)/S2/S3 交付物边界不变; quantum-mcp-s3 仍标 pending。
+
+### 判定: pass1 VERDICT 维持 CONCERNS→已闭环
+
+### 理由
+
+- 变更性质全部落在**文档一致性修正**(frontmatter/正文过时措辞/交叉引用指引, Round 3 F1-F3/F6)与**pass1 P1 findings 的直接修复**(P1#1/#2/#3 对应模板/validate.md 改动逐条可核对), 未新增/删减 checklist.yaml 中任何 done 项, S2/S3 范围标注未变(quantum-mcp-s3 仍 pending), 不构成"已交付物范围/架构决策变更"。
+- Round 3 是 delivery-gate U2 要求的第二轮独立 critic, 针对 re-scope 后最终形态, VERDICT=NEEDS_REVISION 判据是 F1(正文未随 re-scope 改写)+F2(frontmatter 冻结在 draft) 两个文档层 P0, 而非对 Round 1/2 已定的"chat 移出仓库"架构裁决翻案; 处置表(design.md `## Round 3 处置`)显示 F1/F2/F3/F6 已当场修复, F4/F5(OAuth token 存储/consent 页/跨项目 schema)已转化为治理文档 §9 的"S3 前置设计项"立项, 非本 sprint 范围(S3 另开 sprint 的 plan 阶段工作), 与 pass1 原判"S2/S3/S4/S5 均标注待办"一致, 无 re-scope。
+- pass1 三条 P1 (ServiceImpl 写/读侧权限校验降级为注释 TODO、menu-permission.sql ID 拼接) 现已被 templates/ServiceImpl.java.tmpl 与 menu-permission.sql.tmpl 的实际 diff 证实修复(assertWritable/assertReadable/assertInDataScope 从注释变真实调用, 5 个 ID 改独立占位符), 且 validate.md 新增 grep G1-G4 硬性门禁, 直接回应 pass1 P1#1 建议(a)"加硬性 grep 门禁"——原判"CONCERNS, 进 polish 处理"路径成立, 现已在 polish 落地闭环, 不构成需要 REWORK 的残留风险。
+- 无 evidence 缺口: design.md/docs/ai-sprint-design.md 改动与 Round 3 critic 记录、处置表逐条对应, 无"声称修复但无 diff 证据"情形; checklist.yaml 未变, done_without_evidence 仍为 0。
+- 结论: 不满足"改变已交付物范围/架构决策"的 RERUN_REQUIRED 门槛, pass1 VERDICT=CONCERNS 对最新状态依然成立, 且原挂起的 next_action=polish 已完成对应修复, 可视为该 CONCERNS 已闭环。

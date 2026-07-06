@@ -28,9 +28,11 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 ┌────────────────────────────────────────────────────────────────────┐
 │ 平面 A — 提示词 / Agent 智能层（aether / pace，你的个人提示词架构）     │
 │   · vm（已有）                                                        │
-│   · skill: scaffold-gen   —— "CLI" 抽象：驱动 AI 向目标脚手架生成代码   │
-│   · skill: capability-mcp —— "MCP" 抽象：驱动 AI 通过 MCP 读取目标系统   │
+│   · skill ①: scaffold-module-gen —— 基于需求 + 框架约定，快速生成模块   │
+│   · skill ②: project-data-reader —— 通过 MCP 读取运行中项目的数据能力  │
 │   两个 skill 都是【目标无关】的，只认下面两份契约，不认具体脚手架        │
+│   均遵循官方 Agent Skills 规范（SKILL.md + frontmatter），可直接装进    │
+│   你的 aether/pace，与 vm 叠加                                          │
 └───────────────┬──────────────────────────────┬───────────────────────┘
      生成期：读约定包、生成代码、跑校验          运行期：连 MCP、带身份读数据
                 │                                │
@@ -106,9 +108,14 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 ### 3.2 MCP Capability Adapter（契约②实现）—— 设计现在定，实现分期
 
 - 新模块：`quantum-mcp`（挂在 `quantum-common` 下或与 biz 平级，建议独立成 `quantum-mcp`）。
-- 形态：**in-process MCP Server 适配层**，薄封装现有 service 层，**不复制任何业务/权限逻辑**。
+- **协议：走标准 MCP 协议**（决策已定），通用 agent（Claude Desktop / 你的 aether/pace / 第三方）都能连：
+  - 主传输：**Streamable HTTP / SSE**（quantum-backend 本就是 web 应用，MCP server 内嵌暴露一个 SSE 端点最自然）。
+  - 次传输：**stdio**（一个薄启动器，供本地 agent / CLI 直连）。
+- 形态：MCP server 逻辑 **in-process 跑在 Spring 应用内**（这样才能复用 `PermissionAspect` + `DataScope`，
+  不复制任何业务/权限逻辑）；对外以标准 MCP 协议暴露，不是私有 REST。
 - 依赖方向：`quantum-mcp` → 依赖 biz service 接口；biz 不反向依赖它。
 - 开关：`ai.mcp.enabled=false` 默认关闭，不给不需要的部署引入表面积。
+- SSE 端点需从既有安全链排除防重复提交/限流的误杀（长连接），但仍走 Token 认证 + 数据权限。
 
 ---
 
@@ -142,7 +149,49 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ---
 
-## 6. scaffold-gen skill 工作流（你的 #1：快速生成模块 / 界面）
+## 5.5 两个 Skill 的边界（必须分清，遵循官方 Agent Skills 规范）
+
+两个 skill 是**不同物种**，混在一起会同时污染两边。用一张表钉死边界；各自是一个独立的
+`SKILL.md`（官方格式：YAML frontmatter `name` + `description`，正文 markdown），装进 aether/pace 即可。
+
+| 维度 | ① `scaffold-module-gen` | ② `project-data-reader` |
+|---|---|---|
+| 一句话 | **基于需求 + 框架约定，快速生成项目模块** | **通过 MCP 读取运行中项目的数据能力** |
+| 时机 | dev-time（写代码 / 部署前） | runtime（项目已跑起来） |
+| 作用对象 | 目标脚手架的**源码仓库** | 目标系统的**运行实例** |
+| 输入 | 需求描述 + 目标脚手架 id | MCP endpoint + 操作者身份（JWT） |
+| 依赖契约 | 契约① Convention Pack | 契约② Capability Manifest + MCP |
+| 产物 | 可编译的模块骨架 + 菜单/权限 SQL | 结构化业务数据（只读） |
+| 是否碰运行时数据 | 否 | 是（穿权限 + 脱敏） |
+| 是否碰源码 | 是（生成/修改文件） | 否 |
+
+- 官方 SKILL.md frontmatter 示例（两个 skill 各一份）：
+  ```yaml
+  ---
+  name: scaffold-module-gen
+  description: >-
+    Use when the user wants to generate a new business module or page in an
+    existing enterprise scaffold (backend or frontend) from a requirement.
+    Reads the target scaffold's Convention Pack, generates code from templates,
+    then closes the loop with the scaffold's compile/build command.
+  ---
+  ```
+  ```yaml
+  ---
+  name: project-data-reader
+  description: >-
+    Use when you need to read live data or business-process state from a
+    running project (users, departments, dictionaries, workflow status,
+    reports) through its MCP capability server, with the caller's identity and
+    data-permission enforced by the target system.
+  ---
+  ```
+- 本仓库提供两个 skill 的**参考起点**于 `docs/ai/skills/`（脚手架无关，属平面 A，最终迁入 aether/pace），
+  以及 quantum-backend 的 Convention Pack 于 `docs/ai/convention-pack/`（属平面 B，本仓库的活）。
+
+---
+
+## 6. scaffold-module-gen skill 工作流（你的 #1：快速生成模块 / 界面）
 
 ```
 输入：目标脚手架 id（quantum-backend / quantum-front / <客户>） + 需求描述
@@ -162,7 +211,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ---
 
-## 7. capability-mcp skill 工作流（你的 #2：把系统能力开放给模型）
+## 7. project-data-reader skill 工作流（你的 #2：把系统能力开放给模型）
 
 ```
 输入：目标系统 MCP endpoint + 操作用户身份（JWT）
@@ -180,13 +229,13 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ## 8. 分阶段落地顺序
 
-| 阶段 | 交付 | 说明 |
+| 阶段 | 交付 | 状态 |
 |---|---|---|
-| S0（本 Sprint，文档） | 本设计资料 + 两份契约结构定稿 | 评审通过即锁定边界 |
-| S1 | quantum-backend Convention Pack（`docs/ai/convention-pack/`） | 先让 scaffold-gen 能生成 BE 模块，价值最快 |
-| S2 | scaffold-gen skill 接入 aether/pace + 编译闭环 | 打通"AI 生成 → 编译校验 → 自修" |
-| S3 | `quantum-mcp` 只读能力适配（契约②） | 身份透传 + DataScope 穿透 + 审计，默认关闭 |
-| S4 | quantum-front Convention Pack | 验证"脚手架无关"：skill 不改，换约定包 |
+| S0（本 Sprint，文档） | 本设计资料 + 两份契约结构定稿 + 两个 skill 起点 + BE Convention Pack 骨架 | ✅ 本 PR |
+| S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | 待办 |
+| S2 | scaffold-module-gen skill 迁入 aether/pace + 编译闭环实跑 | 待办 |
+| S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 待办：身份透传 + DataScope 穿透 + 审计，默认关闭 |
+| S4 | quantum-front Convention Pack | 待办：验证"脚手架无关"，skill 不改只换约定包 |
 | S5（外部） | 下游 chat 产品对接 MCP | 平面 C，独立项目独立节奏 |
 
 ---

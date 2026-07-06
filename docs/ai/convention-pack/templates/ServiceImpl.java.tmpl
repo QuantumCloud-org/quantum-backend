@@ -1,0 +1,84 @@
+// 模板占位：{{module}} {{Entity}} {{entity}} · 写操作必须带数据权限校验（见 conventions.md 权限约定）
+package com.alpha.{{module}}.service.impl;
+
+import com.alpha.framework.enums.ResultCode;
+import com.alpha.framework.exception.BizException;
+import com.alpha.orm.enums.DataScopeType;
+import com.alpha.orm.interceptor.DataPermissionInterceptor;
+import com.alpha.orm.permission.DataScope;
+import com.alpha.{{module}}.domain.{{Entity}};
+import com.alpha.{{module}}.dto.request.{{Entity}}Query;
+import com.alpha.{{module}}.mapper.{{Entity}}Mapper;
+import com.alpha.{{module}}.service.I{{Entity}}Service;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
+import com.mybatisflex.spring.service.impl.ServiceImpl;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.List;
+
+import static com.alpha.{{module}}.domain.table.{{Entity}}TableDef.{{ENTITY}};
+
+@Slf4j
+@Service
+@RequiredArgsConstructor
+public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entity}}> implements I{{Entity}}Service {
+
+    @Override
+    @DataScope(type = DataScopeType.DEPT_AND_CHILD)
+    public Page<{{Entity}}> selectPage({{Entity}}Query query) {
+        QueryWrapper wrapper = buildQueryWrapper(query);
+        DataPermissionInterceptor.applyDataScope(wrapper, "");
+        return page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
+    }
+
+    @Override
+    public {{Entity}} selectById(Long id) {
+        {{Entity}} entity = getById(id);
+        if (entity == null) {
+            throw new BizException("{{Entity}}不存在");
+        }
+        // TODO: 若为敏感数据，补充读数据权限校验（参照 SysUserServiceImpl.assertTargetUserReadable）
+        return entity;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public Long insert({{Entity}} entity) {
+        // TODO: 唯一性校验 + assertDeptInDataScope(entity.getDeptId()) 若含部门维度
+        save(entity);
+        return entity.getId();
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean update({{Entity}} entity) {
+        {{Entity}} old = getById(entity.getId());
+        if (old == null) {
+            throw new BizException("{{Entity}}不存在");
+        }
+        // TODO: 写操作数据权限校验 —— 目标记录必须在操作者范围内（硬性要求，勿删）
+        // assertWritable(old);
+        boolean ok = updateById(entity);
+        if (!ok) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "数据已变更，请刷新后重试");
+        }
+        return true;
+    }
+
+    @Override
+    @Transactional(rollbackFor = Exception.class)
+    public boolean deleteByIds(List<Long> ids) {
+        // TODO: 逐个 assertWritable(getById(id)) 后再删
+        return removeByIds(ids);
+    }
+
+    private QueryWrapper buildQueryWrapper({{Entity}}Query query) {
+        return QueryWrapper.create()
+                // TODO: 按 query 字段拼接 .and({{ENTITY}}.FIELD.eq(...).when(...))
+                .orderBy({{ENTITY}}.CREATE_TIME.desc());
+    }
+}

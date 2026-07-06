@@ -1,0 +1,72 @@
+// 模板占位：{{Module}} 模块名(小写包名) · {{Entity}} 实体名(大驼峰) · {{entity}} 实体名(小驼峰) · {{perm}} 权限前缀=<module>:<entity>
+package com.alpha.{{module}}.controller;
+
+import com.alpha.framework.entity.Result;
+import com.alpha.logging.annotation.SystemLog;
+import com.alpha.logging.enums.BusinessType;
+import com.alpha.orm.entity.PageResult;
+import com.alpha.security.annotation.RequiresPermission;
+import com.alpha.{{module}}.convert.{{Entity}}Convert;
+import com.alpha.{{module}}.domain.{{Entity}};
+import com.alpha.{{module}}.dto.request.{{Entity}}CreateRequest;
+import com.alpha.{{module}}.dto.request.{{Entity}}Query;
+import com.alpha.{{module}}.dto.request.{{Entity}}UpdateRequest;
+import com.alpha.{{module}}.dto.response.{{Entity}}VO;
+import com.alpha.{{module}}.service.I{{Entity}}Service;
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
+import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
+import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
+
+@Tag(name = "{{Entity}}管理")
+@RestController
+@RequestMapping("/{{module}}/{{entity}}")
+@RequiredArgsConstructor
+public class {{Entity}}Controller {
+
+    private final I{{Entity}}Service {{entity}}Service;
+    private final {{Entity}}Convert {{entity}}Convert;
+
+    @Operation(summary = "分页查询")
+    @RequiresPermission("{{perm}}:list")
+    @GetMapping("/list")
+    public Result<PageResult<{{Entity}}VO>> list(@Validated {{Entity}}Query query) {
+        return Result.ok(PageResult.of({{entity}}Service.selectPage(query), {{entity}}Convert::toVO));
+    }
+
+    @Operation(summary = "查询详情")
+    @RequiresPermission("{{perm}}:query")
+    @GetMapping("/{id}")
+    public Result<{{Entity}}VO> getInfo(@PathVariable Long id) {
+        return Result.ok({{entity}}Convert.toVO({{entity}}Service.selectById(id)));
+    }
+
+    @Operation(summary = "新增")
+    @SystemLog(title = "{{Entity}}管理", businessType = BusinessType.INSERT)
+    @RequiresPermission("{{perm}}:add")
+    @PostMapping
+    public Result<Long> add(@Validated @RequestBody {{Entity}}CreateRequest request) {
+        return Result.ok({{entity}}Service.insert({{entity}}Convert.toEntity(request)));
+    }
+
+    @Operation(summary = "修改")
+    @SystemLog(title = "{{Entity}}管理", businessType = BusinessType.UPDATE)
+    @RequiresPermission("{{perm}}:edit")
+    @PutMapping
+    public Result<Void> edit(@Validated @RequestBody {{Entity}}UpdateRequest request) {
+        {{entity}}Service.update({{entity}}Convert.toEntity(request));
+        return Result.ok();
+    }
+
+    @Operation(summary = "删除")
+    @SystemLog(title = "{{Entity}}管理", businessType = BusinessType.DELETE)
+    @RequiresPermission("{{perm}}:remove")
+    @DeleteMapping("/{ids}")
+    public Result<Void> remove(@PathVariable List<Long> ids) {
+        {{entity}}Service.deleteByIds(ids);
+        return Result.ok();
+    }
+}

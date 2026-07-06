@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "review"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
 current_sprint_slug: "2026-07-06-ai-capability-architecture-design"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -58,27 +58,27 @@ counts:
   refactors_count: 0
   systems_count: 1
   requirements_count: 1
-  reviews_count: 0
-  cleanup_count: 2
+  reviews_count: 3
+  cleanup_count: 3
   compound:
-    learning: 0
+    learning: 1
     trick: 0
-    decision: 0
+    decision: 1
     explore: 0
 
 # === Pointers (指向最新相关文件) ===
 pointers:
   latest_design: "sprints/2026-07-06-ai-capability-architecture-design/design.md"               # sprints/{current_sprint_slug}/design.md
   latest_review: "sprints/2026-07-06-ai-capability-architecture-design/design.md"
-  latest_cleanup: "sprints/2026-07-06-backend-import-data-scope-hardening/cleanup-pass.md"
+  latest_cleanup: "sprints/2026-07-06-ai-capability-architecture-design/cleanup-pass.md"
   latest_brainstorm: ""
-  latest_decisions: []
-  latest_lessons: []
-  latest_architecture_update: "2026-07-06T03:24:37.902884Z"
+  latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
+  latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
+  latest_architecture_update: "2026-07-06T12:28:26.642Z"
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "review"                   # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: "ship"                    # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: []              # WorktreeCreate/Remove hook 维护
@@ -146,6 +146,8 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-06 11:40:45`: stage=review sprint=2026-07-06-ai-capability-architecture-design turn-end
+- `2026-07-06 11:38:11`: stage=design sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 05:02:43`: stage=ship sprint=2026-07-06-backend-import-data-scope-hardening turn-end
 - `2026-07-06 01:26:37`: stage=ship sprint=2026-07-05-main-merge-athena-init turn-end
 - 2026-07-06 Claude critic Round 1: NEEDS_REVISION (F1 P0 归属冲突) → Round 2 re-scope: chat→独立 ai-service, ToolRegistry→quantum-mcp; 治理文档 docs/ai-sprint-design.md

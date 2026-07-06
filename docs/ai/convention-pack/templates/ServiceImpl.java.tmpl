@@ -1,9 +1,18 @@
 // 模板占位：{{module}} 包名 · {{Entity}} 大驼峰 · {{entity}} 小驼峰 · {{ENTITY}} TableDef 常量名(全大写下划线)
-// 写操作必须带数据权限校验（见 conventions.md 权限约定）
+//
+// ⚠ 数据权限默认启用（fail-closed）。本模板的读/写侧校验是**默认开启**的，不是 TODO：
+//   - 实体含部门维度（表有 dept_id 列）→ 原样保留全部 assert* 调用与辅助方法。
+//   - 实体无部门维度且无行级敏感性 → 才允许删除 assert* 调用、辅助方法及 @DataScope/applyDataScope，
+//     删除即视为显式豁免，必须在生成报告中输出一行 "data-scope-exempt: {{Entity}} <原因>"，
+//     并在 validate.md 人工确认清单勾选（门禁会 grep 校验，见 validate.md）。
+//   - 历史教训：2026-07-05 review 发现的 IDOR-read/write 正是"裸 getById/updateById"模式，勿回退。
 package com.alpha.{{module}}.service.impl;
 
+import com.alpha.framework.context.UserContext;
+import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
+import com.alpha.orm.enums.DataScopeType;
 import com.alpha.orm.interceptor.DataPermissionInterceptor;
 import com.alpha.orm.permission.DataScope;
 import com.alpha.{{module}}.domain.{{Entity}};
@@ -28,8 +37,6 @@ import static com.alpha.{{module}}.domain.table.{{Entity}}TableDef.{{ENTITY}};
 public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entity}}> implements I{{Entity}}Service {
 
     @Override
-    // ⚠ 数据权限仅当实体含部门维度（表有 dept_id 列）时保留以下两行，否则必须整体删除：
-    //   表没有 dept_id 时 applyDataScope 注入的条件会导致运行期 SQL 错误（编译期发现不了）。
     // ⚠ 默认 @DataScope（不带 type）= 按用户配置的数据权限；指定 type 是强制覆盖，
     //   会把配置为"全部数据"的用户也压到指定范围，仅在业务明确要求时使用。
     @DataScope
@@ -45,14 +52,17 @@ public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entit
         if (entity == null) {
             throw new BizException("{{Entity}}不存在");
         }
-        // TODO: 若为敏感数据，补充读数据权限校验（参照 SysUserServiceImpl.assertTargetUserReadable）
+        // 读侧数据权限：列表查询由 @DataScope 过滤，但按 ID 直达必须单独校验（防 IDOR-read）
+        assertReadable(entity);
         return entity;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long insert({{Entity}} entity) {
-        // TODO: 唯一性校验 + assertDeptInDataScope(entity.getDeptId()) 若含部门维度
+        // TODO: 业务唯一性校验（名称/编码等，参照 SysUserServiceImpl.checkXxxUnique）
+        // 写侧数据权限：只能在自己可见的部门下创建
+        assertInDataScope(entity.getDeptId(), "新增");
         save(entity);
         return entity.getId();
     }
@@ -64,8 +74,8 @@ public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entit
         if (old == null) {
             throw new BizException("{{Entity}}不存在");
         }
-        // TODO: 写操作数据权限校验 —— 目标记录必须在操作者范围内（硬性要求，勿删）
-        // assertWritable(old);
+        // 写侧数据权限：目标记录必须在操作者范围内（防 IDOR-write）
+        assertWritable(old);
         boolean ok = updateById(entity);
         if (!ok) {
             throw new BizException(ResultCode.DATA_CONFLICT, "数据已变更，请刷新后重试");
@@ -76,7 +86,13 @@ public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entit
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean deleteByIds(List<Long> ids) {
-        // TODO: 逐个 assertWritable(getById(id)) 后再删
+        // 写侧数据权限：逐个校验后再删（防批量 IDOR-write）
+        for (Long id : ids) {
+            {{Entity}} entity = getById(id);
+            if (entity != null) {
+                assertWritable(entity);
+            }
+        }
         return removeByIds(ids);
     }
 
@@ -84,5 +100,38 @@ public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entit
         return QueryWrapper.create()
                 // TODO: 按 query 字段拼接 .and({{ENTITY}}.FIELD.eq(...).when(...))
                 .orderBy({{ENTITY}}.CREATE_TIME.desc());
+    }
+
+    // ==================== 数据权限辅助（语义对照 SysUserServiceImpl.isDeptInScope）====================
+
+    private void assertReadable({{Entity}} target) {
+        assertInDataScope(target.getDeptId(), "查看");
+    }
+
+    private void assertWritable({{Entity}} target) {
+        assertInDataScope(target.getDeptId(), "操作");
+    }
+
+    /**
+     * 校验目标部门是否在操作者数据权限范围内。fail-closed：无登录态 / SELF 范围一律拒绝。
+     * SELF（仅本人）语义按 create_by 归属细化时，由具体业务在此方法内补充。
+     */
+    private void assertInDataScope(Long deptId, String action) {
+        LoginUser current = UserContext.getUser();
+        if (current == null) {
+            throw new BizException(ResultCode.UNAUTHORIZED);
+        }
+        if (current.isAdmin()) {
+            return;
+        }
+        boolean inScope = switch (DataScopeType.fromCode(current.getDataScope())) {
+            case ALL -> true;
+            case DEPT -> current.getDeptId() != null && current.getDeptId().equals(deptId);
+            case DEPT_AND_CHILD, CUSTOM -> current.getDeptIds() != null && current.getDeptIds().contains(deptId);
+            default -> false;
+        };
+        if (!inScope) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权" + action + "该部门数据");
+        }
     }
 }

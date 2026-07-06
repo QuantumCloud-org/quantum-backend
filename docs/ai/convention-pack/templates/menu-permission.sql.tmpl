@@ -1,9 +1,12 @@
 -- 模板占位：{{Entity}} {{entity}} {{module}} {{menuName}} {{parentMenuId}}
--- 菜单 + 按钮权限落库（对照 deploy/init.sql 的 sys_menu 结构；id 由实施时分配号段）
+-- 菜单 + 按钮权限落库（对照 deploy/init.sql 的 sys_menu 结构）
+-- ⚠ 5 个 ID（{{menuId}} / {{btnQueryId}} / {{btnAddId}} / {{btnEditId}} / {{btnRemoveId}}）
+--   全部由实施时从同一号段显式分配，禁止用父 ID 拼接数字生成（位数变化会撞 ID）。
+--   落库前自查：SELECT id FROM sys_menu WHERE id IN (5 个 ID) 必须为空。
 INSERT INTO sys_menu (id, parent_id, menu_name, path, component, menu_type, perms, status, deleted, version)
 VALUES
-  ({{menuId}},   {{parentMenuId}}, '{{menuName}}管理', '{{entity}}', '{{module}}/{{entity}}/index', 'C', '{{module}}:{{entity}}:list',   1, 0, 0),
-  ({{menuId}}1,  {{menuId}}, '{{menuName}}查询', NULL, NULL, 'F', '{{module}}:{{entity}}:query',  1, 0, 0),
-  ({{menuId}}2,  {{menuId}}, '{{menuName}}新增', NULL, NULL, 'F', '{{module}}:{{entity}}:add',    1, 0, 0),
-  ({{menuId}}3,  {{menuId}}, '{{menuName}}修改', NULL, NULL, 'F', '{{module}}:{{entity}}:edit',   1, 0, 0),
-  ({{menuId}}4,  {{menuId}}, '{{menuName}}删除', NULL, NULL, 'F', '{{module}}:{{entity}}:remove', 1, 0, 0);
+  ({{menuId}},      {{parentMenuId}}, '{{menuName}}管理', '{{entity}}', '{{module}}/{{entity}}/index', 'C', '{{module}}:{{entity}}:list',   1, 0, 0),
+  ({{btnQueryId}},  {{menuId}}, '{{menuName}}查询', NULL, NULL, 'F', '{{module}}:{{entity}}:query',  1, 0, 0),
+  ({{btnAddId}},    {{menuId}}, '{{menuName}}新增', NULL, NULL, 'F', '{{module}}:{{entity}}:add',    1, 0, 0),
+  ({{btnEditId}},   {{menuId}}, '{{menuName}}修改', NULL, NULL, 'F', '{{module}}:{{entity}}:edit',   1, 0, 0),
+  ({{btnRemoveId}}, {{menuId}}, '{{menuName}}删除', NULL, NULL, 'F', '{{module}}:{{entity}}:remove', 1, 0, 0);

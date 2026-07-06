@@ -4,7 +4,7 @@
 
 Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 
-最近更新: 2026-07-06T03:21:27Z
+最近更新: 2026-07-06T13:10:00Z
 
 | 模块 | 职责 |
 |---|---|
@@ -23,6 +23,13 @@ Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 - 数据权限运行态以登录用户 `LoginUser.dataScope/deptIds` 为入口; 用户登录时优先由有效角色聚合生成。
 - 用户导入属于系统域写路径, 复用用户新增/编辑 DTO 校验并执行部门数据域 guard。
 
+## AI 协作基座
+
+- 生成期: `docs/ai/convention-pack/` (模板数据权限默认启用 + validate.md G1-G4 安全门禁) + scaffold-module-gen skill。
+- 运行期: MCP 能力服务 (OAuth 2.1, 权限裁决在服务端) 设计定案, `quantum-mcp` 模块待实现 (S3)。
+- 本仓库暂无 AI 运行时代码; chat/RAG/Provider 等已定案移出本仓库。
+
 ## 子系统索引
 
 - [auth-security.md](auth-security.md)
+- [ai-collaboration.md](ai-collaboration.md)

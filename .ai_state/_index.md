@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "ship"                    # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: ""                    # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: []              # WorktreeCreate/Remove hook 维护
@@ -107,6 +107,7 @@ fingerprint: ""
 - 2026-07-06: 后端安全修复 sprint 完成 7 个修复点，进入 ship 合并；review、runtime-verify、cleanup 与 architecture 档案已落盘。
 - 2026-07-06: 非 AI 体系剩余项修复完成: 用户导入契约、导出角色回填、数据域 fail-closed、登录态数据权限来源收敛、MVC/服务层测试; AI 审查/生成体系保留给后续 review。
 - 2026-07-06: AI 能力接入进入 System/design: 已落盘 `quantum-biz-ai` 模块化单体方案、Provider/SSE/Tool-MCP/RAG/配额审计设计, 等 Claude review 后再实现。
+- 2026-07-06 20:35: AI 能力架构 sprint 走完全程 (design→review CONCERNS→polish P1×3 闭环→ship df6b729 已推送); Convention Pack 数据权限默认启用 + G1-G4 门禁; compound×2 + architecture/ai-collaboration.md 落盘。
 
 ## 工具调度建议
 
@@ -146,6 +147,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-06 12:34:04`: stage=ship sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:40:45`: stage=review sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:38:11`: stage=design sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 05:02:43`: stage=ship sprint=2026-07-06-backend-import-data-scope-hardening turn-end

@@ -38,3 +38,24 @@ items:
     title: 代码实现
     status: excluded
     evidence: 本 sprint 只做设计, 实现等 Claude review 后另开 sprint
+  # === Round 2 re-scope 后新增 (Claude, 2026-07-06) ===
+  - id: claude-critic-round1
+    title: Claude critic 审核 (VERDICT NEEDS_REVISION, F1 归属冲突)
+    status: done
+    evidence: design.md#round-1--critic-findings-claude-fable-5-2026-07-06
+  - id: rescope-round2
+    title: Round 2 re-scope (chat 归 ai-service 独立项目, ToolRegistry 归 quantum-mcp)
+    status: done
+    evidence: design.md#round-2-re-scope-by-claude-2026-07-06
+  - id: convention-pack-complete
+    title: "S1 impl: Convention Pack 模板全层齐套 (Mapper/IService/DTO/Convert/菜单SQL)"
+    status: done
+    evidence: docs/ai/convention-pack/templates/
+  - id: runtime-verify-trial
+    title: "runtime-verify: 模板实例化 sys_notice 试算模块 mvn compile 实证"
+    status: done
+    evidence: runtime-verify.md
+  - id: quantum-mcp-s3
+    title: "S3: quantum-mcp 标准协议只读能力适配"
+    status: blocked
+    evidence: 治理文档 §9 — MCP 授权流程 (PAT/OAuth) 待用户拍板

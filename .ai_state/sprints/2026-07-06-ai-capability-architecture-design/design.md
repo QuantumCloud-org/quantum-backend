@@ -259,3 +259,66 @@ auth-service
 - Spring AI PGvector docs: https://docs.spring.io/spring-ai/reference/api/vectordbs/pgvector.html
 - pgvector README: https://github.com/pgvector/pgvector
 - WHATWG EventSource spec: https://html.spec.whatwg.org/multipage/server-sent-events.html
+
+---
+
+## Round 1 · Critic Findings (Claude fable-5, 2026-07-06)
+
+> claude-review-brief.md 所请求的审核。已同步核对用户在 Claude 会话中的三点澄清（2026-07-05/06）。
+
+### VERDICT: NEEDS_REVISION
+
+### 评分
+
+| 维度 | 评分 (1-5) | 关键 finding |
+|---|---|---|
+| 边界条件 | 4 | SSE/EventSource/ticket 分析正确且引用规范 |
+| 错误处理 | 4 | 配额预扣/回补、超时可恢复状态设计完整 |
+| 测试覆盖 | 3 | Sprint 退出标准有测试，但缺越权/线程上下文用例点名 |
+| 历史决策对齐 | **1** | **F1：与用户已拍板的定位冲突（P0）** |
+| 复杂度 | 3 | 单体内八个子包偏重，拆走后自然消解 |
+| 历史教训 | 4 | 显式 LoginUserSnapshot 对齐了 DataScopeAspect fail-open 教训 |
+
+### Findings (按严重度)
+
+#### F1 [P0] quantum-biz-ai 的归属与用户已确认的定位冲突
+- 现象: 本设计把 chat/SSE/RAG/配额/Provider SPI 放进 quantum-backend（先单体后拆）。用户已在 Claude 会话明确拍板：**quantum-backend 不做 chat、不含任何 AI 运行时**，chat 是独立项目（平面 C），从第一天就独立；quantum-backend 只提供两份契约（Convention Pack + MCP 只读能力）。"先单体后拆 + 触发条件" 路线已作废。
+- 建议: 本文档除 Tool/MCP 一节外整体**改挂为未来独立 ai-service 的设计附件**；本仓库范围收敛为 `quantum-mcp`（契约②）+ Convention Pack（契约①）。治理架构见 `docs/ai-sprint-design.md`（已两轮评审）。
+- 引用: docs/ai-sprint-design.md §0/§1/§4
+
+#### F2 [P1] ToolRegistry 归属需前移到 quantum-backend 侧
+- 现象: 设计中 ToolRegistry 在 quantum-biz-ai 内、"MCP 后续包装之"。若 chat 独立成项目，ToolRegistry 若随之外迁，将出现独立进程重新裁决权限。
+- 建议: 采纳设计中"MCP Server 只包装同一个 ToolRegistry"的思想，但宿主定为 **quantum-backend 内的 quantum-mcp 模块**（标准 MCP 协议，Streamable HTTP/SSE；stdio 用桥接）；ai-service 与外部 agent 同为 MCP 客户端。
+- 引用: docs/ai-sprint-design.md §3.2 两条硬性技术要求（UserContext fail-closed / @Sensitive 序列化路径）
+
+#### F3 [P2] anthropic-java 版本口径
+- 现象: brief 标注 README 示例 2.48.0，正确；旧方案 2.34.0 已过时。
+- 建议: 版本不入代码常量（与"价格配置化"同一原则），上线前以官方 README 为准复核。
+
+### 对 claude-review-brief 七问的裁决
+
+1. 单体内跑 + 未来拆 → **否**，直接独立项目（用户已拍板，见 F1）。
+2. 自研薄 SPI + Spring AI adapter → **是**，方向正确；Claude 走官方 SDK 保留 caching/tool/thinking，OpenAI-compatible 走统一 adapter。
+3. Claude 直连官方 Java SDK → **是**。
+4. SSE 清单基本完备；补两点：虚拟线程下禁用 InheritableThreadLocal 传播的决定正确（DataScopeAspect 无用户时静默跳过=fail-open，已实测确认）；`/api/v1/ai/**` 属 ai-service，不再涉及本仓库过滤器排除，本仓库只需处理 quantum-mcp 的 SSE 端点。
+5. tool-level 策略表 → 第一版不需要；`permissionCode + riskLevel + 只读白名单` 够用，ABAC 等真实需求出现再加。
+6. pgvector 第一版足够；VectorStore SPI 预留接口即可，不预实现（YAGNI）。
+7. 审计默认脱敏保存正确；原文加密保存（`content_cipher`）作为 opt-in 列保留，密钥走 KMS，不默认开。
+
+---
+
+## Round 2 (re-scope by Claude, 2026-07-06)
+
+按 F1/F2 重定范围，其余内容**不作废、改归属**：
+
+| 内容 | Round 1 归属 | Round 2 归属 |
+|---|---|---|
+| ChatOrchestrator / SSE / RAG / 配额 / Provider SPI / ai_* 表 | quantum-biz-ai（本仓库） | **独立 ai-service 项目**（平面 C），本文档相应章节作为其设计附件带走 |
+| ToolRegistry + 权限裁决 + 审计 | quantum-biz-ai | **quantum-mcp 模块（本仓库）**，标准 MCP 协议对外 |
+| 只读工具首批清单（user.search/dept.tree/role.list） | quantum-biz-ai 工具 | quantum-mcp 的 Capability Manifest 首批能力 |
+| Convention Pack + 两个 skill | （未涉及） | 本仓库 docs/ai/（已落地，见 PR #2） |
+| 拆服务触发条件 | 演进策略 | 作废（天生独立） |
+
+治理文档：`docs/ai-sprint-design.md`（三平面 + 两契约，含 S3 两条硬性技术要求与 MCP 授权流程待办）。
+本仓库 impl 范围（本 sprint）：S1 Convention Pack 模板全层齐套 + 模板实例化编译实证（runtime-verify）。
+quantum-mcp（S3）blocked on：MCP 授权流程决策（PAT 起步 / OAuth 终态，见治理文档 §9）。

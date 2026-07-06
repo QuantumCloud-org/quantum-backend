@@ -1,0 +1,25 @@
+// 模板占位：{{module}} {{Entity}} {{table}}(下划线表名) · 继承 BaseEntity 复用审计/逻辑删除/乐观锁
+package com.alpha.{{module}}.domain;
+
+import com.alpha.orm.entity.BaseEntity;
+import com.mybatisflex.annotation.Table;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serial;
+import java.io.Serializable;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+@Table("{{table}}")
+public class {{Entity}} extends BaseEntity implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    // TODO: 按需求补充业务字段，例如：
+    // private String name;
+    // private Long deptId;   // 若参与数据权限，需与 conventions.md 的写校验对齐
+    // private Integer status;
+    // 注意：审计字段(createBy/createTime/...)由全局 Listener 自动填充，不要在此声明或手动 set
+}

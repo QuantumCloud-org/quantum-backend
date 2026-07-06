@@ -1,0 +1,11 @@
+// 模板占位：{{module}} {{Entity}}
+package com.alpha.{{module}}.mapper;
+
+import com.alpha.{{module}}.domain.{{Entity}};
+import com.mybatisflex.core.BaseMapper;
+import org.apache.ibatis.annotations.Mapper;
+
+@Mapper
+public interface {{Entity}}Mapper extends BaseMapper<{{Entity}}> {
+    // 复杂查询优先用 QueryWrapper + TableDef 写在 service 层；确需手写 SQL 再加注解方法
+}

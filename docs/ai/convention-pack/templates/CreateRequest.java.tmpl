@@ -1,0 +1,16 @@
+// 模板占位：{{module}} {{Entity}} · 创建入参，Jakarta Validation 注解必填
+package com.alpha.{{module}}.dto.request;
+
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+
+@Data
+public class {{Entity}}CreateRequest implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    // TODO: 业务字段 + @NotBlank/@NotNull/@Size/@Pattern 校验
+}

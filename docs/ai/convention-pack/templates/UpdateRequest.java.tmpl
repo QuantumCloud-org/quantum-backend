@@ -1,0 +1,23 @@
+// 模板占位：{{module}} {{Entity}} · 更新入参，必带 id + version（乐观锁）
+package com.alpha.{{module}}.dto.request;
+
+import jakarta.validation.constraints.NotNull;
+import lombok.Data;
+
+import java.io.Serial;
+import java.io.Serializable;
+
+@Data
+public class {{Entity}}UpdateRequest implements Serializable {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    @NotNull(message = "ID不能为空")
+    private Long id;
+
+    @NotNull(message = "版本号不能为空")
+    private Long version;
+
+    // TODO: 可更新业务字段 + 校验注解
+}

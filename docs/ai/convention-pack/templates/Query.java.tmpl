@@ -1,0 +1,18 @@
+// 模板占位：{{module}} {{Entity}} · 分页查询入参，继承 PageQuery 获得 pageNum/pageSize/orderBy
+package com.alpha.{{module}}.dto.request;
+
+import com.alpha.orm.entity.PageQuery;
+import lombok.Data;
+import lombok.EqualsAndHashCode;
+
+import java.io.Serial;
+
+@Data
+@EqualsAndHashCode(callSuper = true)
+public class {{Entity}}Query extends PageQuery {
+
+    @Serial
+    private static final long serialVersionUID = 1L;
+
+    // TODO: 按需求补充过滤字段（如 name/status/beginTime/endTime）
+}

@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "design"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+stage: "review"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
 current_sprint_slug: "2026-07-06-ai-capability-architecture-design"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -69,7 +69,7 @@ counts:
 # === Pointers (指向最新相关文件) ===
 pointers:
   latest_design: "sprints/2026-07-06-ai-capability-architecture-design/design.md"               # sprints/{current_sprint_slug}/design.md
-  latest_review: "sprints/2026-07-06-backend-import-data-scope-hardening/review.md"
+  latest_review: "sprints/2026-07-06-ai-capability-architecture-design/design.md"
   latest_cleanup: "sprints/2026-07-06-backend-import-data-scope-hardening/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: []
@@ -78,11 +78,11 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: ""                   # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: "review"                   # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: []              # WorktreeCreate/Remove hook 维护
-last_critic_round: 0              # plan stage critic 已跑轮数
+last_critic_round: 1              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
 
 # === 用户偏好 ===
@@ -148,3 +148,6 @@ fingerprint: ""
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
 - `2026-07-06 05:02:43`: stage=ship sprint=2026-07-06-backend-import-data-scope-hardening turn-end
 - `2026-07-06 01:26:37`: stage=ship sprint=2026-07-05-main-merge-athena-init turn-end
+- 2026-07-06 Claude critic Round 1: NEEDS_REVISION (F1 P0 归属冲突) → Round 2 re-scope: chat→独立 ai-service, ToolRegistry→quantum-mcp; 治理文档 docs/ai-sprint-design.md
+- 2026-07-06 impl (S1): Convention Pack 模板补全 + runtime-verify 试算
+- 2026-07-06 runtime-verify PASS: 模板实例化 sys_notice 编译一次通过 (9/9 BUILD SUCCESS); 发现并回写 groupId 约定缺口 → stage=review

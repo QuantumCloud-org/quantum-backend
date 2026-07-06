@@ -262,6 +262,14 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
   S3 因此新增实现项：`/.well-known/oauth-protected-resource` 元数据、`/oauth/authorize` +
   `/oauth/token`（授权码 + PKCE，公共客户端 + 回环/自定义 scheme redirect）、access token
   映射回现有 LoginUser 会话体系（复用 TokenService 存储与吊销）；动态客户端注册（RFC 7591）可后置。
+- **S3 前置设计项（Round 3 critic F4/F5, 2026-07-06）——开工前在 plan 阶段补齐, 不留到实现现场决策**:
+  1. OAuth token 存储对齐: access/refresh token 复用现有 `TokenService` 存储还是新建 OAuth token 表;
+     撤销语义与现有"下线/改密即失效"如何统一。
+  2. Consent 页: `/oauth/authorize` 复用现有登录页 + 新增授权同意步骤, 还是独立 consent 页;
+     公共客户端 + 回环 redirect 场景下 state/PKCE 与现有登录态 cookie 的 CSRF 组合校验方案。
+  3. 跨项目冻结接口: Capability Manifest 最小 schema 示例 (一个真实 tool 的 JSON, 明确是否保留
+     riskLevel/dataScopeMode 自定义 metadata 字段) + ai-service → quantum-mcp 的身份传递约定
+     (Authorization: Bearer / RFC 8707 resource indicator 二选一), 双方独立开工前冻结, 防联调撞车。
 - **框架加固待办（独立于 AI Sprint 的代码改动）**：`DataScopeAspect` 对"无用户上下文"当前是
   静默跳过（fail-open），建议改为 fail-closed（抛出未认证异常或注入恒假条件）。常规 HTTP 链路
   因认证前置而无法触达此路径，但它是所有非 servlet 入口（MCP / 定时任务 / 消息消费）的共同隐患。

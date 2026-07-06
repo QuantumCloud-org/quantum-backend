@@ -15,3 +15,8 @@
 - Exit: success
 - Last message: next_action 已写入 `polish`（内容与要求一致，文件被外部工具重排但字段正确）。  **VERDICT: CONCERNS**  **Evidence Cross-Check**: checklist.yaml 12 项 done 全部核实有对应产物/锚点 (design.md 各章节锚点、convention-pack 11 个 .tmpl、runtime-verify.md 
 
+## 2026-07-06T12:49:56.547Z · unknown
+- Duration: 0s
+- Exit: success
+- Last message: 追加成功 (325→365 行)。  VERDICT: NEEDS_REVISION Findings: 6 条 (P0×2, P1×3, P2×1) 最重要一条: F1/F2 — design.md 正文 240 行仍是被 Round 1 否决的 quantum-biz-ai 单体方案原文 (未插入任何"本文档状态"提示), frontmatter 仍是 `stage: design / sta
+

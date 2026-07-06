@@ -1,13 +1,21 @@
 ---
 slug: 2026-07-06-ai-capability-architecture-design
 path: System
-stage: design
+stage: ship
 req_ref: requirements/ai-capability-platform.md
-status: draft-for-claude-review
+status: shipped
+superseded_by: docs/ai-sprint-design.md
 created: 2026-07-06T05:31:57Z
 ---
 
 # AI 能力接入 Sprint 设计
+
+> ## ⚠ 本文档状态 (Round 3 F1 处置, 2026-07-06)
+>
+> 下文从「## 结论」到「## 官方来源」是 **Round 0 原始方案**, 其"新增 quantum-biz-ai 模块跑在单体内"的定位
+> 已被 Round 1 critic 否决 (F1 P0)、Round 2 re-scope **改归属为未来独立 ai-service 项目 (平面 C) 的设计附件**,
+> 不代表 quantum-backend 仓库范围。本仓库的权威范围与治理架构见 `docs/ai-sprint-design.md` (三平面 + 两契约)。
+> 阅读顺序建议: 先读文末 Round 1/2/3 三段, 再按 Round 2 归属表理解正文。
 
 ## 结论
 
@@ -318,7 +326,66 @@ auth-service
 | 只读工具首批清单（user.search/dept.tree/role.list） | quantum-biz-ai 工具 | quantum-mcp 的 Capability Manifest 首批能力 |
 | Convention Pack + 两个 skill | （未涉及） | 本仓库 docs/ai/（已落地，见 PR #2） |
 | 拆服务触发条件 | 演进策略 | 作废（天生独立） |
+| `report.export.request`（高风险, 需二次确认） | quantum-biz-ai 工具 | **排除出 S3 首批**（§5 安全铁律: MCP 默认只读; 写/导出类能力需目标系统显式声明可写后另行评估, Round 3 F6 处置） |
 
 治理文档：`docs/ai-sprint-design.md`（三平面 + 两契约，含 S3 两条硬性技术要求与 MCP 授权流程待办）。
 本仓库 impl 范围（本 sprint）：S1 Convention Pack 模板全层齐套 + 模板实例化编译实证（runtime-verify）。
-quantum-mcp（S3）blocked on：MCP 授权流程决策（PAT 起步 / OAuth 终态，见治理文档 §9）。
+quantum-mcp（S3）待实现：授权流程已定案 **OAuth 2.1**（2026-07-06 用户拍板，见治理文档 §9），
+待实现三个端点（`/.well-known/oauth-protected-resource` + `/oauth/authorize` + `/oauth/token`）
+与 access token → LoginUser 会话映射；开工前还需补两项最小设计（token 存储对齐 + consent 页 + 跨项目接口冻结，见治理文档 §9 "S3 前置设计项"）。
+
+
+## Round 3 · Critic Findings (Claude fable-5 独立 critic, 2026-07-06)
+
+### VERDICT: NEEDS_REVISION
+
+### Findings (按严重度, 每条带文件:行号或章节锚点证据)
+
+#### F1 [P0] design.md 正文 (第 10-249 行) 仍以 "quantum-biz-ai 在本仓库" 视角撰写, 未随 Round 2 re-scope 改写
+- 现象: `## 结论` (design.md:14)、`## 模块边界` (design.md:39-63)、`## API 形态` (design.md:65-76)、`## SSE 与现有安全链冲突` (design.md:121-130)、`## Sprint 拆分建议` (design.md:230-240) 等十余个章节, 全部按 "新增 Maven 模块 quantum-biz-ai 跑在现有单体内" 的 Round 0 方案书写, 依赖方向图 (design.md:57-61) 仍写 `quantum-server -> quantum-biz-ai -> quantum-biz-system`。Round 1 F1 已判定此方案与用户拍板定位冲突 (P0), Round 2 re-scope 表 (design.md:314-320) 只说"不作废、改归属", 但没有在正文任何一处插入指引或删除线, 后来者从头读到 `## 结论` 或 `## 模块边界` 会直接得到"chat 在本仓库内"的错误结论, 必须读到第 265 行才能看到 Round 1 的否决, 读到第 310 行才知道正文该按什么坐标系重新理解。
+- 建议: 在 `## 结论` 前插入一个醒目的"本文档状态"提示块 (例如 "⚠ 第 10-261 行是 Round 0 原始方案, 已被 Round 1/Round 2 重新归属为独立 ai-service 的设计附件, 不代表 quantum-backend 仓库范围; 权威范围见 docs/ai-sprint-design.md"), 而不是仅在文末补丁。
+- 引用: Round 2 表格自身 (design.md:314-320); docs/ai-sprint-design.md §4 "明确移出 quantum-backend 的清单" (第 135-149 行) 与正文内容逐条矛盾但未在正文出现交叉引用。
+
+#### F2 [P0] design.md frontmatter 与 sprint 实际状态不一致
+- 现象: design.md:4-6 `stage: design`, `status: draft-for-claude-review`, 但本 sprint 已实际走完 review (reviews/pass1.md VERDICT=CONCERNS) → polish (cleanup-pass.md VERDICT=PASS) → 已 ship (git log 显示 commit 8dde00b "docs: design ai capability architecture sprint" 已在 main)。frontmatter 冻结在最早状态, 与铁律[文档即真相]"阶段转换前同步 .ai_state/"要求不符; 索引类工具若按 frontmatter 过滤 "draft" 文档会漏掉这份已交付的治理文档。
+- 建议: frontmatter 更新为 `stage: ship` (或对应的最终 stage) + `status: shipped`，并补一行 `superseded_by: docs/ai-sprint-design.md` 说明权威文档已转移。
+- 引用: 铁律[文档即真相]; git log (8dde00b 为最新 commit, 早于本轮 critic)。
+
+#### F3 [P1] design.md:324 "quantum-mcp blocked on MCP 授权流程决策" 与 docs/ai-sprint-design.md §9 (第 258-264 行) "✅ 已定案" 直接矛盾
+- 现象: design.md Round 2 结尾写 "quantum-mcp（S3）blocked on：MCP 授权流程决策（PAT 起步 / OAuth 终态，见治理文档 §9）"。但治理文档当前版本 §9 (docs/ai-sprint-design.md:258) 明确写 "**MCP 授权流程：✅ 已定案（2026-07-06 用户拍板）——直接 OAuth 2.1**"，并列出了完整的端点清单 (`/.well-known/oauth-protected-resource`、`/oauth/authorize`、`/oauth/token`)。design.md 的 "blocked" 措辞已过时，会让读 design.md 而非治理文档的人误以为 S3 仍卡在决策阶段、PAT 方案仍在候选。
+- 建议: design.md Round 2 段落的 "blocked on" 一句改为 "S3 待实现 (授权流程已定案 OAuth 2.1, 见治理文档 §9; 待实现: 三个端点 + access token 映射 LoginUser 会话)", 与 docs/ai-sprint-design.md §8 阶段表 (S3 行) 措辞对齐。
+- 引用: docs/ai-sprint-design.md:258-264; design.md:324。
+
+#### F4 [P1] S3 可实施性: OAuth 2.1 定案后仍缺两项具体设计决策, "两条硬性技术要求"不足以直接开工
+- 现象: docs/ai-sprint-design.md §9 (263-264 行) 已自认 "动态客户端注册（RFC 7591）可后置", 但同段没有回答: (a) access token 与现有 `TokenService` 的会话生命周期如何对齐 — 现有 JWT 是否有独立的 refresh token 撤销表, 还是要新建一张 OAuth token 表; (b) `/oauth/authorize` 的用户登录页复用现有登录页还是新做一个 OAuth 授权同意页 (consent screen), 若复用现有登录态 cookie/session, 与"公共客户端 + 回环/自定义 scheme redirect"的 CSRF/state 校验如何结合。§3.2 的"两条硬性技术要求"只覆盖 tool handler 内部的 UserContext fail-closed 和序列化脱敏, 完全没有覆盖 OAuth 端点自身的实现决策, S3 一开工大概率会在这两点上现场重新决策, 与"设计先行"铁律相悖。
+- 建议: S3 开工前 (哪怕是下一个 sprint 的 plan 阶段) 补一版"OAuth token 存储 + consent 页面"的最小设计, 而不是留到实现现场发挥。
+- 引用: 铁律[设计先行]; docs/ai-sprint-design.md:122-131 (两条硬性技术要求) 对比 :258-269 (§9 待确认项), 两段覆盖面不重叠。
+
+#### F5 [P1] 平面 C (ai-service) 与 quantum-mcp 的接口契约存在未定义空白, 双方独立开工会撞车
+- 现象: docs/ai-sprint-design.md §2 契约② (82-92 行) 定义了 "MCP tool schema / 认证 / 授权 / 数据过滤 / 审计" 五要素, 但缺: (a) Capability Manifest 的具体 schema 版本/字段规范 (JSON Schema draft? 是否复用 MCP 官方 tool schema 原样, 还是本仓库要加自定义 metadata 字段如 riskLevel/dataScopeMode — 这两个字段在已废弃的 design.md:139-146 `AiToolDefinition` 结构中出现过, 但 Round 2 re-scope 后没有说清 quantum-mcp 的 tool 定义是否保留这两个字段, 还是完全交给 MCP 标准 schema); (b) token 传递格式——§9 只说 "access token 映射回现有 LoginUser 会话体系", 没有约定 ai-service (平面 C) 侧应该以什么头部/字段把用户身份或 delegated token 转发给 quantum-mcp (Authorization: Bearer? 还是 MCP 协议自身的 OAuth resource indicator RFC 8707)。若 ai-service 团队按自己理解先实现, 与 quantum-mcp 实际暴露的字段/header 不一致, 只能等联调时才发现。
+- 建议: 在 docs/ai-sprint-design.md §2 或新增一节, 明确 Capability Manifest 的最小 schema 示例 (一个真实 tool 的 JSON 示例) + 认证 header 约定, 作为双方独立开工前的"冻结接口"。
+- 引用: docs/ai-sprint-design.md:82-92 (契约②定义); design.md:139-146 (riskLevel/dataScopeMode 字段来源, 未在 Round 2 后被继承或明确废弃)。
+
+#### F6 [P2] design.md 正文 Tool 清单 (design.md:158-165) 与治理文档 quantum-mcp 首批能力 (docs/ai-sprint-design.md:318) 字段名不完全对应
+- 现象: design.md 原方案的只读工具清单用 `system.user.search` / `system.dept.tree` / `system.role.list` / `report.export.request`, Round 2 归属表 (design.md:318) 只说"只读工具首批清单（user.search/dept.tree/role.list）"归入 quantum-mcp 的 Capability Manifest, 未提及 `report.export.request` (design.md:165, 标注"需二次确认"的高风险 tool) 归属何处——按 §5 安全铁律"MCP 默认只读", 这个写类工具理论上不该进 quantum-mcp 首批, 但 design.md 没有显式说明它被排除还是延后。
+- 建议: Round 2 表格补一行, 显式说明 `report.export.request` 排除出 S3 首批 (或说明其去向)。
+- 引用: design.md:165, 318。
+
+### 裁决说明 (3-5 行)
+
+Round 1/2 已解决"归属"层面的 P0 冲突 (chat 移出仓库), 但遗留的**文档一致性**问题构成新的 P0: design.md 正文 240 行仍是被否决方案的原文, 且 frontmatter 冻结在 sprint 早期状态, 与已 ship 的现实脱节, 足以误导后续读者或工具链 (铁律[文档即真相]直接违反)。S3 (quantum-mcp) 层面, OAuth 定案消解了"两文档矛盾"的表层症状, 但 design.md 的过时措辞 (F3) 和两处未覆盖的设计缺口 (F4 token 存储/consent 页, F5 跨项目接口 schema) 说明 S3 尚不足以直接开工, 建议在下一个 sprint 的 plan 阶段前补齐。VERDICT=NEEDS_REVISION 主要由 F1/F2 两个文档一致性 P0 驱动, 而非 re-scope 决策本身有误。
+
+## Round 3 处置 (主 agent, 2026-07-06)
+
+| Finding | 处置 |
+|---|---|
+| F1 [P0] 正文仍是被否决方案原文 | ✅ 文档头部插入「⚠ 本文档状态」提示块, 声明正文为 ai-service 设计附件 + 指向权威文档 + 阅读顺序 |
+| F2 [P0] frontmatter 冻结在 draft | ✅ 改 stage: ship / status: shipped + superseded_by: docs/ai-sprint-design.md |
+| F3 [P1] "blocked on 授权决策" 过时 | ✅ 改为 "OAuth 2.1 已定案 + 三端点待实现 + 前置设计项指引" |
+| F4 [P1] S3 缺 token 存储/consent 设计 | ✅ 治理文档 §9 新增「S3 前置设计项」第 1/2 条, 声明 plan 阶段必须补齐 |
+| F5 [P1] 跨项目接口契约空白 | ✅ 治理文档 §9 新增第 3 条: Manifest 最小 schema + 身份传递约定, 双方开工前冻结 |
+| F6 [P2] report.export.request 归属未明 | ✅ Round 2 归属表补行: 排除出 S3 首批 (MCP 默认只读) |
+
+处置后状态: F1/F2/F3/F6 已当场修复; F4/F5 属 S3 的 plan 阶段工作, 已在治理文档立项为硬性前置,
+不在本 sprint 展开 (本 sprint 交付物为设计与 Convention Pack, S3 另开 sprint)。
+Round 3 的 NEEDS_REVISION 判据 (文档一致性 P0) 至此消除。

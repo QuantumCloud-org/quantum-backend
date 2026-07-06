@@ -4,17 +4,17 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "Refactor"                  # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-06-backend-import-data-scope-hardening"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
+stage: "design"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+current_sprint_slug: "2026-07-06-ai-capability-architecture-design"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
 skip_runtime_verify: false        # v9.8.0: true 跳过运行时验证 (纯库/无运行环境才设; System/Refactor 不建议)
 
 # === 路由审议 (v9.9.0) ===
-route_confidence: 0.88            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
-route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
+route_confidence: 0.90            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
+route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
 plan_model: ""                    # "" | "fable" — System/Refactor 的 plan/design 审议切 fable-5 (贵, opt-in)
 
 # === 平台与版本 ===
@@ -56,8 +56,8 @@ counts:
   features_count: 0
   issues_count: 0
   refactors_count: 0
-  systems_count: 0
-  requirements_count: 0
+  systems_count: 1
+  requirements_count: 1
   reviews_count: 0
   cleanup_count: 2
   compound:
@@ -68,14 +68,14 @@ counts:
 
 # === Pointers (指向最新相关文件) ===
 pointers:
-  latest_design: "sprints/2026-07-05-main-merge-athena-init/design.md"               # sprints/{current_sprint_slug}/design.md
+  latest_design: "sprints/2026-07-06-ai-capability-architecture-design/design.md"               # sprints/{current_sprint_slug}/design.md
   latest_review: "sprints/2026-07-06-backend-import-data-scope-hardening/review.md"
   latest_cleanup: "sprints/2026-07-06-backend-import-data-scope-hardening/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: []
   latest_lessons: []
-  latest_architecture_update: "2026-07-06T03:24:37.902Z"
-  latest_requirement: ""          # requirements/{slug}.md 最新 (v9.8.0)
+  latest_architecture_update: "2026-07-06T03:24:37.902884Z"
+  latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
 next_action: ""                   # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
@@ -106,6 +106,7 @@ fingerprint: ""
 - 2026-07-05 22:12: origin/main 已先快进到 5c0fd54，再叠加本地业务改动与 Athena 初始化；`mvn test` 通过；提交 71ae4b7 已推送到 main。
 - 2026-07-06: 后端安全修复 sprint 完成 7 个修复点，进入 ship 合并；review、runtime-verify、cleanup 与 architecture 档案已落盘。
 - 2026-07-06: 非 AI 体系剩余项修复完成: 用户导入契约、导出角色回填、数据域 fail-closed、登录态数据权限来源收敛、MVC/服务层测试; AI 审查/生成体系保留给后续 review。
+- 2026-07-06: AI 能力接入进入 System/design: 已落盘 `quantum-biz-ai` 模块化单体方案、Provider/SSE/Tool-MCP/RAG/配额审计设计, 等 Claude review 后再实现。
 
 ## 工具调度建议
 

@@ -1,0 +1,40 @@
+sprint: 2026-07-06-ai-capability-architecture-design
+path: System
+stage: design
+items:
+  - id: req
+    title: 落盘 AI 能力原始需求
+    status: done
+    evidence: .ai_state/requirements/ai-capability-platform.md
+  - id: official-sources
+    title: 核对模型 SDK/SSE/Spring AI/pgvector 官方来源
+    status: done
+    evidence: design.md#官方来源
+  - id: module-boundary
+    title: 设计 quantum-biz-ai 模块边界与未来拆服务边界
+    status: done
+    evidence: design.md#模块边界
+  - id: provider
+    title: 设计 LlmProvider SPI 与 Claude/OpenAI-compatible 适配策略
+    status: done
+    evidence: design.md#provider-抽象
+  - id: sse-security
+    title: 设计 SSE 与现有安全链冲突处理
+    status: done
+    evidence: design.md#sse-与现有安全链冲突
+  - id: tool-mcp
+    title: 设计 Tool Use 与 MCP 演进边界
+    status: done
+    evidence: design.md#tool-use--mcp
+  - id: rag-quota
+    title: 设计 RAG、数据表、权限过滤、token 配额
+    status: done
+    evidence: design.md#rag-与数据模型
+  - id: claude-review
+    title: 给 Claude 审核准备聚焦问题
+    status: done
+    evidence: claude-review-brief.md
+  - id: implementation
+    title: 代码实现
+    status: excluded
+    evidence: 本 sprint 只做设计, 实现等 Claude review 后另开 sprint

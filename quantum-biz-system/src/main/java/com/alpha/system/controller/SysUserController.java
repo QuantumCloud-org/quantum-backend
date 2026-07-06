@@ -127,7 +127,11 @@ public class SysUserController {
     @RequiresPermission("system:user:query")
     @GetMapping("/{userId}/roles")
     public Result<Set<Long>> getUserRoles(@PathVariable Long userId) {
-        userService.selectUserById(userId);
+        // selectUserById 内含读侧数据域校验，域外用户在此被拒绝
+        SysUser user = userService.selectUserById(userId);
+        if (user == null) {
+            return Result.fail("用户不存在");
+        }
         return Result.ok(roleService.selectRoleIdsByUserId(userId));
     }
 

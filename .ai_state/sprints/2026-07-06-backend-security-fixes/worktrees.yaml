@@ -1,0 +1,6 @@
+sprint_slug: 2026-07-06-backend-security-fixes
+worktrees:
+  - name: "quantum-backend-import-data-scope"
+    path: "/Users/mi_manchi/workspace/quantum/quantum-backend-import-data-scope"
+    created_at: "2026-07-06T03:06:28.916562Z"
+    status: active

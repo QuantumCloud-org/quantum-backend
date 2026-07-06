@@ -1,10 +1,12 @@
 # Quantum 后端 AI 生成体系设计
 
 日期: 2026-07-06
-状态: draft
+状态: active (Phase 1 已完成, Phase 2+ 待启动)
 来源: 2026-07-05 后端完整 review 后的架构设计沉淀
 范围: `quantum-backend`
-修订: 2026-07-06 逐条源码复核 Review 摘要 (9/9 属实), 补充证据位置; P1-4 升格为写侧越权, P2-3 确认注解为死代码
+修订:
+- 2026-07-06 逐条源码复核 Review 摘要 (9/9 属实), 补充证据位置; P1-4 升格为写侧越权, P2-3 确认注解为死代码
+- 2026-07-06 Phase 1 全部完成 (sprint: 2026-07-06-backend-security-fixes + 2026-07-06-backend-import-data-scope-hardening); 第 7 节数据域单一来源已定案并实施
 
 ## 1. 背景
 
@@ -211,7 +213,13 @@ guards:
 - 方案 A: 用户登录态保存最终 data scope, 角色只用于登录时聚合。
 - 方案 B: 角色为唯一来源, 用户不再存独立 data scope。
 
-建议优先方案 A, 因为当前代码已接近该模式, 改动较小。
+~~建议优先方案 A, 因为当前代码已接近该模式, 改动较小。~~
+
+**已定案并实施 (2026-07-06, sprint: backend-import-data-scope-hardening)**: 实际落地为偏方案 B 的混合形态 —
+
+- 登录态由**有效角色集合聚合**生成最终 `dataScope/deptIds` (`UserDetailsServiceImpl.resolveDataScope`): ALL 短路, DEPT/DEPT_AND_CHILD/CUSTOM 并集归一为 CUSTOM + 显式 deptIds, 空聚合 fail-closed 到 SELF。
+- `SysUser.dataScope` 降级为**无角色时的兼容回退**, 不再是主来源。
+- 后续 AI 生成代码应以角色聚合为唯一语义; `SysUser.dataScope` 列待所有存量用户完成角色迁移后可删除。
 
 ## 8. 测试与门禁
 
@@ -238,17 +246,21 @@ guards:
 
 ## 9. 演进路线
 
-### Phase 1: 安全基线修复
+### Phase 1: 安全基线修复 ✅ 已完成 (2026-07-06)
 
-按第 2 节证据位置逐项修复, 每项带回归测试 (见第 8 节缺口清单):
+按第 2 节证据位置逐项修复, 每项带回归测试 (见第 8 节缺口清单)。
+落地 sprint: `2026-07-06-backend-security-fixes` (7 项) + `2026-07-06-backend-import-data-scope-hardening` (导入契约重构 + P2-2 数据域单一来源收敛)。
+验证: `mvn test` Reactor 10/10 SUCCESS, 测试类 3 → 11。
 
-1. 收紧生产 CORS: `application-prod.yml` 显式域名白名单覆盖 `cors-allowed-origins` (P1-1)。
-2. refresh cookie 增加配置驱动 Secure 开关, 生产 profile 默认开 (P1-2)。
-3. 用户详情/角色读取补数据域断言, 与写侧 `assertTargetUserWritable` 对齐 (P1-3)。
-4. 用户导入复用 `insertUser/updateUser` 校验链: 唯一性 + 数据域 + 缓存刷新事件 (P1-4, 写侧越权, 优先级与 3 持平)。
-5. 角色 dataScope DTO `@Min/@Max` + service 双层校验 (P2-1)。
-6. 全部 list 端点查询入参补 `@Validated`, 激活 `PageQuery` 死注解 (P2-3, 资源耗尽面, 提前到 Phase 1)。
-7. RustFS object key 校验与 Local 策略对齐 (P2-4)。
+1. ✅ 收紧生产 CORS: `application-prod.yml` 用 `${SECURITY_CORS_ALLOWED_ORIGINS:}` (空即禁跨域, fail-closed); `SecurityConfig` wildcard + credentials 启动即抛 (P1-1)。
+2. ✅ refresh cookie 配置驱动 Secure 开关 (`security.refresh-cookie-secure`), 生产 profile 默认开 (P1-2)。
+3. ✅ 用户详情/角色读取补 `assertTargetUserReadable`, 无 UserContext 拒绝 (P1-3)。
+4. ✅ 用户导入引入 `UserImportRequest` + Bean Validation, 复用 create/update 校验链: 唯一性 + 数据域 + 乐观锁 + 缓存刷新事件 (P1-4)。
+5. ✅ 角色 dataScope DTO `@Min/@Max` + service `validateDataScope` 双层校验 (P2-1)。
+6. ✅ 7 个分页入口补 `@Validated`, 反射契约测试锁死签名 (P2-3)。
+7. ✅ RustFS object key 校验抽取 `FileUtils.validateObjectKeyParts`, Local/RustFS 共用 (P2-4)。
+
+附加完成 (原 P2-2, 计划外提前): 数据域单一来源收敛, 见第 7 节定案。
 
 ### Phase 2: 契约与测试
 

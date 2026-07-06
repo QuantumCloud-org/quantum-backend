@@ -1,0 +1,6 @@
+sprint_slug: 2026-07-05-main-merge-athena-init
+worktrees:
+  - name: "quantum-backend-security-fixes"
+    path: "../quantum-backend-security-fixes"
+    created_at: "2026-07-06T02:00:08.113092Z"
+    status: active

@@ -16,10 +16,6 @@ public final class CookieUtil {
     private CookieUtil() {
     }
 
-    public static void writeRefreshCookie(HttpServletResponse response, String refreshToken, boolean persistent, int maxAgeSeconds) {
-        writeRefreshCookie(response, refreshToken, persistent, maxAgeSeconds, false);
-    }
-
     public static void writeRefreshCookie(HttpServletResponse response, String refreshToken, boolean persistent, int maxAgeSeconds, boolean secure) {
         response.addHeader("Set-Cookie", buildRefreshCookieHeader(refreshToken, persistent, maxAgeSeconds, secure));
     }
@@ -36,10 +32,6 @@ public final class CookieUtil {
             }
         }
         return null;
-    }
-
-    public static void clearRefreshCookie(HttpServletResponse response) {
-        clearRefreshCookie(response, false);
     }
 
     public static void clearRefreshCookie(HttpServletResponse response, boolean secure) {

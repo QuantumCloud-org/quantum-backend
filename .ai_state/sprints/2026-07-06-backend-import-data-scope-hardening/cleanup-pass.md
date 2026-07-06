@@ -29,3 +29,14 @@
 ## VERDICT
 
 PASS
+
+## 追加: CC 交叉验证 + P3 收尾 (2026-07-06)
+
+Claude Code 对两轮修复做独立交叉验证 (7/7 修复点 + P2-2 收敛全部确认), 并完成遗留 P3:
+
+- `CookieUtil` 删除无 secure 参数的旧签名 (防未来新调用点静默降级为不安全 cookie)。
+- `SysUserController.getUserRoles` 读侧 guard 显式化 + 用户存在性检查。
+- `UserDetailsServiceImplDataScopeTest` 1 → 7 个测试, 覆盖聚合全部分支 (超管/ALL 短路/DEPT/SELF fail-closed/无角色回退/空 scope fail-closed)。
+- `design.md` 回写: 状态 draft → active, Phase 1 标记完成, 第 7 节数据域单一来源定案 (角色聚合优先, 用户列仅回退)。
+
+验证: `mvn test` Reactor 10/10 SUCCESS, 66 tests, 0 failures。

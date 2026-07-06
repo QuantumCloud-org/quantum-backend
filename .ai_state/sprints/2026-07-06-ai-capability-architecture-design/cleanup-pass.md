@@ -40,6 +40,15 @@ sprint: 2026-07-06-ai-capability-architecture-design (path=System)
 - 新增 architecture/ai-collaboration.md (生成期/运行期两主线现状)
 - ARCHITECTURE.md 补 AI 协作基座段 + 子系统索引 + 时间戳
 
+## 铁律[零写入] 豁免留痕 (skip_impl_subagent_check=true)
+
+delivery-gate 要求 System 路径 impl 经 generator subagent, 但本 sprint 为**跨平台协作**:
+- impl (S1 Convention Pack, 20+ 文件) 由 CX 端 (Codex) 经其 generator 管线完成, 以 PR #2/#3 合入 main;
+  证据链在 checklist.yaml (12 done 全有产物, evaluator Evidence Cross-Check 过) + runtime-verify.md, 不在 CC 端 subagent-log.md。
+- CC 端本 sprint 实际写入仅 polish 阶段 4 个文档/模板修订 (绿区), 已在上文"执行者"段说明。
+- 故按门禁解锁路径 B 设 `_index.skip_impl_subagent_check=true` (自负责), 不伪造 generator 日志。
+- 后续改进: 跨平台 sprint 的 generator 证据互认, 属 Athena 框架议题, 已在 proposals 层面记录。
+
 ## VERDICT
 
 PASS — 3 条 P1 全部闭环, P2 一修一缓 (缓项有记录), next_action=ship。

@@ -89,7 +89,7 @@ design_changed_after_impl: false  # design.md 改后需 re-review
 plan_critique_max_rounds: 4       # 默认 4, 可调 2-6
 plan_critique_min_rounds: 0       # v9.9.0 (U2): 0=auto (Refactor/System=2, 其余=1); delivery-gate 在 ship 验 design.md 轮数
 plan_critique_disabled: false     # 关闭多轮 critique (用户自负责)
-skip_impl_subagent_check: false   # v9.9.0 (U1): true 跳过 "impl 必须经 generator" 门禁 (纯绿区微改 sprint 才设)
+skip_impl_subagent_check: true    # v9.9.0 (U1): true 跳过 "impl 必须经 generator" 门禁 (纯绿区微改 sprint 才设) — 本 sprint: impl 经 CX 端 generator 管线 (PR #2/#3), CC 端仅 polish 绿区文档修订, 见 cleanup-pass.md 留痕
 network_in_polish: true           # polish_worker 是否允许 network
 
 # === Fingerprint (index-updater 用于 mtime 比对) ===

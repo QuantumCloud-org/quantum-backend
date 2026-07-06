@@ -224,7 +224,7 @@ public class SecurityConfig {
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOriginPatterns(securityProperties.getCorsAllowedOrigins());
+        config.setAllowedOriginPatterns(resolveCorsAllowedOrigins());
         config.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"));
         config.setAllowedHeaders(List.of("*"));
         config.setExposedHeaders(Arrays.asList("Authorization", "X-Trace-Id"));
@@ -234,6 +234,21 @@ public class SecurityConfig {
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);
         return source;
+    }
+
+    private List<String> resolveCorsAllowedOrigins() {
+        List<String> origins = securityProperties.getCorsAllowedOrigins();
+        if (origins == null || origins.isEmpty()) {
+            return List.of();
+        }
+        List<String> normalized = origins.stream()
+                .filter(origin -> origin != null && !origin.isBlank())
+                .map(String::trim)
+                .toList();
+        if (normalized.contains("*")) {
+            throw new IllegalStateException("CORS wildcard origin cannot be used with credentials enabled");
+        }
+        return normalized;
     }
 
 }

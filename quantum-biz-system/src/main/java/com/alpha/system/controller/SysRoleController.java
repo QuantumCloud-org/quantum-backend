@@ -42,7 +42,7 @@ public class SysRoleController {
     @SystemLog(title = "角色管理", businessType = BusinessType.SELECT)
     @RequiresPermission("system:role:list")
     @GetMapping("/list")
-    public Result<PageResult<RoleVO>> list(RoleQuery query) {
+    public Result<PageResult<RoleVO>> list(@Validated RoleQuery query) {
         Page<SysRole> pageResult = roleService.selectRolePage(query);
         PageResult<RoleVO> voPage = PageResult.of(pageResult, roleConvert::toVO);
         return Result.ok(voPage);

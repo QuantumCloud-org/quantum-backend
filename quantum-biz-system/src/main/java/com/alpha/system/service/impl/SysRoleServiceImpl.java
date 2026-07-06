@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
+import com.alpha.system.security.UserCacheRefreshEvent;
 import com.alpha.system.domain.SysRole;
 import com.alpha.system.dto.request.RoleQuery;
 import com.alpha.system.mapper.SysRoleDeptMapper;
@@ -16,8 +17,6 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.alpha.system.security.UserCacheRefreshEvent;
-import cn.hutool.core.collection.CollUtil;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -76,6 +75,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public Long insertRole(SysRole role, List<Long> menuIds, List<Long> deptIds) {
+        validateDataScope(role.getDataScope());
         // 检查名称唯一性
         if (!checkRoleNameUnique(role.getRoleName(), null)) {
             throw new BizException("角色名称已存在");
@@ -104,6 +104,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateRole(SysRole role, List<Long> menuIds, List<Long> deptIds) {
+        validateDataScope(role.getDataScope());
         // 检查是否为管理员角色
         checkRoleAllowed(role.getId());
 
@@ -185,9 +186,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateDataScope(Long roleId, Integer dataScope, List<Long> deptIds) {
-        if (dataScope < 1 || dataScope > 5) {
-            throw new BizException("数据权限范围无效，仅支持1-5");
-        }
+        validateDataScope(dataScope);
         checkRoleAllowed(roleId);
 
         SysRole oldRole = getById(roleId);
@@ -255,6 +254,12 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     private void checkRoleAllowed(Long roleId) {
         if (CommonConstants.SUPER_ADMIN_ID.equals(roleId)) {
             throw new BizException("不允许操作超级管理员角色");
+        }
+    }
+
+    private void validateDataScope(Integer dataScope) {
+        if (dataScope != null && (dataScope < 1 || dataScope > 5)) {
+            throw new BizException("数据权限范围无效，仅支持1-5");
         }
     }
 

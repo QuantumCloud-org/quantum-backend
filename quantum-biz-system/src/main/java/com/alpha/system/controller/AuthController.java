@@ -5,6 +5,7 @@ import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
+import com.alpha.security.config.SecurityProperties;
 import com.alpha.security.service.ICaptchaService;
 import com.alpha.security.token.TokenService;
 import com.alpha.security.util.CookieUtil;
@@ -40,6 +41,7 @@ public class AuthController {
     private final ISysUserService userService;
     private final UserConvert userConvert;
     private final TokenService tokenService;
+    private final SecurityProperties securityProperties;
 
     @GetMapping("/captcha")
     @Operation(summary = "创建验证码")
@@ -56,7 +58,8 @@ public class AuthController {
                     response,
                     loginResponse.getRefreshToken(),
                     Boolean.TRUE.equals(request.getRememberMe()),
-                    tokenService.getRefreshTokenExpireSeconds()
+                    tokenService.getRefreshTokenExpireSeconds(),
+                    securityProperties.isRefreshCookieSecure()
             );
             loginResponse.setRefreshToken(null);
             return Result.ok(loginResponse);

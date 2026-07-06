@@ -11,6 +11,7 @@ import com.alpha.security.annotation.RequiresPermission;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public class SysOperLogController {
     @SystemLog(title = "操作日志", businessType = BusinessType.SELECT)
     @RequiresPermission("monitor:operlog:list")
     @GetMapping("/list")
-    public Result<PageResult<SysOperLog>> list(SysOperLog query, LogPageQuery pageQuery) {
+    public Result<PageResult<SysOperLog>> list(SysOperLog query, @Validated LogPageQuery pageQuery) {
         return Result.ok(PageResult.of(operLogService.selectOperLogPage(query, pageQuery)));
     }
 

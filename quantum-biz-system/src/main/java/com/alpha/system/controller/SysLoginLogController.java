@@ -11,6 +11,7 @@ import com.alpha.system.service.ISysLoginLogService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -30,7 +31,7 @@ public class SysLoginLogController {
     @SystemLog(title = "登录日志", businessType = BusinessType.SELECT)
     @RequiresPermission("monitor:loginlog:list")
     @GetMapping("/list")
-    public Result<PageResult<SysLoginLog>> list(LoginLogQuery query) {
+    public Result<PageResult<SysLoginLog>> list(@Validated LoginLogQuery query) {
         return Result.ok(PageResult.of(loginLogService.selectLoginLogPage(query)));
     }
 

@@ -37,7 +37,7 @@ public class SysDictController {
     @SystemLog(title = "字典类型", businessType = BusinessType.SELECT)
     @RequiresPermission("system:dict:list")
     @GetMapping("/type/list")
-    public Result<PageResult<SysDictType>> listType(DictTypeQuery query) {
+    public Result<PageResult<SysDictType>> listType(@Validated DictTypeQuery query) {
         return Result.ok(PageResult.of(dictTypeService.selectDictTypePage(query)));
     }
 
@@ -98,7 +98,7 @@ public class SysDictController {
     @SystemLog(title = "字典数据", businessType = BusinessType.SELECT)
     @RequiresPermission("system:dict:listData")
     @GetMapping("/data/list")
-    public Result<List<SysDictData>> listData(DictDataQuery query) {
+    public Result<List<SysDictData>> listData(@Validated DictDataQuery query) {
         return Result.ok(dictDataService.selectDictDataPage(query));
     }
 

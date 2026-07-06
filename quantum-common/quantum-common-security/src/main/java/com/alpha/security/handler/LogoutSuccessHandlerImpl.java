@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.util.JsonUtil;
+import com.alpha.security.config.SecurityProperties;
 import com.alpha.security.token.TokenService;
 import com.alpha.security.util.CookieUtil;
 import jakarta.servlet.http.HttpServletRequest;
@@ -27,6 +28,7 @@ public class LogoutSuccessHandlerImpl implements LogoutSuccessHandler {
 
     private final TokenService tokenService;
     private final JsonUtil jsonUtil;
+    private final SecurityProperties securityProperties;
 
     @Override
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
@@ -41,7 +43,7 @@ public class LogoutSuccessHandlerImpl implements LogoutSuccessHandler {
             }
         }
 
-        CookieUtil.clearRefreshCookie(response);
+        CookieUtil.clearRefreshCookie(response, securityProperties.isRefreshCookieSecure());
         response.setStatus(HttpServletResponse.SC_OK);
         response.setContentType(MediaType.APPLICATION_JSON_VALUE);
         response.setCharacterEncoding("UTF-8");

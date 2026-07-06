@@ -184,6 +184,38 @@ public final class FileUtils {
     }
 
     /**
+     * 校验对象存储 key 的调用方输入片段。
+     */
+    public static void validateObjectKeyParts(String path, String fileName) {
+        validateObjectKeyPath(path);
+        validateStorageFileName(fileName);
+    }
+
+    public static void validateStorageFileName(String fileName) {
+        if (StrUtil.isBlank(fileName)) {
+            return;
+        }
+        if (fileName.contains("/") || fileName.contains("\\") || fileName.contains("..")) {
+            throw new BizException("非法文件名");
+        }
+    }
+
+    private static void validateObjectKeyPath(String path) {
+        if (StrUtil.isBlank(path)) {
+            return;
+        }
+        String normalized = path.replace('\\', '/');
+        if (normalized.startsWith("/") || normalized.endsWith("/")) {
+            throw new BizException("非法文件路径");
+        }
+        for (String segment : normalized.split("/")) {
+            if (segment.isBlank() || ".".equals(segment) || "..".equals(segment)) {
+                throw new BizException("非法文件路径");
+            }
+        }
+    }
+
+    /**
      * 获取文件扩展名（小写）
      *
      * @param filename 文件名

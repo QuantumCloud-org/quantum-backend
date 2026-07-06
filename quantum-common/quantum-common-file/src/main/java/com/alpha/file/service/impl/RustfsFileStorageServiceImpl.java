@@ -92,6 +92,7 @@ public class RustfsFileStorageServiceImpl implements FileStorageService {
     public FileInfo upload(MultipartFile file, String path, String fileName) {
         // 1. 校验文件
         FileUtils.validateFile(file, fileProperties);
+        FileUtils.validateObjectKeyParts(path, fileName);
 
         FileProperties.Rustfs rustfs = fileProperties.getRustfs();
         String bucket = rustfs.getBucket();

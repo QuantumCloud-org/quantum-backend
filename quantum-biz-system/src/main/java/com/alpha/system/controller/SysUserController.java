@@ -51,7 +51,7 @@ public class SysUserController {
     @SystemLog(title = "用户管理", businessType = BusinessType.SELECT)
     @RequiresPermission("system:user:list")
     @GetMapping("/list")
-    public Result<PageResult<UserVO>> list(UserQuery query) {
+    public Result<PageResult<UserVO>> list(@Validated UserQuery query) {
         Page<SysUser> pageResult = userService.selectUserPage(query);
         PageResult<UserVO> voPage = PageResult.of(pageResult, userConvert::toVO);
         return Result.ok(voPage);
@@ -121,6 +121,7 @@ public class SysUserController {
     @RequiresPermission("system:user:query")
     @GetMapping("/{userId}/roles")
     public Result<Set<Long>> getUserRoles(@PathVariable Long userId) {
+        userService.selectUserById(userId);
         return Result.ok(roleService.selectRoleIdsByUserId(userId));
     }
 

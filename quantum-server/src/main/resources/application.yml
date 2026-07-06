@@ -67,7 +67,10 @@ cache:
 
 # Security 配置
 security:
-  cors-allowed-origins: "*"
+  cors-allowed-origins:
+    - http://localhost:5173
+    - http://127.0.0.1:5173
+  refresh-cookie-secure: false
   xss-enabled: true
   # 允许传 HTML 的富文本字段接口
   #xss-excludes:

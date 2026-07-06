@@ -1,5 +1,7 @@
 package com.alpha.system.dto.request;
 
+import jakarta.validation.constraints.Max;
+import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
 import lombok.Data;
@@ -39,6 +41,8 @@ public class RoleCreateRequest implements Serializable {
     /**
      * 数据权限（1-全部 2-本部门 3-本部门及子部门 4-自定义 5-仅本人）
      */
+    @Min(value = 1, message = "数据权限范围无效，仅支持1-5")
+    @Max(value = 5, message = "数据权限范围无效，仅支持1-5")
     private Integer dataScope;
 
     /**

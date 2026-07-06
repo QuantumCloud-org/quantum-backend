@@ -83,7 +83,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     public SysUser selectUserById(Long userId) {
-        return getById(userId);
+        SysUser user = getById(userId);
+        if (user != null) {
+            assertTargetUserReadable(user);
+        }
+        return user;
     }
 
     @Override
@@ -306,17 +310,11 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
             try {
                 SysUser existUser = selectByUsername(user.getUsername());
                 if (existUser == null) {
-                    // 新增（初始密码来自配置 security.init-password，需满足密码策略）
-                    user.setPassword(passwordEncoder.encode(user.getUsername() + securityProperties.getInitPassword()));
-                    save(user);
+                    importNewUser(user);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append("、账号 ").append(user.getUsername()).append(" 导入成功");
                 } else if (updateSupport) {
-                    // 更新
-                    user.setId(existUser.getId());
-                    user.setPassword(null);
-                    user.setVersion(existUser.getVersion());
-                    updateById(user);
+                    importExistingUser(user, existUser);
                     successNum++;
                     successMsg.append("<br/>").append(successNum).append("、账号 ").append(user.getUsername()).append(" 更新成功");
                 } else {
@@ -337,6 +335,51 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
 
         return successMsg.toString();
+    }
+
+    private void importNewUser(SysUser user) {
+        if (!checkUsernameUnique(user.getUsername())) {
+            throw new BizException("用户名已存在");
+        }
+        if (StrUtil.isNotBlank(user.getPhone()) && !checkPhoneUnique(user.getPhone(), null)) {
+            throw new BizException("手机号已存在");
+        }
+        if (StrUtil.isNotBlank(user.getEmail()) && !checkEmailUnique(user.getEmail(), null)) {
+            throw new BizException("邮箱已存在");
+        }
+        validatePassword(securityProperties.getInitPassword());
+        assertDeptInDataScope(user.getDeptId());
+        user.setPassword(passwordEncoder.encode(user.getUsername() + securityProperties.getInitPassword()));
+        save(user);
+    }
+
+    private void importExistingUser(SysUser imported, SysUser existUser) {
+        if (StrUtil.isNotBlank(imported.getPhone()) && !checkPhoneUnique(imported.getPhone(), existUser.getId())) {
+            throw new BizException("手机号已存在");
+        }
+        if (StrUtil.isNotBlank(imported.getEmail()) && !checkEmailUnique(imported.getEmail(), existUser.getId())) {
+            throw new BizException("邮箱已存在");
+        }
+        assertTargetUserWritable(existUser);
+
+        SysUser update = new SysUser();
+        update.setId(existUser.getId());
+        update.setVersion(existUser.getVersion());
+        update.setNickname(imported.getNickname());
+        update.setEmail(imported.getEmail());
+        update.setPhone(imported.getPhone());
+        update.setSex(imported.getSex());
+        update.setStatus(imported.getStatus());
+        if (imported.getDeptId() != null && !imported.getDeptId().equals(existUser.getDeptId())) {
+            assertDeptInDataScope(imported.getDeptId());
+            update.setDeptId(imported.getDeptId());
+        }
+
+        boolean updated = updateById(update);
+        if (!updated) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "用户信息已变更，请刷新后重试");
+        }
+        eventPublisher.publishEvent(new UserCacheRefreshEvent(Set.of(existUser.getId())));
     }
 
     /**
@@ -415,6 +458,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         }
     }
 
+    private void assertTargetUserReadable(SysUser target) {
+        assertTargetUserAccessible(target, "查看");
+    }
+
     /**
      * 写操作数据权限校验：目标用户必须在操作者可见范围内。
      * <p>
@@ -422,23 +469,27 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
      * 必须在此单独校验，否则拥有对应功能权限的用户可跨部门操作任意账号。
      */
     private void assertTargetUserWritable(SysUser target) {
+        assertTargetUserAccessible(target, "操作");
+    }
+
+    private void assertTargetUserAccessible(SysUser target, String action) {
         LoginUser current = UserContext.getUser();
         if (current == null) {
             throw new BizException(ResultCode.UNAUTHORIZED);
         }
         // 超管账号只有超管本人可以操作
         if (CommonConstants.SUPER_ADMIN_ID.equals(target.getId()) && !current.isAdmin()) {
-            throw new BizException(ResultCode.ACCESS_DENIED, "无权操作超级管理员账号");
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权" + action + "超级管理员账号");
         }
         if (current.isAdmin()) {
             return;
         }
-        // 操作自己（个人资料）始终允许
+        // 自己的资料始终允许读取/维护
         if (target.getId() != null && target.getId().equals(current.getUserId())) {
             return;
         }
         if (!isDeptInScope(current, target.getDeptId())) {
-            throw new BizException(ResultCode.ACCESS_DENIED, "无权操作该部门的用户");
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权" + action + "该部门的用户");
         }
     }
 

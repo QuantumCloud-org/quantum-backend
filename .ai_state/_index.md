@@ -4,17 +4,17 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "Quick"                     # Hotfix | Bugfix | Quick | Feature | Refactor | System
+path: "Refactor"                  # Hotfix | Bugfix | Quick | Feature | Refactor | System
 stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-05-main-merge-athena-init"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+current_sprint_slug: "2026-07-06-backend-security-fixes"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
 skip_runtime_verify: false        # v9.8.0: true 跳过运行时验证 (纯库/无运行环境才设; System/Refactor 不建议)
 
 # === 路由审议 (v9.9.0) ===
-route_confidence: 0.86            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
-route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
+route_confidence: 0.92            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
+route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
 plan_model: ""                    # "" | "fable" — System/Refactor 的 plan/design 审议切 fable-5 (贵, opt-in)
 
 # === 平台与版本 ===
@@ -69,16 +69,16 @@ counts:
 # === Pointers (指向最新相关文件) ===
 pointers:
   latest_design: ""               # sprints/{current_sprint_slug}/design.md
-  latest_review: ""
-  latest_cleanup: ""
+  latest_review: "sprints/2026-07-06-backend-security-fixes/review.md"
+  latest_cleanup: "sprints/2026-07-06-backend-security-fixes/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: []
   latest_lessons: []
-  latest_architecture_update: ""  # architecture/ARCHITECTURE.md mtime
+  latest_architecture_update: "architecture/ARCHITECTURE.md"  # architecture/ARCHITECTURE.md mtime
   latest_requirement: ""          # requirements/{slug}.md 最新 (v9.8.0)
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: ""                   # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: "ship"               # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: []              # WorktreeCreate/Remove hook 维护

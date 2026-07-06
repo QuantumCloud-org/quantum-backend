@@ -84,7 +84,8 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                         response,
                         newTokenInfo.getRefreshToken(),
                         Boolean.TRUE.equals(newTokenInfo.getRememberMe()),
-                        tokenService.getRefreshTokenExpireSeconds()
+                        tokenService.getRefreshTokenExpireSeconds(),
+                        securityProperties.isRefreshCookieSecure()
                 );
 
                 LoginUser loginUser = tokenService.validateToken(newTokenInfo.getAccessToken());

@@ -15,6 +15,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.web.bind.annotation.*;
@@ -44,7 +45,7 @@ public class FileController {
     @GetMapping("/list")
     @Operation(summary = "分页查询文件")
     @RequiresPermission("system:file:query")
-    public Result<PageResult<SysFile>> list(SysFileQuery query) {
+    public Result<PageResult<SysFile>> list(@Validated SysFileQuery query) {
         return Result.ok(PageResult.of(sysFileService.selectFilePage(query)));
     }
 

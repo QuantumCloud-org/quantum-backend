@@ -7,7 +7,6 @@ import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * Refresh Token Cookie 工具。
- * 当前部署环境为内网 HTTP，因此明确不设置 Secure 标记。
  */
 public final class CookieUtil {
 
@@ -18,7 +17,11 @@ public final class CookieUtil {
     }
 
     public static void writeRefreshCookie(HttpServletResponse response, String refreshToken, boolean persistent, int maxAgeSeconds) {
-        response.addHeader("Set-Cookie", buildRefreshCookieHeader(refreshToken, persistent, maxAgeSeconds));
+        writeRefreshCookie(response, refreshToken, persistent, maxAgeSeconds, false);
+    }
+
+    public static void writeRefreshCookie(HttpServletResponse response, String refreshToken, boolean persistent, int maxAgeSeconds, boolean secure) {
+        response.addHeader("Set-Cookie", buildRefreshCookieHeader(refreshToken, persistent, maxAgeSeconds, secure));
     }
 
     public static String readRefreshCookie(HttpServletRequest request) {
@@ -36,10 +39,14 @@ public final class CookieUtil {
     }
 
     public static void clearRefreshCookie(HttpServletResponse response) {
-        response.addHeader("Set-Cookie", buildRefreshCookieHeader("", true, 0));
+        clearRefreshCookie(response, false);
     }
 
-    private static String buildRefreshCookieHeader(String value, boolean persistent, int maxAgeSeconds) {
+    public static void clearRefreshCookie(HttpServletResponse response, boolean secure) {
+        response.addHeader("Set-Cookie", buildRefreshCookieHeader("", true, 0, secure));
+    }
+
+    private static String buildRefreshCookieHeader(String value, boolean persistent, int maxAgeSeconds, boolean secure) {
         StringBuilder builder = new StringBuilder();
         builder.append(REFRESH_TOKEN_COOKIE_NAME)
                 .append("=")
@@ -48,6 +55,10 @@ public final class CookieUtil {
                 .append("; SameSite=Strict")
                 .append("; Path=")
                 .append(REFRESH_TOKEN_COOKIE_PATH);
+
+        if (secure) {
+            builder.append("; Secure");
+        }
 
         if (persistent) {
             builder.append("; Max-Age=").append(Math.max(maxAgeSeconds, 0));

@@ -58,6 +58,7 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         // 2. 生成存储路径（校验路径穿越）
         String basePath = fileProperties.getLocal().getBasePath();
         FileUtils.validatePath(path, basePath);
+        FileUtils.validateObjectKeyParts(path, fileName);
         String datePath = DateUtil.format(new Date(), "yyyy/MM/dd");
         String storagePath = StrUtil.isNotBlank(path) ? path : datePath;
         Path directoryPath = Paths.get(basePath, storagePath).normalize();
@@ -73,10 +74,6 @@ public class LocalFileStorageServiceImpl implements FileStorageService {
         // 4. 生成文件名（自定义文件名禁止携带路径分隔符，防止穿越出存储目录）
         String originalName = file.getOriginalFilename();
         String extension = FileUtil.extName(originalName);
-        if (StrUtil.isNotBlank(fileName)
-                && (fileName.contains("/") || fileName.contains("\\") || fileName.contains(".."))) {
-            throw new BizException("非法文件名");
-        }
         String storageName = StrUtil.isNotBlank(fileName)
                 ? fileName
                 : IdUtil.fastSimpleUUID() + "." + extension;

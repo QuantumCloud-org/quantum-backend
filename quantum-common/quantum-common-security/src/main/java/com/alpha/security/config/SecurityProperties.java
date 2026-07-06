@@ -76,6 +76,11 @@ public class SecurityProperties {
     private List<String> corsAllowedOrigins = List.of("http://localhost:5173");
 
     /**
+     * Refresh Token Cookie 是否设置 Secure 标记
+     */
+    private boolean refreshCookieSecure = false;
+
+    /**
      * 登录失败最大次数
      */
     private int maxLoginFailCount = 5;

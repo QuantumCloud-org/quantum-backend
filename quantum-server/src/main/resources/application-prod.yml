@@ -53,6 +53,8 @@ springdoc:
     enabled: false
 
 security:
+  cors-allowed-origins: ${SECURITY_CORS_ALLOWED_ORIGINS:}
+  refresh-cookie-secure: true
   trusted-proxies:
     cidrs:
       - 10.0.0.0/8

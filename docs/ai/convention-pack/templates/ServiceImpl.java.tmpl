@@ -1,9 +1,9 @@
-// 模板占位：{{module}} {{Entity}} {{entity}} · 写操作必须带数据权限校验（见 conventions.md 权限约定）
+// 模板占位：{{module}} 包名 · {{Entity}} 大驼峰 · {{entity}} 小驼峰 · {{ENTITY}} TableDef 常量名(全大写下划线)
+// 写操作必须带数据权限校验（见 conventions.md 权限约定）
 package com.alpha.{{module}}.service.impl;
 
 import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
-import com.alpha.orm.enums.DataScopeType;
 import com.alpha.orm.interceptor.DataPermissionInterceptor;
 import com.alpha.orm.permission.DataScope;
 import com.alpha.{{module}}.domain.{{Entity}};
@@ -28,7 +28,11 @@ import static com.alpha.{{module}}.domain.table.{{Entity}}TableDef.{{ENTITY}};
 public class {{Entity}}ServiceImpl extends ServiceImpl<{{Entity}}Mapper, {{Entity}}> implements I{{Entity}}Service {
 
     @Override
-    @DataScope(type = DataScopeType.DEPT_AND_CHILD)
+    // ⚠ 数据权限仅当实体含部门维度（表有 dept_id 列）时保留以下两行，否则必须整体删除：
+    //   表没有 dept_id 时 applyDataScope 注入的条件会导致运行期 SQL 错误（编译期发现不了）。
+    // ⚠ 默认 @DataScope（不带 type）= 按用户配置的数据权限；指定 type 是强制覆盖，
+    //   会把配置为"全部数据"的用户也压到指定范围，仅在业务明确要求时使用。
+    @DataScope
     public Page<{{Entity}}> selectPage({{Entity}}Query query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         DataPermissionInterceptor.applyDataScope(wrapper, "");

@@ -107,15 +107,28 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ### 3.2 MCP Capability Adapter（契约②实现）—— 设计现在定，实现分期
 
-- 新模块：`quantum-mcp`（挂在 `quantum-common` 下或与 biz 平级，建议独立成 `quantum-mcp`）。
+- 新模块：`quantum-mcp`，**与 biz 模块平级**（它依赖 biz service 接口，故不能放在 quantum-common 下——
+  common 层不得依赖 biz 层）。依赖方向：`quantum-mcp` → biz service 接口；biz 不反向依赖它。
 - **协议：走标准 MCP 协议**（决策已定），通用 agent（Claude Desktop / 你的 aether/pace / 第三方）都能连：
-  - 主传输：**Streamable HTTP / SSE**（quantum-backend 本就是 web 应用，MCP server 内嵌暴露一个 SSE 端点最自然）。
-  - 次传输：**stdio**（一个薄启动器，供本地 agent / CLI 直连）。
+  - 唯一服务端传输：**Streamable HTTP / SSE**，内嵌在 Spring 应用中暴露。
+  - 本地 stdio 场景：**不做第二个服务端实现**，用桥接进程（mcp-remote 模式：stdio ⇄ HTTP 转发）。
+    理由：独立 stdio 进程要么绕过 servlet 安全链、要么重复实现认证，二者都不可接受；
+    桥接保证**认证与数据权限只有一条执行路径**。
 - 形态：MCP server 逻辑 **in-process 跑在 Spring 应用内**（这样才能复用 `PermissionAspect` + `DataScope`，
   不复制任何业务/权限逻辑）；对外以标准 MCP 协议暴露，不是私有 REST。
-- 依赖方向：`quantum-mcp` → 依赖 biz service 接口；biz 不反向依赖它。
 - 开关：`ai.mcp.enabled=false` 默认关闭，不给不需要的部署引入表面积。
 - SSE 端点需从既有安全链排除防重复提交/限流的误杀（长连接），但仍走 Token 认证 + 数据权限。
+
+**S3 实现的两条硬性技术要求**（源于对现有切面机制的核实，实现者不得省略）：
+
+1. **线程上下文 fail-closed**：`PermissionAspect` / `DataScopeAspect` 依赖 `UserContext`（ThreadLocal）。
+   经核实，`DataScopeAspect` 在拿不到用户时会**静默跳过**、`applyDataScope` 退化为 no-op —— 即
+   **无用户上下文 = 数据权限被旁路（fail-open）**。因此 MCP tool handler 必须满足其一：
+   在完成认证的请求线程上同步执行；或显式把 `LoginUser` 传递到执行线程并重建 `UserContext`。
+   且适配层入口必须自带断言：`UserContext.getUser() == null` 时直接拒绝调用，不进业务层。
+2. **脱敏不可旁路**：`@Sensitive` 依赖应用配置的 Jackson 序列化器。MCP SDK 自带的序列化
+   不会经过它，脱敏会**静默失效**。适配层必须先用应用的 `ObjectMapper`（`JsonUtil`）把 VO
+   序列化为 JSON 文本，再交给 MCP 响应，禁止把实体/VO 对象直接交给 MCP SDK 序列化。
 
 ---
 
@@ -248,6 +261,9 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
   b) 用户在 agent 配置中粘贴自己的登录 token（零开发，但 token 过期体验差、有泄漏面）；
   c) 为 MCP 单独签发长期受限 PAT（个人访问令牌，范围只读 + 可吊销）。
   倾向 c) 起步、a) 为终态；S3 实现前需拍板。
+- **框架加固待办（独立于 AI Sprint 的代码改动）**：`DataScopeAspect` 对"无用户上下文"当前是
+  静默跳过（fail-open），建议改为 fail-closed（抛出未认证异常或注入恒假条件）。常规 HTTP 链路
+  因认证前置而无法触达此路径，但它是所有非 servlet 入口（MCP / 定时任务 / 消息消费）的共同隐患。
 - aether / pace 的 skill 打包规范（`SKILL.md` 字段、目录约定）以本仓库 Convention Pack 为被引用方，需对齐一次格式。
 - 客户脚手架接入时，由客户提供其 Convention Pack 与（可选）MCP 适配；本设计只规定契约结构，不规定其内部实现。
 - 下游 chat 产品的 Provider SPI / RAG / 配额属独立项目，另立设计，不在本仓库。

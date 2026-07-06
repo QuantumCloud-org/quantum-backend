@@ -38,9 +38,14 @@ quantum-biz-<module>/
 
 - 功能权限：方法上 `@RequiresPermission("<module>:<entity>:<action>")`，action ∈ `list/query/add/edit/remove/export/import`。
 - 角色限定：`@RequiresRole("admin")`。
-- **行级数据权限**：
-  - 查询：service 方法标 `@DataScope(type = ...)`，构建 `QueryWrapper` 后调
-    `DataPermissionInterceptor.applyDataScope(wrapper, "<别名>")`。
+- **行级数据权限**（三条硬规则，违反其一即错误代码）：
+  - **仅当实体含部门维度**（表有 `dept_id` 列，或注解指定了 `deptField`）时才使用。
+    无部门维度的实体**禁止**标 `@DataScope` / 调 `applyDataScope`——编译不会报错，
+    但运行期注入的 `dept_id` 条件会直接导致 SQL 错误。
+  - 查询：service 方法标 `@DataScope`（**默认不带 type** = 按用户配置的数据权限；
+    指定 `type = ...` 是强制覆盖，会把配置为"全部数据"的用户也压到指定范围，
+    仅在业务明确要求时使用），构建 `QueryWrapper` 后调
+    `DataPermissionInterceptor.applyDataScope(wrapper, "<别名>")`——注解与调用必须成对出现。
   - **写操作（update/delete/reset/changeStatus/insert）按 ID 直达，必须单独校验**目标记录/目标部门
     是否在操作者数据权限范围内（参照 `SysUserServiceImpl.assertTargetUserWritable / assertDeptInDataScope`），
     否则拥有功能权限的用户可跨部门越权。**这是硬性要求，生成的写接口必须带此校验。**

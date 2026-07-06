@@ -23,6 +23,8 @@ mvn -q -pl quantum-biz-<module> -am -DskipTests compile
 ## 生成后人工确认项（AI 不得擅自略过）
 
 - [ ] 每个写接口（add/edit/remove/changeStatus 等）都带 `@RequiresPermission` 且 serviceImpl 里有写操作数据权限校验（TODO 已落实，非空壳）
+- [ ] 数据权限使用正确：实体**有** dept 维度 → `@DataScope` 与 `applyDataScope` 成对出现；
+      实体**无** dept 维度 → 两者都必须删除（否则运行期 SQL 错误，编译发现不了）
 - [ ] `menu-permission.sql` 的权限点与 controller 上的 `@RequiresPermission` 完全一致
 - [ ] 敏感字段已 `@Sensitive` / `@JsonIgnore`
 - [ ] 新模块已在根 `pom.xml` 的 `<modules>` 注册，且被 `quantum-server` 依赖

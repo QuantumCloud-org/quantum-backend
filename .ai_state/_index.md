@@ -151,3 +151,4 @@ fingerprint: ""
 - 2026-07-06 Claude critic Round 1: NEEDS_REVISION (F1 P0 归属冲突) → Round 2 re-scope: chat→独立 ai-service, ToolRegistry→quantum-mcp; 治理文档 docs/ai-sprint-design.md
 - 2026-07-06 impl (S1): Convention Pack 模板补全 + runtime-verify 试算
 - 2026-07-06 runtime-verify PASS: 模板实例化 sys_notice 编译一次通过 (9/9 BUILD SUCCESS); 发现并回写 groupId 约定缺口 → stage=review
+- 2026-07-06 决策: MCP 授权=OAuth 2.1 (用户拍板, S3 解锁); 交叉 review 用户线下进行; skills 双端(CC/CX)安装包就绪

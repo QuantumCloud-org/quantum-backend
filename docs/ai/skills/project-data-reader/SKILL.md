@@ -30,7 +30,20 @@ description: >-
 ## 输入
 
 1. 目标系统的 MCP endpoint（Streamable HTTP/SSE URL 或 stdio 启动方式）
-2. 操作者身份：用户 JWT（透传，不在 skill 侧解析权限）
+2. 操作者身份：**OAuth 2.1 自动授权，无需手动提供 token**（决策 2026-07-06）
+
+## 授权流程（OAuth 2.1，MCP 规范标准流程）
+
+首次连接一次性完成，之后全自动：
+
+1. agent 连 MCP endpoint → 401 + 受保护资源元数据（RFC 9728）指向授权服务器
+2. agent 自动拉起浏览器 → 用户以目标系统正常账号登录并同意授权
+3. 授权码 + PKCE 换短时 access token + refresh token → agent 缓存
+4. 之后每次 tool 调用自动携带 token 并自动刷新；token 在目标系统侧映射回登录用户，
+   权限与数据权限照常裁决；撤销在服务端（下线/改密即失效）
+
+用户手动动作只有第 2 步登录一次。**禁止**把长期 token 写进 agent 配置文件或 prompt。
+无浏览器环境（CI/纯 CLI）用 device flow 或预授权的受限凭证，属例外路径需显式声明。
 
 ## 工作流
 

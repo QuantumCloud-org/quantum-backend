@@ -68,7 +68,7 @@ counts:
 
 # === Pointers (指向最新相关文件) ===
 pointers:
-  latest_design: ""               # sprints/{current_sprint_slug}/design.md
+  latest_design: "sprints/2026-07-05-main-merge-athena-init/design.md"               # sprints/{current_sprint_slug}/design.md
   latest_review: ""
   latest_cleanup: ""
   latest_brainstorm: ""
@@ -143,3 +143,4 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-06 01:26:37`: stage=ship sprint=2026-07-05-main-merge-athena-init turn-end

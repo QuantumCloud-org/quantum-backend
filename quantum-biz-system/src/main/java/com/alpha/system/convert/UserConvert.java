@@ -130,6 +130,7 @@ public class UserConvert {
         vo.setEmail(user.getEmail());
         vo.setPhone(user.getPhone());
         vo.setDeptName(user.getDeptName());
+        vo.setDeptId(user.getDeptId());
         vo.setSexLabel(convertSex(user.getSex()));
         vo.setStatusLabel(convertStatus(user.getStatus()));
         vo.setCreateTime(user.getCreateTime());

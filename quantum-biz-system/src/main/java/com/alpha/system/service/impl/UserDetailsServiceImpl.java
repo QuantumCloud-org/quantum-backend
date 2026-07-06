@@ -16,9 +16,12 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
 import java.util.Collections;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 用户认证服务实现
@@ -41,7 +44,11 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
-        Set<String> roles = roleMapper.selectRoleKeysByUserId(user.getId());
+        List<SysRole> assignedRoles = safeRoles(roleMapper.selectRolesByUserId(user.getId()));
+        Set<String> roles = assignedRoles.stream()
+                .map(SysRole::getRoleKey)
+                .filter(roleKey -> roleKey != null && !roleKey.isBlank())
+                .collect(Collectors.toSet());
 
         Set<String> permissions;
         if (isAdmin(user.getId())) {
@@ -55,6 +62,8 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             deptName = userMapper.selectDeptNameById(user.getDeptId());
         }
 
+        DataScopeResolution dataScope = resolveDataScope(user, assignedRoles);
+
         return new LoginUser()
                 .setUserId(user.getId())
                 .setUsername(user.getUsername())
@@ -65,46 +74,83 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .setStatus(user.getStatus())
                 .setRoles(roles)
                 .setPermissions(permissions)
-                .setDataScope(user.getDataScope())
-                .setDeptIds(resolveDeptIds(user));
+                .setDataScope(dataScope.type().getCode())
+                .setDeptIds(dataScope.deptIds());
     }
 
     private boolean isAdmin(Long userId) {
         return CommonConstants.SUPER_ADMIN_ID.equals(userId);
     }
 
-    private Set<Long> resolveDeptIds(SysUser user) {
-        if (user.getDeptId() == null) {
-            return Collections.emptySet();
+    private List<SysRole> safeRoles(List<SysRole> roles) {
+        return roles == null ? Collections.emptyList() : roles;
+    }
+
+    private DataScopeResolution resolveDataScope(SysUser user, List<SysRole> assignedRoles) {
+        if (isAdmin(user.getId())) {
+            return new DataScopeResolution(DataScopeType.ALL, Collections.emptySet());
         }
 
-        DataScopeType dataScopeType = DataScopeType.fromCode(user.getDataScope());
-        return switch (dataScopeType) {
-            case DEPT -> Set.of(user.getDeptId());
-            case DEPT_AND_CHILD -> {
-                Set<Long> deptIds = deptMapper.selectChildDeptIds(user.getDeptId());
-                yield deptIds == null || deptIds.isEmpty() ? Set.of(user.getDeptId()) : deptIds;
+        if (assignedRoles.isEmpty()) {
+            return resolveFallbackUserScope(user);
+        }
+
+        Set<Long> deptIds = new LinkedHashSet<>();
+        List<Long> customRoleIds = new ArrayList<>();
+        for (SysRole role : assignedRoles) {
+            DataScopeType roleScope = DataScopeType.fromCode(role.getDataScope());
+            switch (roleScope) {
+                case ALL -> {
+                    return new DataScopeResolution(DataScopeType.ALL, Collections.emptySet());
+                }
+                case DEPT -> addDeptId(deptIds, user.getDeptId());
+                case DEPT_AND_CHILD -> deptIds.addAll(resolveDeptAndChildren(user.getDeptId()));
+                case CUSTOM -> customRoleIds.add(role.getId());
+                default -> {
+                    // SELF/DEFAULT do not add cross-user departments.
+                }
             }
-            case CUSTOM -> resolveCustomDeptIds(user.getId());
-            default -> Collections.emptySet();
+        }
+
+        deptIds.addAll(resolveCustomDeptIds(customRoleIds));
+        if (!deptIds.isEmpty()) {
+            return new DataScopeResolution(DataScopeType.CUSTOM, deptIds);
+        }
+        return new DataScopeResolution(DataScopeType.SELF, Collections.emptySet());
+    }
+
+    private DataScopeResolution resolveFallbackUserScope(SysUser user) {
+        DataScopeType fallback = DataScopeType.fromCode(user.getDataScope());
+        return switch (fallback) {
+            case ALL -> new DataScopeResolution(DataScopeType.ALL, Collections.emptySet());
+            case DEPT -> new DataScopeResolution(DataScopeType.CUSTOM, user.getDeptId() == null ? Collections.emptySet() : Set.of(user.getDeptId()));
+            case DEPT_AND_CHILD -> new DataScopeResolution(DataScopeType.CUSTOM, resolveDeptAndChildren(user.getDeptId()));
+            default -> new DataScopeResolution(DataScopeType.SELF, Collections.emptySet());
         };
     }
 
-    private Set<Long> resolveCustomDeptIds(Long userId) {
-        List<SysRole> roles = roleMapper.selectRolesByUserId(userId);
-        if (roles == null || roles.isEmpty()) {
+    private Set<Long> resolveDeptAndChildren(Long deptId) {
+        if (deptId == null) {
             return Collections.emptySet();
         }
+        Set<Long> deptIds = deptMapper.selectChildDeptIds(deptId);
+        return deptIds == null || deptIds.isEmpty() ? Set.of(deptId) : deptIds;
+    }
 
-        List<Long> roleIds = roles.stream()
-                .filter(role -> role.getDataScope() != null && DataScopeType.CUSTOM.getCode() == role.getDataScope())
-                .map(SysRole::getId)
-                .toList();
+    private Set<Long> resolveCustomDeptIds(List<Long> roleIds) {
         if (roleIds.isEmpty()) {
             return Collections.emptySet();
         }
-
         Set<Long> deptIds = deptMapper.selectDeptIdsByRoleIds(roleIds);
         return deptIds == null ? Collections.emptySet() : deptIds;
+    }
+
+    private void addDeptId(Set<Long> deptIds, Long deptId) {
+        if (deptId != null) {
+            deptIds.add(deptId);
+        }
+    }
+
+    private record DataScopeResolution(DataScopeType type, Set<Long> deptIds) {
     }
 }

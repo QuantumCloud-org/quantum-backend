@@ -29,6 +29,18 @@ public class UserExportVO implements Serializable {
     private String deptName;
 
     /**
+     * 部门ID（导入必填）
+     */
+    @ExcelProperty("部门ID")
+    private Long deptId;
+
+    /**
+     * 角色ID列表（导入新增必填, 多个用英文逗号分隔）
+     */
+    @ExcelProperty("角色ID列表")
+    private String roleIds;
+
+    /**
      * 昵称
      */
     @ExcelProperty("昵称")

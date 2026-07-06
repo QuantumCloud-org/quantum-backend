@@ -6,10 +6,13 @@ import com.alpha.framework.exception.BizException;
 import com.alpha.orm.enums.DataScopeType;
 import com.alpha.security.config.SecurityProperties;
 import com.alpha.system.domain.SysUser;
+import com.alpha.system.dto.request.UserImportRequest;
 import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.mapper.SysUserMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
 import com.alpha.system.security.UserCacheRefreshEvent;
+import jakarta.validation.Validation;
+import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -20,8 +23,10 @@ import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.doReturn;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
@@ -88,17 +93,77 @@ class SysUserServiceImplSecurityTest {
         verify(publisher).publishEvent(new UserCacheRefreshEvent(Set.of(2L)));
     }
 
+    @Test
+    void importUsersShouldRejectInvalidPhoneByCreateContract() {
+        SysUserMapper userMapper = mock(SysUserMapper.class);
+        SysUserRoleMapper userRoleMapper = mock(SysUserRoleMapper.class);
+        SysUserServiceImpl service = spy(newService(userMapper, userRoleMapper, mock(ApplicationEventPublisher.class)));
+        when(userMapper.selectByUsername("alice")).thenReturn(null);
+        UserContext.setUser(operator());
+
+        assertThatThrownBy(() -> service.importUsers(List.of(importRequest("alice", "bad-phone", "alice@example.com", 10L, List.of(2L))), false))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("手机号格式不正确");
+
+        verify(service, never()).save(any(SysUser.class));
+        verify(userRoleMapper, never()).batchInsert(any(), any());
+    }
+
+    @Test
+    void importUsersShouldPersistRoleRelationsOnCreate() {
+        SysUserMapper userMapper = mock(SysUserMapper.class);
+        SysUserRoleMapper userRoleMapper = mock(SysUserRoleMapper.class);
+        SysUserServiceImpl service = spy(newService(userMapper, userRoleMapper, mock(ApplicationEventPublisher.class)));
+        when(userMapper.selectByUsername("alice")).thenReturn(null);
+        when(userMapper.checkUsernameExists("alice")).thenReturn(0);
+        when(userMapper.checkPhoneExists("13800000002", 0L)).thenReturn(0);
+        when(userMapper.checkEmailExists("alice@example.com", 0L)).thenReturn(0);
+        doAnswer(invocation -> {
+            SysUser user = invocation.getArgument(0);
+            user.setId(20L);
+            return true;
+        }).when(service).save(any(SysUser.class));
+        UserContext.setUser(operator());
+
+        service.importUsers(List.of(importRequest("alice", "13800000002", "alice@example.com", 10L, List.of(2L, 3L))), false);
+
+        verify(userRoleMapper).batchInsert(20L, List.of(2L, 3L));
+    }
+
+    @Test
+    void insertUserShouldRejectMissingAuthenticationContext() {
+        SysUserMapper userMapper = mock(SysUserMapper.class);
+        SysUserServiceImpl service = spy(newService(userMapper, mock(ApplicationEventPublisher.class)));
+        SysUser user = user(20L, "alice", 10L);
+        user.setPassword("Init@12345");
+        user.setPhone("13800000002");
+        user.setEmail("alice@example.com");
+        when(userMapper.checkUsernameExists("alice")).thenReturn(0);
+        when(userMapper.checkPhoneExists("13800000002", 0L)).thenReturn(0);
+        when(userMapper.checkEmailExists("alice@example.com", 0L)).thenReturn(0);
+
+        assertThatThrownBy(() -> service.insertUser(user, List.of(2L)))
+                .isInstanceOf(BizException.class)
+                .hasMessageContaining("未认证");
+    }
+
     private SysUserServiceImpl newService(SysUserMapper userMapper, ApplicationEventPublisher publisher) {
+        return newService(userMapper, mock(SysUserRoleMapper.class), publisher);
+    }
+
+    private SysUserServiceImpl newService(SysUserMapper userMapper, SysUserRoleMapper userRoleMapper, ApplicationEventPublisher publisher) {
         PasswordEncoder passwordEncoder = mock(PasswordEncoder.class);
         when(passwordEncoder.encode(any())).thenReturn("encoded");
         SecurityProperties properties = new SecurityProperties();
+        Validator validator = Validation.buildDefaultValidatorFactory().getValidator();
         return new SysUserServiceImpl(
                 userMapper,
                 mock(SysDeptMapper.class),
-                mock(SysUserRoleMapper.class),
+                userRoleMapper,
                 passwordEncoder,
                 properties,
-                publisher
+                publisher,
+                validator
         );
     }
 
@@ -120,14 +185,29 @@ class SysUserServiceImplSecurityTest {
         return user;
     }
 
-    private SysUser importUser(String username, String phone, String email) {
-        SysUser user = new SysUser();
+    private UserImportRequest importUser(String username, String phone, String email) {
+        UserImportRequest user = new UserImportRequest();
         user.setUsername(username);
         user.setNickname(username);
         user.setPhone(phone);
         user.setEmail(email);
+        user.setSex(1);
         user.setDeptId(10L);
         user.setStatus(1);
+        user.setRoleIds(List.of(2L));
         return user;
+    }
+
+    private UserImportRequest importRequest(String username, String phone, String email, Long deptId, List<Long> roleIds) {
+        UserImportRequest request = new UserImportRequest();
+        request.setUsername(username);
+        request.setNickname(username);
+        request.setPhone(phone);
+        request.setEmail(email);
+        request.setSex(1);
+        request.setStatus(1);
+        request.setDeptId(deptId);
+        request.setRoleIds(roleIds);
+        return request;
     }
 }

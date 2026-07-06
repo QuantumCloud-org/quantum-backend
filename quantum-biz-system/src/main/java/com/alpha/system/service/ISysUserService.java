@@ -2,6 +2,7 @@ package com.alpha.system.service;
 
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.system.domain.SysUser;
+import com.alpha.system.dto.request.UserImportRequest;
 import com.alpha.system.dto.request.UserQuery;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
@@ -86,5 +87,5 @@ public interface ISysUserService extends IService<SysUser> {
     /**
      * 导入用户
      */
-    String importUsers(List<SysUser> userList, boolean updateSupport);
+    String importUsers(List<UserImportRequest> userList, boolean updateSupport);
 }

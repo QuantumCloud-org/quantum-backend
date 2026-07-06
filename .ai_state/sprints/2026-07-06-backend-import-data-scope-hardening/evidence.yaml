@@ -1,0 +1,22 @@
+stage: runtime-verify
+sprint: 2026-07-06-backend-import-data-scope-hardening
+commands:
+  - command: git diff --check
+    result: pass
+  - command: mvn -pl quantum-biz-system -am test
+    result: pass
+    summary: Reactor 9/9 SUCCESS; quantum-biz-system 19 tests, 0 failures
+  - command: mvn test
+    result: pass
+    summary: Reactor 10/10 SUCCESS; quantum-biz-system 19 tests, 0 failures
+excluded:
+  - contracts/codegen/CLI/MCP AI review and generation system
+
+collected_evidence:
+  - tool_use_id: "call_PbPRtJP5Y2CQ8tTqubyPIlFE"
+    tool: "Bash"
+    file: ""
+    kind: "test"
+    command: "mvn test"
+    result: "pass"
+    timestamp: "2026-07-06T03:25:01.045195Z"

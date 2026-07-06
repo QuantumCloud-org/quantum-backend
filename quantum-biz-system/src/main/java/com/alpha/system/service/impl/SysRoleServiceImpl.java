@@ -4,13 +4,14 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.exception.BizException;
-import com.alpha.system.security.UserCacheRefreshEvent;
 import com.alpha.system.domain.SysRole;
+import com.alpha.system.domain.SysUserRole;
 import com.alpha.system.dto.request.RoleQuery;
 import com.alpha.system.mapper.SysRoleDeptMapper;
 import com.alpha.system.mapper.SysRoleMapper;
 import com.alpha.system.mapper.SysRoleMenuMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
+import com.alpha.system.security.UserCacheRefreshEvent;
 import com.alpha.system.service.ISysRoleService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -21,8 +22,14 @@ import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Collections;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 import static com.alpha.system.domain.table.SysRoleTableDef.SYS_ROLE;
 
@@ -70,6 +77,26 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     public Set<Long> selectRoleIdsByUserId(Long userId) {
         return roleMapper.selectRoleIdsByUserId(userId);
+    }
+
+    @Override
+    public Map<Long, Set<Long>> selectRoleIdsByUserIds(List<Long> userIds) {
+        if (CollUtil.isEmpty(userIds)) {
+            return Collections.emptyMap();
+        }
+        List<Long> normalizedUserIds = userIds.stream()
+                .filter(Objects::nonNull)
+                .distinct()
+                .toList();
+        if (normalizedUserIds.isEmpty()) {
+            return Collections.emptyMap();
+        }
+        return userRoleMapper.selectByUserIds(normalizedUserIds).stream()
+                .collect(Collectors.groupingBy(
+                        SysUserRole::getUserId,
+                        LinkedHashMap::new,
+                        Collectors.mapping(SysUserRole::getRoleId, Collectors.toCollection(LinkedHashSet::new))
+                ));
     }
 
     @Override

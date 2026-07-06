@@ -13,7 +13,10 @@ import com.alpha.orm.permission.DataScope;
 import com.alpha.security.config.SecurityProperties;
 import com.alpha.system.domain.SysDept;
 import com.alpha.system.domain.SysUser;
+import com.alpha.system.dto.request.UserCreateRequest;
+import com.alpha.system.dto.request.UserImportRequest;
 import com.alpha.system.dto.request.UserQuery;
+import com.alpha.system.dto.request.UserUpdateRequest;
 import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.mapper.SysUserMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
@@ -23,6 +26,8 @@ import com.alpha.system.service.ISysUserService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
+import jakarta.validation.ConstraintViolation;
+import jakarta.validation.Validator;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.context.ApplicationEventPublisher;
@@ -31,6 +36,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -54,6 +60,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
     private final PasswordEncoder passwordEncoder;
     private final SecurityProperties securityProperties;
     private final ApplicationEventPublisher eventPublisher;
+    private final Validator validator;
 
     @Override
     @DataScope(type = DataScopeType.DEPT_AND_CHILD)
@@ -296,7 +303,7 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public String importUsers(List<SysUser> userList, boolean updateSupport) {
+    public String importUsers(List<UserImportRequest> userList, boolean updateSupport) {
         if (CollUtil.isEmpty(userList)) {
             throw new BizException("导入用户数据不能为空");
         }
@@ -306,8 +313,9 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         StringBuilder successMsg = new StringBuilder();
         StringBuilder failureMsg = new StringBuilder();
 
-        for (SysUser user : userList) {
+        for (UserImportRequest user : userList) {
             try {
+                validateBean(user);
                 SysUser existUser = selectByUsername(user.getUsername());
                 if (existUser == null) {
                     importNewUser(user);
@@ -337,27 +345,21 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         return successMsg.toString();
     }
 
-    private void importNewUser(SysUser user) {
-        if (!checkUsernameUnique(user.getUsername())) {
-            throw new BizException("用户名已存在");
-        }
-        if (StrUtil.isNotBlank(user.getPhone()) && !checkPhoneUnique(user.getPhone(), null)) {
-            throw new BizException("手机号已存在");
-        }
-        if (StrUtil.isNotBlank(user.getEmail()) && !checkEmailUnique(user.getEmail(), null)) {
-            throw new BizException("邮箱已存在");
-        }
-        validatePassword(securityProperties.getInitPassword());
-        assertDeptInDataScope(user.getDeptId());
-        user.setPassword(passwordEncoder.encode(user.getUsername() + securityProperties.getInitPassword()));
-        save(user);
+    private void importNewUser(UserImportRequest imported) {
+        UserCreateRequest request = toCreateRequest(imported);
+        validateBean(request);
+        SysUser user = toNewUser(request);
+        insertUser(user, request.getRoleIds());
     }
 
-    private void importExistingUser(SysUser imported, SysUser existUser) {
-        if (StrUtil.isNotBlank(imported.getPhone()) && !checkPhoneUnique(imported.getPhone(), existUser.getId())) {
+    private void importExistingUser(UserImportRequest imported, SysUser existUser) {
+        UserUpdateRequest request = toUpdateRequest(imported, existUser);
+        validateBean(request);
+
+        if (StrUtil.isNotBlank(request.getPhone()) && !checkPhoneUnique(request.getPhone(), existUser.getId())) {
             throw new BizException("手机号已存在");
         }
-        if (StrUtil.isNotBlank(imported.getEmail()) && !checkEmailUnique(imported.getEmail(), existUser.getId())) {
+        if (StrUtil.isNotBlank(request.getEmail()) && !checkEmailUnique(request.getEmail(), existUser.getId())) {
             throw new BizException("邮箱已存在");
         }
         assertTargetUserWritable(existUser);
@@ -365,21 +367,94 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
         SysUser update = new SysUser();
         update.setId(existUser.getId());
         update.setVersion(existUser.getVersion());
-        update.setNickname(imported.getNickname());
-        update.setEmail(imported.getEmail());
-        update.setPhone(imported.getPhone());
-        update.setSex(imported.getSex());
-        update.setStatus(imported.getStatus());
-        if (imported.getDeptId() != null && !imported.getDeptId().equals(existUser.getDeptId())) {
-            assertDeptInDataScope(imported.getDeptId());
-            update.setDeptId(imported.getDeptId());
+        update.setNickname(request.getNickname());
+        update.setEmail(request.getEmail());
+        update.setPhone(request.getPhone());
+        update.setSex(request.getSex());
+        update.setStatus(request.getStatus());
+        if (!request.getDeptId().equals(existUser.getDeptId())) {
+            assertDeptInDataScope(request.getDeptId());
+            update.setDeptId(request.getDeptId());
         }
 
         boolean updated = updateById(update);
         if (!updated) {
             throw new BizException(ResultCode.DATA_CONFLICT, "用户信息已变更，请刷新后重试");
         }
+        if (imported.getRoleIds() != null) {
+            userRoleMapper.deleteByUserId(existUser.getId());
+            if (CollUtil.isNotEmpty(imported.getRoleIds())) {
+                userRoleMapper.batchInsert(existUser.getId(), imported.getRoleIds());
+            }
+        }
         eventPublisher.publishEvent(new UserCacheRefreshEvent(Set.of(existUser.getId())));
+    }
+
+    private UserCreateRequest toCreateRequest(UserImportRequest imported) {
+        validateBean(imported);
+        UserCreateRequest request = new UserCreateRequest();
+        request.setUsername(imported.getUsername());
+        request.setPassword(securityProperties.getInitPassword());
+        request.setNickname(imported.getNickname());
+        request.setPhone(imported.getPhone());
+        request.setEmail(imported.getEmail());
+        request.setSex(imported.getSex());
+        request.setDeptId(imported.getDeptId());
+        request.setStatus(imported.getStatus());
+        request.setRoleIds(imported.getRoleIds());
+        request.setRemark(imported.getRemark());
+        return request;
+    }
+
+    private UserUpdateRequest toUpdateRequest(UserImportRequest imported, SysUser existUser) {
+        validateBean(imported);
+        UserUpdateRequest request = new UserUpdateRequest();
+        request.setId(existUser.getId());
+        request.setVersion(existUser.getVersion());
+        request.setUsername(imported.getUsername());
+        request.setNickname(imported.getNickname());
+        request.setPhone(imported.getPhone());
+        request.setEmail(imported.getEmail());
+        request.setSex(imported.getSex());
+        request.setDeptId(imported.getDeptId());
+        request.setStatus(imported.getStatus());
+        request.setRoleIds(resolveImportedRoleIds(imported, existUser.getId()));
+        request.setRemark(imported.getRemark());
+        return request;
+    }
+
+    private List<Long> resolveImportedRoleIds(UserImportRequest imported, Long userId) {
+        if (imported.getRoleIds() != null) {
+            return imported.getRoleIds();
+        }
+        Set<Long> currentRoleIds = userRoleMapper.selectRoleIdsByUserId(userId);
+        return currentRoleIds == null ? List.of() : new ArrayList<>(currentRoleIds);
+    }
+
+    private SysUser toNewUser(UserCreateRequest request) {
+        SysUser user = new SysUser();
+        user.setUsername(request.getUsername());
+        user.setPassword(request.getPassword());
+        user.setNickname(request.getNickname());
+        user.setPhone(request.getPhone());
+        user.setEmail(request.getEmail());
+        user.setSex(request.getSex());
+        user.setDeptId(request.getDeptId());
+        user.setStatus(request.getStatus());
+        user.setRemark(request.getRemark());
+        return user;
+    }
+
+    private void validateBean(Object bean) {
+        Set<ConstraintViolation<Object>> violations = validator.validate(bean);
+        if (violations.isEmpty()) {
+            return;
+        }
+        String message = violations.stream()
+                .map(ConstraintViolation::getMessage)
+                .distinct()
+                .collect(Collectors.joining("; "));
+        throw new BizException(message);
     }
 
     /**
@@ -498,7 +573,10 @@ public class SysUserServiceImpl extends ServiceImpl<SysUserMapper, SysUser> impl
      */
     private void assertDeptInDataScope(Long deptId) {
         LoginUser current = UserContext.getUser();
-        if (current == null || current.isAdmin()) {
+        if (current == null) {
+            throw new BizException(ResultCode.UNAUTHORIZED);
+        }
+        if (current.isAdmin()) {
             return;
         }
         if (!isDeptInScope(current, deptId)) {

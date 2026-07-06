@@ -43,4 +43,24 @@ public interface SysUserRoleMapper extends BaseMapper<SysUserRole> {
      */
     @Select("SELECT DISTINCT user_id FROM sys_user_role WHERE role_id = #{roleId}")
     Set<Long> selectUserIdsByRoleId(@Param("roleId") Long roleId);
+
+    /**
+     * 根据用户ID查询角色ID集合
+     */
+    @Select("SELECT role_id FROM sys_user_role WHERE user_id = #{userId}")
+    Set<Long> selectRoleIdsByUserId(@Param("userId") Long userId);
+
+    /**
+     * 根据用户ID集合查询用户角色关联
+     */
+    @Select("""
+            <script>
+            SELECT user_id, role_id FROM sys_user_role
+            WHERE user_id IN
+            <foreach collection="userIds" item="userId" open="(" separator="," close=")">
+                #{userId}
+            </foreach>
+            </script>
+            """)
+    List<SysUserRole> selectByUserIds(@Param("userIds") List<Long> userIds);
 }

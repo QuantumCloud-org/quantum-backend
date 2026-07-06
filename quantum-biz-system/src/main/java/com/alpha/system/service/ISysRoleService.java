@@ -6,6 +6,7 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -42,6 +43,11 @@ public interface ISysRoleService extends IService<SysRole> {
      * 根据用户ID查询角色ID集合
      */
     Set<Long> selectRoleIdsByUserId(Long userId);
+
+    /**
+     * 根据用户ID集合批量查询角色ID集合
+     */
+    Map<Long, Set<Long>> selectRoleIdsByUserIds(List<Long> userIds);
 
     /**
      * 新增角色

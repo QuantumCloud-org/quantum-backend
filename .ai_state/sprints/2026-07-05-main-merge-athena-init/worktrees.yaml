@@ -3,4 +3,4 @@ worktrees:
   - name: "quantum-backend-security-fixes"
     path: "../quantum-backend-security-fixes"
     created_at: "2026-07-06T02:00:08.113092Z"
-    status: active
+    status: merged  # 2026-07-06 验证: 提交已在 main, 目录已删除

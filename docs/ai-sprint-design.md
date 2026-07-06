@@ -41,8 +41,8 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 │                                                                        │
 │   quantum-backend（你的 BE）   quantum-front（你的 FE）   客户自有脚手架  │
 │   每个目标"参与"AI 只需提供两份契约的实现：                              │
-│     契约①  Convention Pack（约定包）   → 供 scaffold-gen 消费           │
-│     契约②  Capability Manifest + MCP  → 供 capability-mcp 消费          │
+│     契约①  Convention Pack（约定包）   → 供 scaffold-module-gen 消费     │
+│     契约②  Capability Manifest + MCP  → 供 project-data-reader 消费      │
 │   quantum-backend 在本平面【只做这两件事，没有任何 AI 运行时】           │
 └────────────────────────────────────────────────────────────────────┘
                                 │  被消费
@@ -100,7 +100,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 ### 3.1 Convention Pack（契约①实现）—— dev-time，纯文档 + 模板，零运行时代码
 
 - 目录：`docs/ai/convention-pack/`
-  - `SKILL.md`：quantum-backend 模块生成约定（可直接被 aether/pace 的 scaffold-gen skill 引用）
+  - `SKILL.md`：quantum-backend 模块生成约定（可直接被 aether/pace 的 scaffold-module-gen skill 引用）
   - `templates/`：各层骨架模板
   - `validate.md`：校验命令与自修流程说明
 - 产物不进 jar，不影响运行时。
@@ -139,7 +139,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ## 5. 安全铁律（不可协商）
 
-1. **身份与数据权限永远留在目标系统一侧**。scaffold-gen / capability-mcp / 下游 chat 产品都**不得**自建一套权限。
+1. **身份与数据权限永远留在目标系统一侧**。scaffold-module-gen / project-data-reader / 下游 chat 产品都**不得**自建一套权限。
    - MCP 每次能力调用：JWT 透传 → quantum-backend 重建 `LoginUser` → 走 `@RequiresPermission` + `DataScope`。
    - 一旦 MCP 适配层绕过 `DataScope` 直接查库，之前修复的 fail-closed 数据权限（含越权写修复）全部失效。
 2. **MCP 默认只读**。写操作若开放，必须逐个能力显式声明，并复用写操作数据权限校验（`assertTargetUserWritable` 等）。
@@ -242,6 +242,12 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 
 ## 9. 待确认 / 依赖项
 
+- **MCP 授权流程（S3 前必须定）**：设计已确定"每次调用带用户 JWT、由 quantum-backend 裁决"，
+  但通用 agent（如 Claude Desktop）**如何获得这个 JWT** 尚未定义。候选：
+  a) MCP 规范的 OAuth 2.1 授权流程（标准、对通用 agent 最友好，但 quantum-backend 需新增授权端点）；
+  b) 用户在 agent 配置中粘贴自己的登录 token（零开发，但 token 过期体验差、有泄漏面）；
+  c) 为 MCP 单独签发长期受限 PAT（个人访问令牌，范围只读 + 可吊销）。
+  倾向 c) 起步、a) 为终态；S3 实现前需拍板。
 - aether / pace 的 skill 打包规范（`SKILL.md` 字段、目录约定）以本仓库 Convention Pack 为被引用方，需对齐一次格式。
 - 客户脚手架接入时，由客户提供其 Convention Pack 与（可选）MCP 适配；本设计只规定契约结构，不规定其内部实现。
 - 下游 chat 产品的 Provider SPI / RAG / 配额属独立项目，另立设计，不在本仓库。

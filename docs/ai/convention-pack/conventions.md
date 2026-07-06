@@ -47,8 +47,11 @@ quantum-biz-<module>/
 
 ## 实体约定
 
-- 继承 `BaseEntity`（含 `id/createTime/createBy/updateTime/updateBy/deleted/version`）。
-- 逻辑删除 `deleted`，乐观锁 `version`，由 MyBatis-Flex audit 自动填充审计字段。
+- 继承 `BaseEntity`（含 `id/createTime/createBy/updateTime/updateBy/deleted/version`），
+  并 `implements Serializable`（带 `@Serial serialVersionUID`），**不加** `@Accessors`（对齐 `SysUser` 风格）。
+- 逻辑删除 `deleted`、乐观锁 `version`；审计字段（createBy/createTime/updateBy/updateTime）由
+  `MybatisFlexConfig` 注册的全局 `EntityInsertListener` / `EntityUpdateListener` 自动填充
+  （注意：这与 `mybatis-flex.audit` 配置无关，后者是 SQL 审计）。实体代码中**不要**手动 set 审计字段。
 - 密码等敏感字段出参用 `@Sensitive` 脱敏 / `@JsonIgnore`。
 
 ## 菜单与权限落库

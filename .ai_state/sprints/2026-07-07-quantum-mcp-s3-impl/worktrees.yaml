@@ -4,4 +4,4 @@ worktrees:
     path: /Users/mi_manchi/workspace/quantum/quantum-backend-worktrees/quantum-mcp-s3-impl
     branch: codex/quantum-mcp-s3-impl
     base: main@676a185
-    status: remove-after-merge
+    status: removed

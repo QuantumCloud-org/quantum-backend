@@ -20,3 +20,13 @@ collected_evidence:
     timestamp: 2026-07-07T12:30:49+08:00
     result: PASS
     summary: No debug/TODO markers in changed code/config scope.
+  - command: mvn -pl quantum-server -am test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-07T12:36:51+08:00
+    result: PASS
+    summary: Post-merge main aggregate; Reactor BUILD SUCCESS; quantum-mcp 12 tests PASS.
+  - command: git worktree remove ... && git branch -d codex/quantum-mcp-s3-impl
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-07T12:37:00+08:00
+    result: PASS
+    summary: Implementation worktree removed and local implementation branch deleted.

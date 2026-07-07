@@ -74,14 +74,14 @@ pointers:
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
   latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
-  latest_architecture_update: "2026-07-07T04:31:00Z"
+  latest_architecture_update: "2026-07-07T04:36:20.235170Z"
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
 next_action: ""
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
-active_worktrees: ["quantum-mcp-s3-impl"]
+active_worktrees: []
 last_critic_round: 1              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
 

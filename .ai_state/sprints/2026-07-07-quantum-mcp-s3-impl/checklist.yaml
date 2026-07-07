@@ -40,5 +40,5 @@ items:
     evidence: reviews/pass1.md VERDICT PASS; cleanup-pass.md PASS; architecture/ 更新
   - id: ship
     title: merge main + push + 清理 worktree/branch
-    status: pending
-    evidence: 待最终 git 验证
+    status: done
+    evidence: merge 46692ae; worktree removed; local branch codex/quantum-mcp-s3-impl deleted; final push state reported in session

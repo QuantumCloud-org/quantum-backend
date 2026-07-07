@@ -13,6 +13,7 @@
         <module>quantum-common</module>
         <module>quantum-server</module>
         <module>quantum-biz-system</module>
+        <module>quantum-mcp</module>
     </modules>
     <parent>
         <groupId>org.springframework.boot</groupId>

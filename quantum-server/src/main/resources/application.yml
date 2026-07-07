@@ -65,6 +65,27 @@ file:
 cache:
   mode: local
 
+# MCP OAuth 能力默认关闭；启用时必须显式配置 issuer/resource 与静态 client allowlist
+ai:
+  mcp:
+    enabled: false
+    issuer: ${AI_MCP_ISSUER:http://localhost:8080}
+    resource: ${AI_MCP_RESOURCE:http://localhost:8080/mcp}
+    endpoint: /mcp
+    authorization-code-ttl: 5m
+    access-token-ttl: 15m
+    refresh-token-ttl: 30d
+    clients:
+      quantum-local-agent:
+        name: Quantum Local Agent
+        redirect-uris:
+          - http://127.0.0.1/callback
+          - http://localhost/callback
+        scopes:
+          - system.user.read
+          - system.dept.read
+          - system.role.read
+
 # Security 配置
 security:
   cors-allowed-origins:

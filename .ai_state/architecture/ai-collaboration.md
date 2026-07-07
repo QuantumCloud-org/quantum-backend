@@ -1,6 +1,6 @@
 # AI 协作基座 (docs/ai)
 
-更新: 2026-07-07 (sprint: 2026-07-07-quantum-mcp-s3-preflight-design)
+更新: 2026-07-07 (sprint: 2026-07-07-quantum-mcp-s3-impl)
 
 ## 定位
 
@@ -9,7 +9,7 @@
 | 主线 | 载体 | 状态 |
 |---|---|---|
 | 生成期 (dev-time): AI 按约定生成业务模块 | `docs/ai/convention-pack/` + `scaffold-module-gen` skill | 已交付 |
-| 运行期 (runtime): 外部 Agent 经 MCP 按操作者身份读业务数据 | `project-data-reader` skill + `quantum-mcp` 模块 (S3) | 开工前设计冻结, 待实现 |
+| 运行期 (runtime): 外部 Agent 经 MCP 按操作者身份读业务数据 | `project-data-reader` skill + `quantum-mcp` 模块 (S3) | S3 skeleton 已实现 |
 
 治理文档: `docs/ai-sprint-design.md` (Round1/Round2 收敛记录: chat/RAG/Provider/SSE/配额移出本仓库)。
 
@@ -20,7 +20,7 @@
 - `validate.md` — 三段校验: 编译 → 安全门禁 G1-G4 (grep 检测 assert 调用与 SQL 占位残留) → 人工清单
 - 设计决策见 compound/2026-07-06-decision-codegen-security-gates-default-on.md
 
-## MCP 能力服务 (运行期, S3 待实现)
+## MCP 能力服务 (运行期, S3 已实现)
 
 - 授权: OAuth 2.1 标准流程 (RFC 9728 资源元数据 + PKCE), 禁止长期 token 落盘
 - 权限裁决在服务端: token 映射回登录用户 → 复用 @RequiresPermission + 数据域链路, fail-closed
@@ -29,6 +29,11 @@
   - token 存储: 独立 `quantum:oauth:*` store, 不与普通 Web access token 互通; 复用 LoginUser / CacheClient / 用户吊销语义
   - consent: 复用登录态 + 新增授权同意页; 授权码绑定 client/redirect/PKCE/resource/user, 一次性短 TTL
   - Manifest v1: `resource + tools[] + permission + dataScopeMode + riskLevel + schema`; 调用只用 `Authorization: Bearer`
+- 2026-07-07 S3 实现:
+  - 新增 `quantum-mcp` module, `quantum-server` 引入, `ai.mcp.enabled=false` 默认关闭
+  - OAuth endpoints: well-known metadata / authorize / token / revoke
+  - `/mcp`: GET manifest, POST JSON-RPC `initialize` / `tools/list` / `tools/call`
+  - 首批只读 tools: `system.user.search`, `system.dept.tree`, `system.role.list`
 
 ## Skills 分发
 

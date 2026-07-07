@@ -63,6 +63,8 @@ quantum-biz-<module>/
 
 生成模块时同步产出 `menu-permission.sql`：插入菜单节点 + 对应的 `<module>:<entity>:<action>` 权限点，
 并挂到目标父菜单下（参照 `deploy/init.sql` 的 sys_menu 结构）。
+统一存放路径：`quantum-biz-<module>/src/main/resources/sql/menu-permission.sql`（S2 实跑回写，
+避免各次生成自选路径导致落库脚本散落）。
 
 ## 生成清单（一个标准 CRUD 模块）
 

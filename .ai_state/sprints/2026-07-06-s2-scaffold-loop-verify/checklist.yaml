@@ -1,0 +1,19 @@
+sprint: 2026-07-06-s2-scaffold-loop-verify
+path: Feature
+stage: impl
+items:
+  - id: gen-module
+    title: generator 按 skill 工作流生成 quantum-biz-asset 独立模块 (全 11 模板, 带 dept 维度)
+    status: done
+  - id: compile-loop
+    title: 编译闭环 (含自修记录) BUILD SUCCESS
+    status: done
+  - id: gates
+    title: validate.md §2 G1-G4 门禁全 PASS
+    status: done
+  - id: cleanup
+    title: 现场清理, git 无生成物残留
+    status: done
+  - id: writeback
+    title: runtime-verify.md 实跑证据 + §8 S2 状态回写 + 缺口修正 (如有)
+    status: done

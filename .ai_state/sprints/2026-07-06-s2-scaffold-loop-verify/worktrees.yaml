@@ -1,0 +1,7 @@
+sprint_slug: 2026-07-06-s2-scaffold-loop-verify
+worktrees:
+  - name: "agent-a97f09563e06d95f2"
+    path: ""
+    branch: ""
+    created_at: "2026-07-07T01:30:06.018Z"
+    status: active

@@ -1,6 +1,6 @@
 sprint: 2026-07-07-fe-be-convention-pack-expansion
 path: Feature
-stage: impl
+stage: ship
 items:
   - id: fe-pack
     title: quantum-front Convention Pack (conventions + 7 模板 + validate G1-G6)
@@ -20,4 +20,5 @@ items:
     evidence: 本 session Read 全部 6 个 BE 文件 + FE validate.md; 修正 2 处小瑕疵 (5条判定规则引用/G6a grep 优先级)
   - id: commits
     title: 两仓库各自 commit + push
-    status: pending
+    status: done
+    evidence: BE 4b0c067+0aa8b30 (remote 验证一致), FE 8f4d5ab (remote 验证一致)

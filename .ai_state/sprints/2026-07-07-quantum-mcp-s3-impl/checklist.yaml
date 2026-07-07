@@ -1,0 +1,44 @@
+sprint: 2026-07-07-quantum-mcp-s3-impl
+path: System
+stage: ship
+items:
+  - id: module
+    title: 新增 quantum-mcp Maven module 并接入 quantum-server
+    status: done
+    evidence: pom.xml + quantum-server/pom.xml + quantum-mcp/pom.xml
+  - id: config
+    title: ai.mcp 默认关闭配置与静态 client allowlist
+    status: done
+    evidence: McpProperties + quantum-server/src/main/resources/application.yml
+  - id: oauth-store
+    title: 独立 OAuth code/access/refresh store + PKCE S256 + refresh rotation
+    status: done
+    evidence: OAuthTokenServiceTest 4 tests PASS
+  - id: bearer-filter
+    title: MCP Bearer filter fail-closed, 写入 SecurityContextHolder + UserContext
+    status: done
+    evidence: OAuthBearerAuthenticationFilterTest 2 tests PASS
+  - id: endpoints
+    title: well-known/OAuth/MCP endpoints
+    status: done
+    evidence: OAuthMetadataController + OAuthController + McpController
+  - id: manifest-tools
+    title: Manifest v1 + system.user.search/system.dept.tree/system.role.list
+    status: done
+    evidence: CapabilityManifestServiceTest PASS
+  - id: tool-guard
+    title: tool handler 无 UserContext/无权限 fail-closed, output 走 JsonUtil
+    status: done
+    evidence: McpToolServiceTest PASS
+  - id: runtime-verify
+    title: runtime verify 实跑
+    status: done
+    evidence: runtime-verify.md; mvn -pl quantum-server -am test PASS; quantum-mcp 12 tests PASS
+  - id: review-polish
+    title: review + polish + architecture 更新
+    status: done
+    evidence: reviews/pass1.md VERDICT PASS; cleanup-pass.md PASS; architecture/ 更新
+  - id: ship
+    title: merge main + push + 清理 worktree/branch
+    status: pending
+    evidence: 待最终 git 验证

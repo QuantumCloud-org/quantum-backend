@@ -6,15 +6,15 @@ version: "9.9.0"
 # === PACE 路由状态 ===
 path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
 stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-07-quantum-mcp-s3-preflight-design"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+current_sprint_slug: "2026-07-07-quantum-mcp-s3-impl"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
 skip_runtime_verify: false        # v9.8.0: true 跳过运行时验证 (纯库/无运行环境才设; System/Refactor 不建议)
 
 # === 路由审议 (v9.9.0) ===
-route_confidence: 0.86            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
-route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)", "2026-07-07 System/design-only: quantum-mcp S3 preflight design + state closeout"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
+route_confidence: 0.90            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
+route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)", "2026-07-07 System/design-only: quantum-mcp S3 preflight design + state closeout", "2026-07-07 System: implement quantum-mcp S3 OAuth/MCP skeleton"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
 plan_model: ""                    # "" | "fable" — System/Refactor 的 plan/design 审议切 fable-5 (贵, opt-in)
 
 # === 平台与版本 ===
@@ -56,10 +56,10 @@ counts:
   features_count: 2
   issues_count: 0
   refactors_count: 0
-  systems_count: 2
+  systems_count: 3
   requirements_count: 1
-  reviews_count: 10
-  cleanup_count: 4
+  reviews_count: 11
+  cleanup_count: 5
   compound:
     learning: 1
     trick: 0
@@ -68,13 +68,13 @@ counts:
 
 # === Pointers (指向最新相关文件) ===
 pointers:
-  latest_design: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/design.md"               # sprints/{current_sprint_slug}/design.md
-  latest_review: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/reviews/pass1.md"
-  latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/cleanup-pass.md"
+  latest_design: "sprints/2026-07-07-quantum-mcp-s3-impl/design.md"               # sprints/{current_sprint_slug}/design.md
+  latest_review: "sprints/2026-07-07-quantum-mcp-s3-impl/reviews/pass1.md"
+  latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-impl/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
   latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
-  latest_architecture_update: "2026-07-06T12:28:26.642037Z"
+  latest_architecture_update: "2026-07-07T04:31:00Z"
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
@@ -110,6 +110,7 @@ fingerprint: ""
 - 2026-07-06 20:35: AI 能力架构 sprint 走完全程 (design→review CONCERNS→polish P1×3 闭环→ship df6b729 已推送); Convention Pack 数据权限默认启用 + G1-G4 门禁; compound×2 + architecture/ai-collaboration.md 落盘。
 - 2026-07-07 11:04: FE/BE Convention Pack 扩充 sprint 已 ship: BE `865a7bf` / FE `8f4d5ab` 均与 origin/main 对齐; 旧 agent worktree 现场已清理。
 - 2026-07-07 12:10: S3 `quantum-mcp` 开工前设计冻结: OAuth token 独立 store、consent 页、Capability Manifest v1 / Bearer 身份传递已落盘; 下一步进入代码实现 sprint。
+- 2026-07-07 12:31: S3 `quantum-mcp` 实现 sprint 已进入 ship: 新增 module、独立 OAuth store、Bearer filter、well-known/OAuth endpoints、MCP JSON-RPC `initialize/tools/list/tools/call`、首批只读 tools; `mvn -pl quantum-server -am test` 通过。
 
 ## 工具调度建议
 
@@ -162,3 +163,4 @@ fingerprint: ""
 - 2026-07-06 决策: MCP 授权=OAuth 2.1 (用户拍板, S3 解锁); 交叉 review 用户线下进行; skills 双端(CC/CX)安装包就绪
 - 2026-07-07 state closeout: active_worktrees 清零; FE/BE Convention Pack 遗留改为已清理 + scaffold-page-gen 后续实跑项
 - 2026-07-07 S3 preflight design: token store / consent / manifest 三项完成, stage=ship
+- 2026-07-07 S3 impl: quantum-mcp OAuth/MCP skeleton 完成, runtime/review/polish/architecture 落盘, stage=ship

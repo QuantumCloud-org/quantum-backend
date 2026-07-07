@@ -19,6 +19,11 @@
             <artifactId>quantum-biz-system</artifactId>
             <version>${revision}</version>
         </dependency>
+        <dependency>
+            <groupId>com.alpha.mcp</groupId>
+            <artifactId>quantum-mcp</artifactId>
+            <version>${revision}</version>
+        </dependency>
     </dependencies>
 
     <build>

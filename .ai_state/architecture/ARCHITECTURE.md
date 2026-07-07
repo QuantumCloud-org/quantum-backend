@@ -4,7 +4,7 @@
 
 Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 
-最近更新: 2026-07-06T13:10:00Z
+最近更新: 2026-07-07T04:31:00Z
 
 | 模块 | 职责 |
 |---|---|
@@ -15,6 +15,7 @@ Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 | `quantum-common-logging` | 操作日志、登录日志、日志分页 |
 | `quantum-common-file` | 文件校验、本地存储、RustFS/S3 兼容存储、Excel |
 | `quantum-biz-system` | 用户、角色、菜单、部门、字典、文件记录等系统域 |
+| `quantum-mcp` | MCP OAuth 授权、Manifest v1、只读 tool 适配 |
 | `quantum-server` | 启动入口与 profile 配置 |
 
 ## 安全与权限现状
@@ -26,10 +27,11 @@ Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 ## AI 协作基座
 
 - 生成期: `docs/ai/convention-pack/` (模板数据权限默认启用 + validate.md G1-G4 安全门禁) + scaffold-module-gen skill。
-- 运行期: MCP 能力服务 (OAuth 2.1, 权限裁决在服务端) 设计定案, `quantum-mcp` 模块待实现 (S3)。
-- 本仓库暂无 AI 运行时代码; chat/RAG/Provider 等已定案移出本仓库。
+- 运行期: `quantum-mcp` 已提供 S3 skeleton (OAuth 2.1 public client + PKCE, 独立 token store, Bearer filter, Manifest v1, 只读 tools)。
+- chat/RAG/Provider 等已定案移出本仓库。
 
 ## 子系统索引
 
 - [auth-security.md](auth-security.md)
 - [ai-collaboration.md](ai-collaboration.md)
+- [auth-mcp-oauth.md](auth-mcp-oauth.md)

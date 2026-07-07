@@ -247,7 +247,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 | S0（本 Sprint，文档） | 本设计资料 + 两份契约结构定稿 + 两个 skill 起点 + BE Convention Pack 骨架 | ✅ 本 PR |
 | S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | ✅ 本 PR（runtime-verify 实证：模板实例化模块一次编译通过） |
 | S2 | scaffold-module-gen skill 迁入 aether/pace + 编译闭环实跑 | ✅ 2026-07-06（skill 双端迁入 + generator 端到端实跑 quantum-biz-asset：全 11 模板独立模块零返工 BUILD SUCCESS + G1-G4 全过，证据见 sprints/2026-07-06-s2-scaffold-loop-verify/runtime-verify.md） |
-| S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 待实现：2026-07-07 已完成开工前设计冻结（OAuth token store / consent / Manifest v1），下一 sprint 进入代码实现 |
+| S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 已实现 S3 skeleton：2026-07-07 新增 `quantum-mcp` module、OAuth 独立 token store、Bearer filter、Manifest v1、JSON-RPC `initialize/tools/list/tools/call` 与首批只读 tools |
 | S4 | quantum-front Convention Pack | 待办：验证"脚手架无关"，skill 不改只换约定包 |
 | S5（外部） | 下游 chat 产品对接 MCP | 平面 C，独立项目独立节奏 |
 

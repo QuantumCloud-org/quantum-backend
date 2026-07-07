@@ -1,3 +1,18 @@
+## Spec Compliance
+
+来源: pass1-spec.md (spec-compliance subagent, 2026-07-06)。**MISSING=0 / DEVIATED=0 / EXTRA=2 (均合理) → PASS**
+
+| # | 验收标准 (route-note.md) | 判定 | 关键证据 |
+|---|---|---|---|
+| 1 | 生成 quantum-biz-asset (全 11 模板 + dept 维度) | 满足 | tool-trace.jsonl L4/L6, runtime-verify.md 场景1 |
+| 2 | 编译闭环 BUILD SUCCESS (自修环) | 满足 | subagent 首轮 + 主 agent 独立重跑双重验证, 零返工 |
+| 3 | G1-G4 门禁全 PASS | 满足 | runtime-verify.md 场景2 + 主 agent grep 复核 |
+| 4 | 清理后 git 无生成物残留 | 满足 | git checkout + rm 后工作区复核, mvn test SUCCESS |
+| 5 | runtime-verify.md 证据 + §8 S2 回写 | 满足 | ai-sprint-design.md L249 状态已更新 |
+
+EXTRA×2: conventions.md SQL 路径约定 (route-note 预期内缺口修正) + review-note.md 流程留痕, 无 scope creep。
+"skill 迁入" 子项属先前 sprint 已完成 (Rlues 3419038 + 运行时部署), 本 sprint 覆盖"编译闭环实跑", 与 §8 定义相符。
+
 ## Evidence Cross-Check (v9.9.0 · U3)
 
 | task (checklist.yaml) | evidence | 判定 |

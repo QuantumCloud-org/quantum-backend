@@ -58,7 +58,7 @@ counts:
   refactors_count: 0
   systems_count: 1
   requirements_count: 1
-  reviews_count: 3
+  reviews_count: 6
   cleanup_count: 3
   compound:
     learning: 1

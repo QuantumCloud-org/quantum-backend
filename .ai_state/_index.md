@@ -4,17 +4,17 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
+path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
 stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-07-fe-be-convention-pack-expansion"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+current_sprint_slug: "2026-07-07-quantum-mcp-s3-preflight-design"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
 skip_runtime_verify: false        # v9.8.0: true 跳过运行时验证 (纯库/无运行环境才设; System/Refactor 不建议)
 
 # === 路由审议 (v9.9.0) ===
-route_confidence: 0.85            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
-route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
+route_confidence: 0.86            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
+route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)", "2026-07-07 System/design-only: quantum-mcp S3 preflight design + state closeout"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
 plan_model: ""                    # "" | "fable" — System/Refactor 的 plan/design 审议切 fable-5 (贵, opt-in)
 
 # === 平台与版本 ===
@@ -56,10 +56,10 @@ counts:
   features_count: 2
   issues_count: 0
   refactors_count: 0
-  systems_count: 1
+  systems_count: 2
   requirements_count: 1
-  reviews_count: 7
-  cleanup_count: 3
+  reviews_count: 10
+  cleanup_count: 4
   compound:
     learning: 1
     trick: 0
@@ -68,20 +68,20 @@ counts:
 
 # === Pointers (指向最新相关文件) ===
 pointers:
-  latest_design: "sprints/2026-07-06-ai-capability-architecture-design/design.md"               # sprints/{current_sprint_slug}/design.md
-  latest_review: "sprints/2026-07-06-ai-capability-architecture-design/design.md"
-  latest_cleanup: "sprints/2026-07-06-ai-capability-architecture-design/cleanup-pass.md"
+  latest_design: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/design.md"               # sprints/{current_sprint_slug}/design.md
+  latest_review: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/reviews/pass1.md"
+  latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-preflight-design/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
   latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
-  latest_architecture_update: "2026-07-06T12:28:26.642Z"
+  latest_architecture_update: "2026-07-06T12:28:26.642037Z"
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
 next_action: ""
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
-active_worktrees: ["agent-a1d881a8d6a040fb7", "agent-ad6b93c24b2355f4e"]
+active_worktrees: []
 last_critic_round: 1              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
 
@@ -108,6 +108,8 @@ fingerprint: ""
 - 2026-07-06: 非 AI 体系剩余项修复完成: 用户导入契约、导出角色回填、数据域 fail-closed、登录态数据权限来源收敛、MVC/服务层测试; AI 审查/生成体系保留给后续 review。
 - 2026-07-06: AI 能力接入进入 System/design: 已落盘 `quantum-biz-ai` 模块化单体方案、Provider/SSE/Tool-MCP/RAG/配额审计设计, 等 Claude review 后再实现。
 - 2026-07-06 20:35: AI 能力架构 sprint 走完全程 (design→review CONCERNS→polish P1×3 闭环→ship df6b729 已推送); Convention Pack 数据权限默认启用 + G1-G4 门禁; compound×2 + architecture/ai-collaboration.md 落盘。
+- 2026-07-07 11:04: FE/BE Convention Pack 扩充 sprint 已 ship: BE `865a7bf` / FE `8f4d5ab` 均与 origin/main 对齐; 旧 agent worktree 现场已清理。
+- 2026-07-07 12:10: S3 `quantum-mcp` 开工前设计冻结: OAuth token 独立 store、consent 页、Capability Manifest v1 / Bearer 身份传递已落盘; 下一步进入代码实现 sprint。
 
 ## 工具调度建议
 
@@ -158,3 +160,5 @@ fingerprint: ""
 - 2026-07-06 impl (S1): Convention Pack 模板补全 + runtime-verify 试算
 - 2026-07-06 runtime-verify PASS: 模板实例化 sys_notice 编译一次通过 (9/9 BUILD SUCCESS); 发现并回写 groupId 约定缺口 → stage=review
 - 2026-07-06 决策: MCP 授权=OAuth 2.1 (用户拍板, S3 解锁); 交叉 review 用户线下进行; skills 双端(CC/CX)安装包就绪
+- 2026-07-07 state closeout: active_worktrees 清零; FE/BE Convention Pack 遗留改为已清理 + scaffold-page-gen 后续实跑项
+- 2026-07-07 S3 preflight design: token store / consent / manifest 三项完成, stage=ship

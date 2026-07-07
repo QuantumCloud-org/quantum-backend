@@ -34,3 +34,14 @@ linked_sprints:
 ## 逃生通道备注
 
 如果后续弃码重生, 必须保留三个边界: AI 编排不直接访问 mapper; Tool 执行复用业务 service + RBAC/DataScope; AI 模块的长连接/配额/审计从第一版开始独立于 CRUD 业务设计。
+
+## 2026-07-07 重定范围补记
+
+Claude review 后, 原 `quantum-biz-ai` 模块化单体假设已被废弃: chat/RAG/Provider/SSE/配额属于下游 ai-service,
+不在本仓库。`quantum-backend` 保留两份契约: dev-time Convention Pack 与 runtime `quantum-mcp` 只读能力适配。
+
+S3 开工前设计已冻结:
+
+- OAuth token: 独立 OAuth token store, 不与普通 Web access token 互通; 复用 LoginUser / CacheClient / 用户吊销语义。
+- Consent: 复用现有登录态, 新增授权同意页; 授权码绑定 client/redirect/PKCE/resource/user。
+- Capability Manifest: 最小 schema + `Authorization: Bearer` 身份传递约定已定, 禁止私有用户身份头。

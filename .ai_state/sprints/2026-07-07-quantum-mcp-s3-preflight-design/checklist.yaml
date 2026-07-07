@@ -1,0 +1,24 @@
+sprint: 2026-07-07-quantum-mcp-s3-preflight-design
+path: System
+stage: ship
+items:
+  - id: state-closeout
+    title: 收口上一 sprint 的 active worktree / runtime-verify 遗留 / _index 状态
+    status: done
+    evidence: ".ai_state/sprints/2026-07-07-fe-be-convention-pack-expansion/{worktrees.yaml,runtime-verify.md} + .ai_state/_index.md"
+  - id: official-source-grounding
+    title: S3 OAuth/MCP 设计引用官方规范与本仓源码锚点
+    status: done
+    evidence: "design.md §1; docs/ai-sprint-design.md §9; TokenService/UserContext/PermissionAspect/DataScopeAspect/SensitiveSerializer"
+  - id: token-consent-manifest
+    title: 冻结 token 存储、consent 页、Capability Manifest/身份传递三项前置决策
+    status: done
+    evidence: "design.md §3-§5; docs/ai-sprint-design.md §9.1"
+  - id: architecture-sync
+    title: 同步 architecture / requirements / _index 指针
+    status: done
+    evidence: ".ai_state/architecture/ai-collaboration.md + .ai_state/requirements/ai-capability-platform.md + .ai_state/_index.md"
+  - id: review-ship
+    title: 本轮文档 review + commit + push + 分支/worktree 清理复核
+    status: done
+    evidence: "reviews/pass1.md; ship stage will verify git rev-list origin/main...main=0 0, git worktree list only main, git branch -a only main/origin main"

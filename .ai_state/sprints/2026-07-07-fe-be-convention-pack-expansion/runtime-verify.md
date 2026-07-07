@@ -49,12 +49,13 @@ review pass1 P0×2 (F1: G6 正则与真实测试不匹配; F2: 场景 2 仅 Read
 
 教训 (回应 F2): 门禁类产物的验收必须含"正例过 + 反例拦"双向实跑, Read 复核只能验文字一致性。
 
-## 遗留
+## 遗留 / 收口
 
-- generator worktree (agent-ad6b93c24b2355f4e) 磁盘目录待清理 (分类器不可用, git worktree remove 被拦; 不影响 git 状态)。
+- generator worktree (agent-ad6b93c24b2355f4e) 已清理。2026-07-07 复核: `git worktree list`
+  只剩主仓库 main; `/Users/mi_manchi/workspace/quantum/quantum-backend-worktrees` 不存在。
 - FE G1-G6 门禁未在"新生成页面"上跑过 (仅烟测存量 user 模块) — F2 的 scaffold-page-gen 端到端实跑时补。
 
 ## 结论
 
 验收标准 1/2 达成 (FE validate 实跑 + 权限守卫默认生成 + mock 约定; BE 双文档模板 + PG 实探 + 测试/报告约定)。
-标准 3 (双仓库 commit) 在 ship 步执行。
+标准 3 (双仓库 commit) 已在 ship 步完成: BE `865a7bf` / FE `8f4d5ab`, 两仓库 `origin/main...main = 0 0`。

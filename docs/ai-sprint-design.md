@@ -247,7 +247,7 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 | S0（本 Sprint，文档） | 本设计资料 + 两份契约结构定稿 + 两个 skill 起点 + BE Convention Pack 骨架 | ✅ 本 PR |
 | S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | ✅ 本 PR（runtime-verify 实证：模板实例化模块一次编译通过） |
 | S2 | scaffold-module-gen skill 迁入 aether/pace + 编译闭环实跑 | ✅ 2026-07-06（skill 双端迁入 + generator 端到端实跑 quantum-biz-asset：全 11 模板独立模块零返工 BUILD SUCCESS + G1-G4 全过，证据见 sprints/2026-07-06-s2-scaffold-loop-verify/runtime-verify.md） |
-| S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 待办：身份透传 + DataScope 穿透 + 审计，默认关闭 |
+| S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 待实现：2026-07-07 已完成开工前设计冻结（OAuth token store / consent / Manifest v1），下一 sprint 进入代码实现 |
 | S4 | quantum-front Convention Pack | 待办：验证"脚手架无关"，skill 不改只换约定包 |
 | S5（外部） | 下游 chat 产品对接 MCP | 平面 C，独立项目独立节奏 |
 
@@ -270,6 +270,25 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
   3. 跨项目冻结接口: Capability Manifest 最小 schema 示例 (一个真实 tool 的 JSON, 明确是否保留
      riskLevel/dataScopeMode 自定义 metadata 字段) + ai-service → quantum-mcp 的身份传递约定
      (Authorization: Bearer / RFC 8707 resource indicator 二选一), 双方独立开工前冻结, 防联调撞车。
+
+### 9.1 S3 前置设计结论（2026-07-07）
+
+权威记录见 `.ai_state/sprints/2026-07-07-quantum-mcp-s3-preflight-design/design.md`。
+
+1. **OAuth token 存储**: S3 不把 MCP OAuth access token 当普通 Web access token 直接复用。
+   新增 `quantum-mcp` 内部 `OAuthTokenService` / `OAuthTokenStore`, 使用 `quantum:oauth:*`
+   独立 key 前缀, 存 `LoginUser` 快照 + `clientId` + `resource` + `scope`; 复用 `CacheClient`,
+   `UserDetailsService` 刷新用户权限, 以及用户下线/改密时的吊销语义。普通 `TokenAuthenticationFilter`
+   不消费 OAuth token; MCP 入口使用专用 Bearer filter, 验 token 后写 `SecurityContextHolder` + `UserContext`。
+2. **Consent 页**: `/oauth/authorize` 复用现有登录态, 但必须新增授权同意页。授权码一次性、短 TTL,
+   绑定 `client_id + redirect_uri + code_challenge + resource + userId`; 只允许公共客户端 + PKCE S256;
+   S3 首版使用静态 client allowlist, 动态客户端注册（RFC 7591）后置。
+3. **Capability Manifest v1 / 身份传递**:
+   - Manifest 固定 `schemaVersion/resource/authorizationServers/transport/tools[]`;
+     每个 tool 必填 `name`, `readOnly`, `permission`, `dataScopeMode`, `riskLevel`, `inputSchema`, `outputSchema`。
+   - ai-service / project-data-reader 调 quantum-mcp 只传 `Authorization: Bearer <OAuth access token>`;
+     禁止 `X-User-Id` / `X-Dept-Ids` / `X-Permissions` 等私有身份头。
+   - 多资源绑定在授权/换 token 阶段使用 RFC 8707 `resource` 参数; tool 调用期用 token 内 resource 与当前 `/mcp` endpoint 比对。
 - **框架加固待办（独立于 AI Sprint 的代码改动）**：`DataScopeAspect` 对"无用户上下文"当前是
   静默跳过（fail-open），建议改为 fail-closed（抛出未认证异常或注入恒假条件）。常规 HTTP 链路
   因认证前置而无法触达此路径，但它是所有非 servlet 入口（MCP / 定时任务 / 消息消费）的共同隐患。

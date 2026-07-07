@@ -1,0 +1,12 @@
+sprint_slug: 2026-07-07-fe-be-convention-pack-expansion
+worktrees:
+  - name: "agent-a1d881a8d6a040fb7"
+    path: ""
+    branch: ""
+    created_at: "2026-07-07T02:07:22.663Z"
+    status: active
+  - name: "agent-ad6b93c24b2355f4e"
+    path: ""
+    branch: ""
+    created_at: "2026-07-07T02:14:52.307Z"
+    status: active

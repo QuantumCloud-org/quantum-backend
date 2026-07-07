@@ -1,0 +1,58 @@
+<!-- 模板占位：{{module}} {{Entity}} {{entity}} {{table}}(下划线表名) -->
+<!-- 对应 DDL：deploy/sql/{{module}}-ddl.sql（本文件改动必须同步该 DDL，见 db-conventions.md 双文档分离原则） -->
+
+# {{table}} 表设计文档
+
+## 背景
+
+<!-- TODO: 为什么需要这张表？支撑哪个业务场景？ -->
+
+## 表基本信息
+
+| 项 | 值 |
+|---|---|
+| 表名 | `{{table}}` |
+| 对应 DDL | `deploy/sql/{{module}}-ddl.sql` |
+| 对应 Entity | `com.alpha.{{module}}.domain.{{Entity}}` |
+| 数据域归属（dept_id 判定） | <!-- TODO: 归属某部门 / 全局配置 / 关联表 / 含糊(默认加) --> |
+
+## 字段说明
+
+| 列名 | 类型 | 是否可空 | 默认值 | 业务含义 | 备注 |
+|---|---|---|---|---|---|
+| id | int8 | NOT NULL | 雪花算法生成 | 主键 | 应用层生成，非自增 |
+<!-- TODO: 业务字段逐行补充，例如： -->
+<!-- | name | varchar(50) | NOT NULL | - | {{Entity}}名称 | 唯一性由 service 层 check*Unique 校验 | -->
+<!-- | dept_id | int8 | 视判定结论 | - | 数据域归属部门ID | 若判定结论为"需要"，此列必填且启用 @DataScope | -->
+| create_time | timestamp(6) | 可空 | CURRENT_TIMESTAMP | 创建时间 | 全局 EntityInsertListener 自动填充 |
+| create_by | int8 | 可空 | - | 创建人ID | 同上 |
+| update_time | timestamp(6) | 可空 | CURRENT_TIMESTAMP | 更新时间 | 全局 EntityUpdateListener 自动填充 |
+| update_by | int8 | 可空 | - | 更新人ID | 同上 |
+| deleted | int4 | 可空 | 0 | 逻辑删除（0-未删除 1-已删除） | 对应 BaseEntity.deleted，isLogicDelete |
+| version | int8 | 可空 | 0 | 乐观锁版本号 | 对应 BaseEntity.version，@Column(version = true) |
+
+## 敏感字段标注
+
+<!-- TODO: 列出敏感字段（如密码/密钥/身份证号），说明脱敏方式，无则写"无敏感字段" -->
+
+## 索引设计
+
+| 索引名 | 列 | 类型 | 理由 |
+|---|---|---|---|
+<!-- TODO: 例如 | uk_{{table}}_code | code | UNIQUE | 业务编码唯一性由 DB 兜底，避免并发下 service 层 check 失效 | -->
+
+## 数据域归属判定说明
+
+<!-- TODO: 按 db-conventions.md 的 5 条判定规则，说明这张表属于哪一类，为什么。
+     若判定为"不需要 dept_id"且不属于全局配置/关联表两类明确豁免，必须写清楚理由，
+     否则视为违反"安全默认启用"原则。 -->
+
+## 与现有表的关系
+
+<!-- TODO: 外键 / 关联表 / 引用关系（PG 本项目历史上不强制物理外键，关系体现在应用层，此处仅做文档说明） -->
+
+## 变更记录
+
+| 日期 | 变更 | 说明 |
+|---|---|---|
+| <!-- TODO --> | 初版 | <!-- TODO --> |

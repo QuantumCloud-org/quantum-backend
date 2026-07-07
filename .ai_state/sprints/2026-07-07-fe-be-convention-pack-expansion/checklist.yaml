@@ -1,0 +1,23 @@
+sprint: 2026-07-07-fe-be-convention-pack-expansion
+path: Feature
+stage: impl
+items:
+  - id: fe-pack
+    title: quantum-front Convention Pack (conventions + 7 模板 + validate G1-G6)
+    status: done
+    evidence: quantum-front/docs/ai/convention-pack/ (9 文件, generator a1d881a8d6a040fb7, lint+tsc 实跑全过)
+  - id: be-db-pack
+    title: quantum-backend db-conventions + schema-design/ddl 双模板 (PG 实探)
+    status: done
+    evidence: docs/ai/convention-pack/db-conventions.md + templates/{schema-design.md,ddl.sql}.tmpl
+  - id: be-test-pack
+    title: quantum-backend test-conventions + test-report 模板 + validate G5/G6
+    status: done
+    evidence: docs/ai/convention-pack/test-conventions.md + templates/test-report.md.tmpl + validate.md
+  - id: main-review
+    title: 主 agent 逐文件复核 BE 产物 (分类器不可用期间的替代验证) + FE 抽查
+    status: done
+    evidence: 本 session Read 全部 6 个 BE 文件 + FE validate.md; 修正 2 处小瑕疵 (5条判定规则引用/G6a grep 优先级)
+  - id: commits
+    title: 两仓库各自 commit + push
+    status: pending

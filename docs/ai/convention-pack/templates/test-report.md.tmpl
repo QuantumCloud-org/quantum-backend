@@ -1,0 +1,42 @@
+---
+module: {{module}}
+entity: {{Entity}}
+date: {{date}}
+rounds: {{rounds}}
+tests_total: {{tests_total}}
+passed: {{passed}}
+failed: {{failed}}
+coverage_paths:
+  - data-scope-read
+  - data-scope-write
+  - permission-code
+  - page-query-validation
+  - optimistic-lock-conflict
+data_scope_exempt: false
+# data_scope_exempt: true 时，上面 coverage_paths 的 data-scope-read/write 两项
+# 改为记录"豁免生效验证"用例名，并在正文 ## 遗留 一节写明豁免理由引用（对齐 conventions.md 豁免规则）
+---
+
+# {{Entity}} 单测生成报告
+
+## 用例清单
+
+| # | 测试类 | 测试方法 | 覆盖点 | 结果 |
+|---|---|---|---|---|
+| 1 | {{Entity}}ServiceImplSecurityTest | selectByIdShouldRejectOutOfScopeEntity | 数据域越权-读 | <!-- PASS/FAIL --> |
+| 2 | {{Entity}}ServiceImplSecurityTest | updateShouldRejectOutOfScopeEntity | 数据域越权-写 | <!-- PASS/FAIL --> |
+| 3 | {{Entity}}ControllerContractTest | writeEndpointsShouldRequirePermissionCode | 权限码 | <!-- PASS/FAIL --> |
+| 4 | PageQueryValidationContractTest | listEndpointShouldValidatePageQueryArgument | 分页校验 | <!-- PASS/FAIL --> |
+| 5 | {{Entity}}ServiceImplSecurityTest | updateShouldThrowConflictWhenVersionMismatch | 乐观锁冲突 | <!-- PASS/FAIL --> |
+<!-- TODO: 补充本模块其余测试行 -->
+
+## Debug 轮次日志
+
+| 轮次 | 命令 | 失败用例数 | 失败原因摘要 | 本轮修复动作 |
+|---|---|---|---|---|
+| 1 | `mvn -pl {{module}} test` | <!-- TODO --> | <!-- TODO --> | <!-- TODO --> |
+<!-- TODO: 每轮追加一行，直到 failed=0 -->
+
+## 遗留
+
+<!-- TODO: 未覆盖的边界场景 / 已知限制 / data-scope-exempt 理由引用，无则写"无遗留" -->

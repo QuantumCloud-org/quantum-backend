@@ -5,8 +5,8 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-06-s2-scaffold-loop-verify"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+stage: "impl"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+current_sprint_slug: "2026-07-07-fe-be-convention-pack-expansion"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
@@ -53,7 +53,7 @@ tools_available:
 
 # === 进度计数 (index-updater hook 自动维护, 不手填) ===
 counts:
-  features_count: 1
+  features_count: 2
   issues_count: 0
   refactors_count: 0
   systems_count: 1
@@ -78,10 +78,10 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "ship"                # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: "review"
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
-active_worktrees: []              # agent-a97f09563e06d95f2 未使用已自动清理 (generator 直写主区, 生成物验后回滚)
+active_worktrees: ["agent-a1d881a8d6a040fb7", "agent-ad6b93c24b2355f4e"]
 last_critic_round: 1              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
 

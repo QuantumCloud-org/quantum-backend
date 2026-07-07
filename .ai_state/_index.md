@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: ""                    # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
+next_action: "ship"                # evaluator/Stop prompt 写: runtime-verify | polish | ship | rework_impl | next_roadmap_item:{slug}
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: []              # agent-a97f09563e06d95f2 未使用已自动清理 (generator 直写主区, 生成物验后回滚)
@@ -147,6 +147,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-07 01:38:44`: stage=ship sprint=2026-07-06-s2-scaffold-loop-verify turn-end
 - `2026-07-06 12:34:04`: stage=ship sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:40:45`: stage=review sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:38:11`: stage=design sprint=2026-07-06-ai-capability-architecture-design turn-end

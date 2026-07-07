@@ -83,37 +83,44 @@ grep -q "$DESIGN" "$DDL" && echo "G5b-ddl PASS" || echo "G5b-ddl FAIL"
 ! grep -q "{{" "$DDL" && echo "G5c-ddl PASS" || echo "G5c-ddl FAIL"
 
 # G5d 审计五件套 + dept_id 判定不漂移：DDL 声明的列名需在设计文档「字段说明」表中逐一出现
-# （占位实现：抽取 DDL 双引号列名，逐个 grep 设计文档；生成器执行时按实际列名展开）
-for col in $(grep -oE '"[a-z_]+"' "$DDL" | tr -d '"' | sort -u); do
+# 列名只从"缩进开头的列定义行"抽取（CREATE TABLE/ALTER/COMMENT 行不缩进, 避免把 schema 名 "public" 误判为列, 实跑校准 2026-07-07）
+for col in $(grep -E '^\s+"' "$DDL" | grep -oE '^\s+"[a-z_]+"' | tr -d ' "' | sort -u); do
   grep -q "$col" "$DESIGN" || echo "G5d FAIL: $col missing in design doc"
 done
+
+# G5e 数据域归属判定必填：设计文档「数据域归属」行不得残留 TODO（判定结论必须真实填写）
+! grep -A1 "数据域归属" "$DESIGN" | grep -q "TODO" && echo "G5e PASS" || echo "G5e FAIL"
 ```
 
 **豁免规则**：无（本门禁无业务豁免路径——双文档分离是硬约定，任何模块都不得跳过）。
 
 ## 5. 生成测试覆盖门禁（G6，硬性 — FAIL 即未完成）
 
-供 `unit-test-gen` skill 消费，校验 `test-conventions.md` 要求的四类必测用例是否真实生成
-（而非只生成部分、或用假测试凑数）：
+供 `unit-test-gen` skill 消费，校验 `test-conventions.md` 要求的五个必测用例是否真实生成
+（而非只生成部分、或用假测试凑数）。
+
+**适用范围**：G6 只检测 unit-test-gen 的**生成物**（按 test-conventions.md 标准方法名精确匹配），
+不约束存量测试的自由命名。语义正确性（断言内容是否真的测了越权）由生成模板 + 人工清单兜底，
+G6 只保证"标准用例存在"这个必要条件。
 
 ```bash
 TEST=<生成的 {Entity}ServiceImplSecurityTest.java 路径>
-CONTRACT=<生成的 {Entity}ControllerContractTest.java 路径，若沿用跨模块 PageQueryValidationContractTest 可指向该文件>
+CONTRACT=<生成的 {Entity}ControllerContractTest.java 路径>
 
-# G6a 数据域越权-读
-grep -qE "void .*[Rr]eject.*OutOfScope.*\(" "$TEST" && echo "G6a PASS" || echo "G6a FAIL"
+# G6a 数据域越权-读（标准名: selectByIdShouldRejectOutOfScopeEntity）
+grep -qE "void selectByIdShouldRejectOutOfScope\w*\(" "$TEST" && echo "G6a PASS" || echo "G6a FAIL"
 
-# G6b 数据域越权-写
-grep -qE "void .*(update|delete|remove).*Reject.*OutOfScope.*\(" "$TEST" && echo "G6b PASS" || echo "G6b FAIL"
+# G6b 数据域越权-写（标准名: updateShouldRejectOutOfScopeEntity / deleteShouldRejectOutOfScopeEntity）
+grep -qE "void (update|delete)ShouldRejectOutOfScope\w*\(" "$TEST" && echo "G6b PASS" || echo "G6b FAIL"
 
-# G6c 权限码（Controller 契约测试断言 @RequiresPermission）
-grep -qE "RequiresPermission" "$CONTRACT" && echo "G6c PASS" || echo "G6c FAIL"
+# G6c 权限码（标准名: writeEndpointsShouldRequirePermissionCode; 生成的契约测试用反射断言注解值）
+grep -qE "void writeEndpointsShouldRequirePermissionCode\(|RequiresPermission" "$CONTRACT" && echo "G6c PASS" || echo "G6c FAIL"
 
-# G6d 分页校验
-grep -qE "void .*[Pp]age[Qq]uery.*[Vv]alidat.*\(" "$CONTRACT" && echo "G6d PASS" || echo "G6d FAIL"
+# G6d 分页校验（标准名: listEndpointShouldValidatePageQueryArgument）
+grep -qE "void listEndpointShouldValidatePageQuery\w*\(" "$CONTRACT" && echo "G6d PASS" || echo "G6d FAIL"
 
-# G6e 乐观锁冲突
-grep -qE "void .*[Cc]onflict.*[Vv]ersion.*\(|void .*[Vv]ersion.*[Mm]ismatch.*\(" "$TEST" && echo "G6e PASS" || echo "G6e FAIL"
+# G6e 乐观锁冲突（标准名: updateShouldThrowConflictWhenVersionMismatch）
+grep -qE "void updateShouldThrowConflictWhenVersionMismatch\(" "$TEST" && echo "G6e PASS" || echo "G6e FAIL"
 ```
 
 **豁免规则**：实体经 `db-conventions.md` 判定为无 `dept_id`（`data-scope-exempt`）时，

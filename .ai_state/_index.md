@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "impl"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
 current_sprint_slug: "2026-07-07-fe-be-convention-pack-expansion"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -58,7 +58,7 @@ counts:
   refactors_count: 0
   systems_count: 1
   requirements_count: 1
-  reviews_count: 6
+  reviews_count: 7
   cleanup_count: 3
   compound:
     learning: 1
@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "review"
+next_action: "ship"
 last_subagent: ""                 # SubagentStop hook 写
 last_subagent_at: ""
 active_worktrees: ["agent-a1d881a8d6a040fb7", "agent-ad6b93c24b2355f4e"]

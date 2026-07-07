@@ -39,10 +39,18 @@
 - 权限上下文用 `UserContext.setUser(operator())` 显式设置 `LoginUser`（含 `deptId`/`deptIds`/`dataScope`），
   测试数据权限时必须真实构造 `DataScopeType`，不允许绕过。
 
-## 每个生成模块必须覆盖的四类测试（安全默认启用，硬性要求）
+## 每个生成模块必须覆盖的五个必测用例（四类关注点；安全默认启用，硬性要求）
 
 对齐 `conventions.md` 的行级数据权限三条硬规则与乐观锁约定，`unit-test-gen` 为每个生成的
-`{Entity}ServiceImpl` **必须**生成以下四类用例，缺一即视为生成未完成：
+`{Entity}ServiceImpl` **必须**生成以下用例，缺一即视为生成未完成。
+
+**标准方法名与 G6 适用范围（重要）**：
+- 生成的测试**必须采用本节给出的标准方法名**（`selectByIdShouldRejectOutOfScopeEntity` 等，
+  `{Entity}` 部分可替换为实际实体名），`validate.md` G6 门禁按标准名模式精确检测。
+- **G6 只跑在 unit-test-gen 的生成物上，不约束存量测试**。存量测试（如
+  `SysUserServiceImplSecurityTest.importUsersShouldRejectOutOfScopeUpdate`）命名风格一致但
+  方法名自由，不受 G6 检测；存量中亦无权限码契约/乐观锁冲突用例——这两类正是生成约定要**补齐**的
+  增量要求，而非对存量的描述。
 
 ### 1. 数据域越权 — 读
 
@@ -86,8 +94,8 @@ void updateShouldThrowConflictWhenVersionMismatch() {
 }
 ```
 
-> 说明：需求原文列出"数据域越权（读+写）、权限码、分页校验、乐观锁冲突"四类，本约定按测试点拆为
-> 上述 5 个具体用例（读/写越权各一个用例，共 4 类关注点），与 `validate.md` G6 的 grep 检测一一对应。
+> 说明：需求原文列出"数据域越权（读+写）、权限码、分页校验、乐观锁冲突"四类关注点，本约定拆为
+> 上述 5 个具体用例（读/写越权各一），与 `validate.md` G6a-G6e 的标准名检测一一对应。
 
 **豁免**：若表经 `db-conventions.md` 判定为无 `dept_id`（全局配置/关联表/已声明 `data-scope-exempt`），
 则第 1/2 类测试改为断言"selectById 直接 getById 无需 assertReadable"（正向验证豁免生效，而非跳过测试），

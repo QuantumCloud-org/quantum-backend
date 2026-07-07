@@ -2,6 +2,8 @@
 
 > 契约①实现，供未来 `db-schema-gen` skill 消费。描述"怎么给 quantum-backend 正确生成一张表的设计文档 + DDL"。
 > 生成后必须通过 `validate.md` 的 G5/G6 校验。
+> 前端侧对应约定包: `quantum-front/docs/ai/convention-pack/`（页面 `backendComponent` 与本仓库
+> `menu-permission.sql` 的 `component` 字段两侧核对, 见其人工清单）。
 
 ## 方言（实探结论）
 

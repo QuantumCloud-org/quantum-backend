@@ -36,6 +36,19 @@ G6a 的 `grep || grep && echo` 优先级歧义 → 单正则。
 BE generator 用 init.sql 真实表 sys_dept 反向填模板确认占位齐全, 并因此发现判定规则盲区
 (组织架构树自引用表) → 补第 5 条规则。证据见其报告 (tool-trace)。
 
+## 场景 4 (REWORK 后补, 2026-07-07): G5/G6 门禁正反双向实跑
+
+review pass1 P0×2 (F1: G6 正则与真实测试不匹配; F2: 场景 2 仅 Read 复核未实跑门禁) 的修复验证:
+
+- 修复: G6 改为按 test-conventions 标准方法名精确检测 + 明确"只跑生成物不约束存量"适用范围;
+  G5 补 G5e (数据域归属判定必填); test-conventions 标题/适用范围澄清; db-conventions 补跨仓库互链。
+- 实跑 (正例最小 fixture): G5a-G5e 全 PASS — 其中**首轮实跑即抓到 G5d 真 bug**
+  (列名抽取把 schema 名 "public" 误判为列 → 必然 FAIL), 修为"仅缩进列定义行抽取"后复验 PASS。
+- 实跑 (反例): 删互引 → G5b FAIL; 留 TODO → G5e FAIL; 空测试类 → G6a/G6b FAIL — fail-closed 方向正确。
+- 实跑 (G6 正例, 标准名假测试): G6a-G6e 全 PASS。
+
+教训 (回应 F2): 门禁类产物的验收必须含"正例过 + 反例拦"双向实跑, Read 复核只能验文字一致性。
+
 ## 遗留
 
 - generator worktree (agent-ad6b93c24b2355f4e) 磁盘目录待清理 (分类器不可用, git worktree remove 被拦; 不影响 git 状态)。

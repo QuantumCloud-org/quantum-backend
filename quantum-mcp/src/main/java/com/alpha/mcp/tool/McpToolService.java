@@ -6,6 +6,7 @@ import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
 import com.alpha.framework.util.JsonUtil;
 import com.alpha.mcp.manifest.CapabilityManifestService;
+import com.alpha.mcp.security.McpAuthenticationDetails;
 import com.alpha.orm.entity.PageResult;
 import com.alpha.system.convert.UserConvert;
 import com.alpha.system.domain.SysDept;
@@ -17,6 +18,8 @@ import com.alpha.system.service.ISysRoleService;
 import com.alpha.system.service.ISysUserService;
 import com.mybatisflex.core.paginate.Page;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 
 import java.util.List;
@@ -39,6 +42,7 @@ public class McpToolService {
         if (tool == null) {
             throw new BizException(ResultCode.DATA_NOT_FOUND, "MCP tool is not registered");
         }
+        requireOAuthScope(String.valueOf(tool.get("scope")));
         requirePermission(loginUser, String.valueOf(tool.get("permission")));
 
         Object result = switch (name) {
@@ -87,6 +91,14 @@ public class McpToolService {
         }
     }
 
+    private static void requireOAuthScope(String scope) {
+        Authentication authentication = SecurityContextHolder.getContext().getAuthentication();
+        Object details = authentication == null ? null : authentication.getDetails();
+        if (!(details instanceof McpAuthenticationDetails mcpDetails) || !mcpDetails.hasScope(scope)) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "MCP OAuth scope denied");
+        }
+    }
+
     private static String stringArg(Map<String, Object> arguments, String name) {
         if (arguments == null) {
             return null;
@@ -103,21 +115,25 @@ public class McpToolService {
         if (arguments == null || !arguments.containsKey(name) || arguments.get(name) == null) {
             return null;
         }
-        return intValue(arguments.get(name));
+        return intValue(arguments.get(name), name);
     }
 
     private static int intArg(Map<String, Object> arguments, String name, int defaultValue, int min, int max) {
         if (arguments == null || !arguments.containsKey(name) || arguments.get(name) == null) {
             return defaultValue;
         }
-        int value = intValue(arguments.get(name));
+        int value = intValue(arguments.get(name), name);
         return Math.max(min, Math.min(max, value));
     }
 
-    private static int intValue(Object value) {
+    private static int intValue(Object value, String name) {
         if (value instanceof Number number) {
             return number.intValue();
         }
-        return Integer.parseInt(String.valueOf(value));
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (NumberFormatException e) {
+            throw new BizException(ResultCode.PARAM_INVALID, "invalid MCP tool argument: " + name);
+        }
     }
 }

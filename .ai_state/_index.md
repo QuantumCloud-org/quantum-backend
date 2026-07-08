@@ -79,8 +79,8 @@ pointers:
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
 next_action: ""
-last_subagent: ""                 # SubagentStop hook 写
-last_subagent_at: ""
+last_subagent: "evaluator"
+last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []
 last_critic_round: 1              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
@@ -111,6 +111,7 @@ fingerprint: ""
 - 2026-07-07 11:04: FE/BE Convention Pack 扩充 sprint 已 ship: BE `865a7bf` / FE `8f4d5ab` 均与 origin/main 对齐; 旧 agent worktree 现场已清理。
 - 2026-07-07 12:10: S3 `quantum-mcp` 开工前设计冻结: OAuth token 独立 store、consent 页、Capability Manifest v1 / Bearer 身份传递已落盘; 下一步进入代码实现 sprint。
 - 2026-07-07 12:31: S3 `quantum-mcp` 实现 sprint 已进入 ship: 新增 module、独立 OAuth store、Bearer filter、well-known/OAuth endpoints、MCP JSON-RPC `initialize/tools/list/tools/call`、首批只读 tools; `mvn -pl quantum-server -am test` 通过。
+- 2026-07-08 16:38: Critic Round 1 发现 OAuth scope 未进入 tool 授权链; 已补 `McpAuthenticationDetails` + Manifest `scope` + tool scope guard, `mvn -pl quantum-mcp -am test` 通过。
 
 ## 工具调度建议
 
@@ -164,3 +165,4 @@ fingerprint: ""
 - 2026-07-07 state closeout: active_worktrees 清零; FE/BE Convention Pack 遗留改为已清理 + scaffold-page-gen 后续实跑项
 - 2026-07-07 S3 preflight design: token store / consent / manifest 三项完成, stage=ship
 - 2026-07-07 S3 impl: quantum-mcp OAuth/MCP skeleton 完成, runtime/review/polish/architecture 落盘, stage=ship
+- 2026-07-08 S3 rework: OAuth token scope 进入 MCP tool guard; quantum-mcp 13 tests PASS

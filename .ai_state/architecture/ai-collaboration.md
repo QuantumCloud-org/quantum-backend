@@ -1,6 +1,6 @@
 # AI 协作基座 (docs/ai)
 
-更新: 2026-07-07 (sprint: 2026-07-07-quantum-mcp-s3-impl)
+更新: 2026-07-08 (sprint: 2026-07-07-quantum-mcp-s3-impl)
 
 ## 定位
 
@@ -23,7 +23,7 @@
 ## MCP 能力服务 (运行期, S3 已实现)
 
 - 授权: OAuth 2.1 标准流程 (RFC 9728 资源元数据 + PKCE), 禁止长期 token 落盘
-- 权限裁决在服务端: token 映射回登录用户 → 复用 @RequiresPermission + 数据域链路, fail-closed
+- 权限裁决在服务端: token scope + 登录用户权限 + 数据域链路共同裁决, fail-closed
 - 硬性技术要求 (design 定案): UserContext fail-closed 传递、@Sensitive 序列化路径复用
 - 2026-07-07 S3 前置设计冻结:
   - token 存储: 独立 `quantum:oauth:*` store, 不与普通 Web access token 互通; 复用 LoginUser / CacheClient / 用户吊销语义
@@ -34,6 +34,7 @@
   - OAuth endpoints: well-known metadata / authorize / token / revoke
   - `/mcp`: GET manifest, POST JSON-RPC `initialize` / `tools/list` / `tools/call`
   - 首批只读 tools: `system.user.search`, `system.dept.tree`, `system.role.list`
+  - 2026-07-08 rework: OAuth scope 进入 tool guard; JSON-RPC `BizException` 返回 error envelope
 
 ## Skills 分发
 

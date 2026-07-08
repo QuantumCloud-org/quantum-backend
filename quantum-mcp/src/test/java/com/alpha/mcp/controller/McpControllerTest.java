@@ -1,5 +1,7 @@
 package com.alpha.mcp.controller;
 
+import com.alpha.framework.enums.ResultCode;
+import com.alpha.framework.exception.BizException;
 import com.alpha.mcp.config.McpProperties;
 import com.alpha.mcp.manifest.CapabilityManifestService;
 import com.alpha.mcp.tool.McpToolService;
@@ -54,5 +56,61 @@ class McpControllerTest {
         Map<String, Object> result = (Map<String, Object>) response.get("result");
         assertThat(result).containsEntry("isError", false);
         assertThat(String.valueOf(result.get("content"))).contains("\"records\":[]");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void mapsToolBizExceptionToJsonRpcErrorEnvelope() {
+        McpToolService toolService = mock(McpToolService.class);
+        when(toolService.callTool(eq("system.user.search"), eq(Map.of())))
+                .thenThrow(new BizException(ResultCode.ACCESS_DENIED, "MCP OAuth scope denied"));
+        McpController controller = new McpController(new CapabilityManifestService(new McpProperties()), toolService);
+
+        Map<String, Object> response = controller.call(Map.of(
+                "jsonrpc", "2.0",
+                "id", "call-2",
+                "method", "tools/call",
+                "params", Map.of("name", "system.user.search")));
+
+        assertThat(response).containsEntry("jsonrpc", "2.0").containsEntry("id", "call-2");
+        Map<String, Object> error = (Map<String, Object>) response.get("error");
+        assertThat(error).containsEntry("code", -32003);
+        assertThat(error).containsEntry("message", "MCP OAuth scope denied");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void mapsInvalidParamsBizExceptionToJsonRpcInvalidParams() {
+        McpToolService toolService = mock(McpToolService.class);
+        when(toolService.callTool(eq("system.user.search"), eq(Map.of("pageNum", "bad"))))
+                .thenThrow(new BizException(ResultCode.PARAM_INVALID, "invalid MCP tool argument: pageNum"));
+        McpController controller = new McpController(new CapabilityManifestService(new McpProperties()), toolService);
+
+        Map<String, Object> response = controller.call(Map.of(
+                "jsonrpc", "2.0",
+                "id", "call-3",
+                "method", "tools/call",
+                "params", Map.of("name", "system.user.search", "arguments", Map.of("pageNum", "bad"))));
+
+        Map<String, Object> error = (Map<String, Object>) response.get("error");
+        assertThat(error).containsEntry("code", -32602);
+        assertThat(error).containsEntry("message", "invalid MCP tool argument: pageNum");
+    }
+
+    @Test
+    @SuppressWarnings("unchecked")
+    void mapsLegacyToolCallBizExceptionToErrorPayload() {
+        McpToolService toolService = mock(McpToolService.class);
+        when(toolService.callTool(eq("system.user.search"), eq(Map.of())))
+                .thenThrow(new BizException(ResultCode.ACCESS_DENIED, "MCP OAuth scope denied"));
+        McpController controller = new McpController(new CapabilityManifestService(new McpProperties()), toolService);
+
+        Map<String, Object> response = controller.call(Map.of(
+                "method", "tools/call",
+                "name", "system.user.search"));
+
+        Map<String, Object> error = (Map<String, Object>) response.get("error");
+        assertThat(error).containsEntry("code", 403);
+        assertThat(error).containsEntry("message", "MCP OAuth scope denied");
     }
 }

@@ -69,6 +69,9 @@ class OAuthBearerAuthenticationFilterTest {
             assertThat(UserContext.getUser()).isNotNull();
             assertThat(UserContext.getUsername()).isEqualTo("alice");
             assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+            assertThat(SecurityContextHolder.getContext().getAuthentication().getDetails())
+                    .isInstanceOfSatisfying(McpAuthenticationDetails.class,
+                            details -> assertThat(details.hasScope("system.user.read")).isTrue());
         });
 
         assertThat(chainCalled).isTrue();

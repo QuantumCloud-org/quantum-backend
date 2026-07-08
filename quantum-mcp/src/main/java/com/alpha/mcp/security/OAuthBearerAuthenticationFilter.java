@@ -50,7 +50,10 @@ public class OAuthBearerAuthenticationFilter extends OncePerRequestFilter {
         LoginUser loginUser = accessToken.getLoginUser();
         UsernamePasswordAuthenticationToken authentication =
                 new UsernamePasswordAuthenticationToken(loginUser, null, loginUser.getAuthorities());
-        authentication.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+        authentication.setDetails(McpAuthenticationDetails.from(
+                accessToken,
+                new WebAuthenticationDetailsSource().buildDetails(request)
+        ));
         SecurityContextHolder.getContext().setAuthentication(authentication);
         UserContext.setUser(loginUser);
         MDC.put(CommonConstants.MDC_USER_ID, String.valueOf(loginUser.getUserId()));

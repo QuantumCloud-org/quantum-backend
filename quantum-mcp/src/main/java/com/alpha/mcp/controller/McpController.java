@@ -1,5 +1,6 @@
 package com.alpha.mcp.controller;
 
+import com.alpha.framework.exception.BizException;
 import com.alpha.mcp.manifest.CapabilityManifestService;
 import com.alpha.mcp.tool.McpToolService;
 import lombok.RequiredArgsConstructor;
@@ -43,11 +44,7 @@ public class McpController {
         Map<String, Object> arguments = request.get("arguments") instanceof Map<?, ?> map
                 ? (Map<String, Object>) map
                 : Map.of();
-        return Map.of(
-                "name", name,
-                "contentType", "application/json",
-                "output", toolService.callTool(name, arguments)
-        );
+        return legacyCallTool(name, arguments);
     }
 
     @SuppressWarnings("unchecked")
@@ -70,16 +67,55 @@ public class McpController {
                 Map<String, Object> arguments = params.get("arguments") instanceof Map<?, ?> map
                         ? (Map<String, Object>) map
                         : Map.of();
-                yield jsonRpcResult(id, Map.of(
-                        "content", java.util.List.of(Map.of(
-                                "type", "text",
-                                "text", toolService.callTool(name, arguments)
-                        )),
-                        "isError", false
-                ));
+                try {
+                    yield jsonRpcResult(id, Map.of(
+                            "content", java.util.List.of(Map.of(
+                                    "type", "text",
+                                    "text", toolService.callTool(name, arguments)
+                            )),
+                            "isError", false
+                    ));
+                } catch (BizException e) {
+                    yield jsonRpcError(id, jsonRpcCode(e), e.getMessage());
+                } catch (RuntimeException e) {
+                    yield jsonRpcError(id, -32603, "Internal error");
+                }
             }
             default -> jsonRpcError(id, -32601, "Method not found");
         };
+    }
+
+    private static int jsonRpcCode(BizException e) {
+        return switch (e.getCode()) {
+            case 401, 403 -> -32003;
+            case 400, 404 -> -32602;
+            default -> -32603;
+        };
+    }
+
+    private Map<String, Object> legacyCallTool(String name, Map<String, Object> arguments) {
+        try {
+            return Map.of(
+                    "name", name,
+                    "contentType", "application/json",
+                    "ok", true,
+                    "output", toolService.callTool(name, arguments)
+            );
+        } catch (BizException e) {
+            return Map.of(
+                    "name", name,
+                    "contentType", "application/json",
+                    "ok", false,
+                    "error", Map.of("code", e.getCode(), "message", e.getMessage())
+            );
+        } catch (RuntimeException e) {
+            return Map.of(
+                    "name", name,
+                    "contentType", "application/json",
+                    "ok", false,
+                    "error", Map.of("code", 500, "message", "Internal error")
+            );
+        }
     }
 
     private static Map<String, Object> jsonRpcResult(Object id, Map<String, Object> result) {

@@ -30,3 +30,38 @@ collected_evidence:
     timestamp: 2026-07-07T12:37:00+08:00
     result: PASS
     summary: Implementation worktree removed and local implementation branch deleted.
+  - command: test cleanup-pass.md and architecture MCP docs
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:26:03+08:00
+    result: PASS
+    summary: cleanup-pass.md exists; ARCHITECTURE.md, ai-collaboration.md, and auth-mcp-oauth.md all contain quantum-mcp/MCP/S3 updates.
+  - command: git rev-list --left-right --count origin/main...main && git worktree list --porcelain && git branch --all --verbose --no-abbrev
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:26:03+08:00
+    result: PASS
+    summary: origin/main...main = 0 0; only main worktree remains; local branch list contains main only, with origin/main at the same HEAD.
+  - command: mvn -pl quantum-mcp -am -Dtest=McpToolServiceTest,OAuthBearerAuthenticationFilterTest -Dsurefire.failIfNoSpecifiedTests=false test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:37:36+08:00
+    result: PASS
+    summary: Scope guard red/green; final targeted run BUILD SUCCESS, OAuthBearerAuthenticationFilterTest 2 tests and McpToolServiceTest 3 tests PASS.
+  - command: mvn -pl quantum-mcp -am -Dtest=McpControllerTest -Dsurefire.failIfNoSpecifiedTests=false test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:41:37+08:00
+    result: PASS
+    summary: JSON-RPC BizException error envelope red/green; final targeted run BUILD SUCCESS, McpControllerTest 3 tests PASS.
+  - command: mvn -pl quantum-server -am test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:42:00+08:00
+    result: PASS
+    summary: Post-rework server aggregate; Reactor 11 modules BUILD SUCCESS; quantum-mcp 14 tests PASS.
+  - command: mvn -pl quantum-mcp -am -Dtest=McpControllerTest,McpToolServiceTest -Dsurefire.failIfNoSpecifiedTests=false test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:55:21+08:00
+    result: PASS
+    summary: Reviewer P2 cleanup red/green; final targeted run BUILD SUCCESS, McpControllerTest 5 tests and McpToolServiceTest 4 tests PASS.
+  - command: mvn -pl quantum-server -am test
+    cwd: /Users/mi_manchi/workspace/quantum/quantum-backend
+    timestamp: 2026-07-08T16:55:41+08:00
+    result: PASS
+    summary: Final post-review server aggregate; Reactor 11 modules BUILD SUCCESS; quantum-mcp 17 tests PASS.

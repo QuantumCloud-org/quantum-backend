@@ -1,6 +1,6 @@
 # MCP OAuth Architecture
 
-更新: 2026-07-07 (sprint: 2026-07-07-quantum-mcp-s3-impl)
+更新: 2026-07-08 (sprint: 2026-07-07-quantum-mcp-s3-impl)
 
 ## 定位
 
@@ -47,7 +47,7 @@
 
 1. 读取 `Authorization: Bearer <opaque-token>`。
 2. `OAuthTokenService.validateAccessToken` 校验 token + resource + enabled LoginUser。
-3. 写入 `SecurityContextHolder` 与 `UserContext`。
+3. 写入 `SecurityContextHolder` (`McpAuthenticationDetails` 保存 client/resource/scopes) 与 `UserContext`。
 4. 缺失/无效 token 返回 401, `WWW-Authenticate` 指向 protected resource metadata。
 
 普通 Web JWT/refresh cookie 不作为 MCP OAuth token 使用。
@@ -56,10 +56,10 @@
 
 首批只读 tools:
 
-| tool | permission | dataScopeMode |
-|---|---|---|
-| `system.user.search` | `system:user:list` | required |
-| `system.dept.tree` | `system:dept:list` | permission-only |
-| `system.role.list` | `system:role:query` | permission-only |
+| tool | OAuth scope | permission | dataScopeMode |
+|---|---|---|---|
+| `system.user.search` | `system.user.read` | `system:user:list` | required |
+| `system.dept.tree` | `system.dept.read` | `system:dept:list` | permission-only |
+| `system.role.list` | `system.role.read` | `system:role:query` | permission-only |
 
-`McpToolService` 在 service 调用前断言 `UserContext.getUser() != null` 与 tool permission。输出统一先经 `JsonUtil` 序列化为 JSON 文本。
+`McpToolService` 在 service 调用前断言 `UserContext.getUser() != null`、OAuth token scope 与 tool permission。输出统一先经 `JsonUtil` 序列化为 JSON 文本。JSON-RPC `tools/call` 捕获业务异常并返回 JSON-RPC error envelope; legacy 非 JSON-RPC `tools/call` 分支返回显式 `error.code/message` payload。数字参数解析失败归一为 `PARAM_INVALID`。

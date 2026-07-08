@@ -26,7 +26,10 @@ class CapabilityManifestServiceTest {
                 .containsExactly("system.user.search", "system.dept.tree", "system.role.list");
         assertThat(tools)
                 .allSatisfy(tool -> assertThat(tool)
-                        .containsKeys("readOnly", "permission", "dataScopeMode", "riskLevel", "inputSchema", "outputSchema"));
+                        .containsKeys("readOnly", "permission", "scope", "dataScopeMode", "riskLevel", "inputSchema", "outputSchema"));
+        assertThat(tools)
+                .extracting(tool -> tool.get("scope"))
+                .containsExactly("system.user.read", "system.dept.read", "system.role.read");
 
         String json = new JsonUtil(new ObjectMapper()).toJson(manifest);
         assertThat(json).doesNotContain("X-User-Id", "X-Dept-Ids", "X-Permissions");

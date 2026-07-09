@@ -18,3 +18,21 @@
   实际制造过脏 sprint 目录; 修复要同步 8 个文件 (部署 + Rlues 源) — 见 Rlues 366ee6b。
 - **提案**: 抽 `~/.claude/hooks/lib/frontmatter.cjs` 共享模块 (或构建期注入), 消灭 4 份拷贝;
   CX 端 Python 同理 (read_field 已散在 5+ 文件, 目前实现碰巧无病但同样脆弱)。
+
+## 2026-07-09 · drill 脚本 test_account_doc 检查路径重复
+
+- **现象**: `Rlues/scripts/test-end-to-end-drill.py` 的 "OAuth/test account handoff" 检查项 (`test_account_doc`,
+  L95-97) 与 "backend-runtime-env" 检查 (L58-62) 指向**同一文件** `docs/ai/convention-pack/runtime-env.md` —
+  runtime-env.md 一落地两个 blocker 同时消失, `mcp-test-access.md` 永远不被 drill 校验。
+- **提案**: `test_account_doc` 改指 `docs/ai/mcp-test-access.md` 真路径; 同时 cowork 检查升级为文件级
+  (当前只判 `docs/ai` 目录存在, 不校验 README/runtime-env/mcp-provider 三件套)。
+- **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (critic Round 1 F4) +
+  2026-07-09-cowork-runtime-contract-docs (critic F2)。
+
+## 2026-07-09 · drill 只是静态基线, 真·动态 E2E 缺独立载体
+
+- **现象**: `test-end-to-end-drill.py` 本质只做文件存在性 + git fetch, 不起服务、不走 OAuth→tool-call 链;
+  三个 runtime contract sprint 清完后 drill 转绿 ≠ 跨服务联调已验证 (F6 runtime-verify.md Reflect 自认)。
+- **提案**: fullstack-delivery roadmap 增补 F7 (真·动态 E2E): 起 FE(mock off)+BE, 走
+  authorize→consent→token→/mcp tools/call 全链 + playwright-e2e 证据; 前置 = S4 + be-hardening + cowork-docs 三 sprint。
+- **触发 sprint**: 本轮三 sprint 设计 critic Round 1 全局 G2。

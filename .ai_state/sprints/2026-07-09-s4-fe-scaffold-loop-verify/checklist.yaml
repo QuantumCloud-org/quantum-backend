@@ -1,0 +1,44 @@
+sprint: 2026-07-09-s4-fe-scaffold-loop-verify
+path: Feature
+stage: design
+items:
+  - id: env-preflight
+    title: bun install 预检 + 端口 5173 空闲确认
+    status: todo
+    evidence: ""
+  - id: athena-init-fe
+    title: quantum-front 执行 athena-init, 建 FE 自有 .ai_state
+    status: todo
+    evidence: ""
+  - id: pack-check
+    title: check_frontend_pack.py 校验 FE Convention Pack 结构
+    status: todo
+    evidence: ""
+  - id: nav-mock-infra
+    title: 导航层 mock 基建 (探依赖链 + navigation api USE_MOCK 短路 + conventions.md 增补, 永久)
+    status: todo
+    evidence: ""
+  - id: generate
+    title: generator subagent 按 skill 生成 system/asset 演示页面模块 (含 deptId 关联维度, mock 契约冻结)
+    status: todo
+    evidence: ""
+  - id: static-gates
+    title: tsc/lint/build 全绿 + G1-G6 门禁, 主 agent 独立复核
+    status: todo
+    evidence: ""
+  - id: demo-verify
+    title: VITE_FEATURE_MOCK demo 起服 + 探活 + 经 mock 导航直达 asset 页渲染列表 (runtime-verify.md)
+    status: todo
+    evidence: ""
+  - id: agnostic-proof
+    title: Rlues skill 核心 diff=0 验证; pack/adapter 纠偏留痕
+    status: todo
+    evidence: ""
+  - id: rollback
+    title: 演示生成物回滚 (保留导航 mock/pack/.ai_state 永久项), git status 仅余白名单, bun test 回归
+    status: todo
+    evidence: ""
+  - id: review-ship
+    title: review 三件套 + ship (sprint 档案落 BE .ai_state bridge)
+    status: todo
+    evidence: ""

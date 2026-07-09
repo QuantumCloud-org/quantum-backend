@@ -4,17 +4,17 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "ship"                     # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
-current_sprint_slug: "2026-07-07-quantum-mcp-s3-impl"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
+stage: "design"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+current_sprint_slug: "2026-07-09-s4-fe-scaffold-loop-verify"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
 skip_runtime_verify: false        # v9.8.0: true 跳过运行时验证 (纯库/无运行环境才设; System/Refactor 不建议)
 
 # === 路由审议 (v9.9.0) ===
-route_confidence: 0.90            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
-route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)", "2026-07-07 System/design-only: quantum-mcp S3 preflight design + state closeout", "2026-07-07 System: implement quantum-mcp S3 OAuth/MCP skeleton"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
+route_confidence: 0.82            # 0-1, 入口路由审议置信度 (主 agent 审议 Step 3 写)
+route_history: ["2026-07-05 Quick: merge origin/main + local workspace, run athena-init, test, push main", "2026-07-06 Refactor: implement 7 cross-module backend security hardening fixes", "2026-07-06 Refactor: harden import contract and consolidate data-scope runtime source", "2026-07-06 System: design AI capability architecture for Claude review", "2026-07-06 Feature: S2 scaffold-module-gen end-to-end loop verify (生成物临时, 验后回滚)", "2026-07-07 System/design-only: quantum-mcp S3 preflight design + state closeout", "2026-07-07 System: implement quantum-mcp S3 OAuth/MCP skeleton", "2026-07-09 Feature: S4 FE scaffold loop verify (design R2, critic R1 P0 已修)", "2026-07-09 Feature: be-runtime-contract-hardening 立项排队 (S4 后接棒)"]  # re-route 记录, 如 ["2026-07-02 Quick→Feature: 文件数超上限"]
 plan_model: ""                    # "" | "fable" — System/Refactor 的 plan/design 审议切 fable-5 (贵, opt-in)
 
 # === 平台与版本 ===
@@ -68,7 +68,7 @@ counts:
 
 # === Pointers (指向最新相关文件) ===
 pointers:
-  latest_design: "sprints/2026-07-07-quantum-mcp-s3-impl/design.md"               # sprints/{current_sprint_slug}/design.md
+  latest_design: "sprints/2026-07-09-s4-fe-scaffold-loop-verify/design.md"               # sprints/{current_sprint_slug}/design.md
   latest_review: "sprints/2026-07-07-quantum-mcp-s3-impl/reviews/pass1.md"
   latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-impl/cleanup-pass.md"
   latest_brainstorm: ""
@@ -78,11 +78,11 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: ""
+next_action: "S4 design R2 待用户确认后进 impl; 排队: be-runtime-contract-hardening → (独立仓) cowork-runtime-contract-docs; 三清后重跑 drill=静态基线转绿; F7 真动态 E2E 见 proposals.md"
 last_subagent: "evaluator"
 last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []
-last_critic_round: 1              # plan stage critic 已跑轮数
+last_critic_round: 2              # plan stage critic 已跑轮数
 design_changed_after_impl: false  # design.md 改后需 re-review
 
 # === 用户偏好 ===
@@ -112,6 +112,8 @@ fingerprint: ""
 - 2026-07-07 12:10: S3 `quantum-mcp` 开工前设计冻结: OAuth token 独立 store、consent 页、Capability Manifest v1 / Bearer 身份传递已落盘; 下一步进入代码实现 sprint。
 - 2026-07-07 12:31: S3 `quantum-mcp` 实现 sprint 已进入 ship: 新增 module、独立 OAuth store、Bearer filter、well-known/OAuth endpoints、MCP JSON-RPC `initialize/tools/list/tools/call`、首批只读 tools; `mvn -pl quantum-server -am test` 通过。
 - 2026-07-08 16:38: Critic Round 1 发现 OAuth scope 未进入 tool 授权链; 已补 `McpAuthenticationDetails` + Manifest `scope` + tool scope guard, `mvn -pl quantum-mcp -am test` 通过。
+- 2026-07-09: S4 (FE 生成链闭环) design R2 落盘: critic R1 抓 P0 (导航层无 mock 通路 / BE actuator 前提失实 / interceptor switch 哑弹), 演示实体 notice→asset, 已全修。模块遗留立项 2 sprint: be-runtime-contract-hardening (本仓) + cowork-runtime-contract-docs (cowork 仓)。proposals +2 (drill 路径重复 / F7 真动态 E2E)。推进序: S4 → BE 接棒, current_sprint_slug 串行互斥。
+- 2026-07-09: critic Round 2 复核 **三份设计全 PASS** (S4 / BE / cowork), 4 条 P2 观察项已写入各 design 的 impl 关注清单。stage=design 完成, 待用户确认后 S4 进 impl。
 
 ## 工具调度建议
 

@@ -1,35 +1,35 @@
 sprint_slug: 2026-07-07-quantum-mcp-s3-impl
-updated_at: "2026-07-08T09:00:20.981950+00:00"
+updated_at: "2026-07-08T09:02:33.887179+00:00"
 status: "ok"
 totals:
   cache_creation_input_tokens: 0
   cache_read_input_tokens: 0
-  cached_input_tokens: 27340288
-  input_tokens: 29762856
-  output_tokens: 201549
-  reasoning_output_tokens: 76650
-  total_tokens: 30192304
+  cached_input_tokens: 28502784
+  input_tokens: 30958245
+  output_tokens: 205026
+  reasoning_output_tokens: 78198
+  total_tokens: 31391170
 by_model:
   "unknown":
-    calls: 264
-    total_tokens: 30192304
-    reasoning_output_tokens: 76650
-    cached_input_tokens: 27340288
-    output_tokens: 201549
+    calls: 270
     cache_creation_input_tokens: 0
+    cached_input_tokens: 28502784
+    output_tokens: 205026
     cache_read_input_tokens: 0
-    input_tokens: 29762856
+    input_tokens: 30958245
+    reasoning_output_tokens: 78198
+    total_tokens: 31391170
 by_stage:
   "ship":
     "unknown":
-      calls: 264
-      total_tokens: 30192304
-      reasoning_output_tokens: 76650
-      cached_input_tokens: 27340288
-      output_tokens: 201549
+      calls: 270
       cache_creation_input_tokens: 0
+      cached_input_tokens: 28502784
+      output_tokens: 205026
       cache_read_input_tokens: 0
-      input_tokens: 29762856
+      input_tokens: 30958245
+      reasoning_output_tokens: 78198
+      total_tokens: 31391170
 records:
   - fingerprint: "da825e70fbc09536"
     platform: "cx"
@@ -3727,5 +3727,89 @@ records:
     output_tokens: 421
     reasoning_output_tokens: 145
     total_tokens: 49046
+  - fingerprint: "50eead7d17c421f1"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:00:20.991Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 195968
+    input_tokens: 197013
+    output_tokens: 85
+    reasoning_output_tokens: 0
+    total_tokens: 197098
+  - fingerprint: "6d20e3c3ef0af9f4"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:00:34.209Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 172928
+    input_tokens: 195752
+    output_tokens: 276
+    reasoning_output_tokens: 0
+    total_tokens: 196028
+  - fingerprint: "b131d29ed62d240c"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:00:46.508Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 195456
+    input_tokens: 196771
+    output_tokens: 374
+    reasoning_output_tokens: 0
+    total_tokens: 197145
+  - fingerprint: "bbcf2541ebf1a33f"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:01:07.167Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 196480
+    input_tokens: 200381
+    output_tokens: 882
+    reasoning_output_tokens: 516
+    total_tokens: 201263
+  - fingerprint: "407e2b41ba7f563f"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:02:07.191Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 200064
+    input_tokens: 201971
+    output_tokens: 873
+    reasoning_output_tokens: 516
+    total_tokens: 202844
+  - fingerprint: "46fc74598b53dc02"
+    platform: "cx"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.codex/sessions/2026/07/07/rollout-2026-07-07T11-48-16-019f3ab0-da1d-74f1-bbec-de45e7834451.jsonl"
+    timestamp: "2026-07-08T09:02:33.788Z"
+    model: "unknown"
+    cache_creation_input_tokens: 0
+    cache_read_input_tokens: 0
+    cached_input_tokens: 201600
+    input_tokens: 203501
+    output_tokens: 987
+    reasoning_output_tokens: 516
+    total_tokens: 204488
 notes:
   []

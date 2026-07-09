@@ -1,0 +1,40 @@
+sprint: 2026-07-09-be-runtime-contract-hardening
+path: Feature
+stage: design
+items:
+  - id: inventory
+    title: 非 servlet 入口 @DataScope 调用点盘点复核 (critic 基线 2 处; 廉价退出判定)
+    status: todo
+    evidence: ""
+  - id: tdd-tests
+    title: 先写四分支单测 (null→DENY_ALL / SystemDataScope→ALL+审计 / admin 回归 / 枚举穷尽参数化)
+    status: todo
+    evidence: ""
+  - id: fail-closed-impl
+    title: DataScopeType.DENY_ALL + interceptor switch 穷尽/default 兜底 + SystemDataScope(Context) try/finally + aspect 三序分支
+    status: todo
+    evidence: ""
+  - id: context-cleanup-verify
+    title: 核实 DataPermissionContext 清理时机, 新分支同路径清理无残留
+    status: todo
+    evidence: ""
+  - id: runtime-env-doc
+    title: 实跑 boot + curl /actuator/health 校准后落盘 docs/ai/convention-pack/runtime-env.md (复用 actuator, 零新增端点)
+    status: todo
+    evidence: ""
+  - id: mcp-test-access-doc
+    title: docs/ai/mcp-test-access.md (repo-safe, 占位符纪律 + grep 门禁)
+    status: todo
+    evidence: ""
+  - id: conventions-entity-rule
+    title: BE conventions.md 增补验证实体选择原则 (须含部门/角色关联字段)
+    status: todo
+    evidence: ""
+  - id: drill-recheck
+    title: 重跑 test-end-to-end-drill.py, BE 检查项 PASS (静态基线转绿, 非动态 E2E)
+    status: todo
+    evidence: ""
+  - id: regression-review-ship
+    title: mvn test 全绿 + review 三件套 + ship
+    status: todo
+    evidence: ""

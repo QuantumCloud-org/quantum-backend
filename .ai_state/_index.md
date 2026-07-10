@@ -53,7 +53,7 @@ tools_available:
 
 # === 进度计数 (index-updater hook 自动维护, 不手填) ===
 counts:
-  features_count: 2
+  features_count: 4
   issues_count: 0
   refactors_count: 0
   systems_count: 3

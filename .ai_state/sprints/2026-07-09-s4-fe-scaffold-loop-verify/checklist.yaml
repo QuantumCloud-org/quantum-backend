@@ -40,8 +40,8 @@ items:
     evidence: asset 删除 + page-registry checkout + launch.json 删; git status 仅永久白名单; tsc 0 / lint 0 / bun test 15 pass
   - id: review-ship
     title: review 三件套 + ship (sprint 档案落 BE .ai_state bridge)
-    status: in_progress
+    status: done
     evidence: >-
       pass1 REWORK (F1 P0) → Opus rework → pass2 CONCERNS (fable5): F1 已解决 (两家独立复核 production grep 零泄漏),
-      剩 P1/P2 无新 P0. ship 前 D1 (conventions isMockEnabled 文档漂移) + M1 (G4 门禁升级 proposals 记录) 已由 evaluator 补齐;
-      warn 逻辑单测为 deferred P1 debt. 待 ship (commit+push)。
+      剩 P1/P2 无新 P0. ship 前 D1 (conventions 文档漂移) + M1 (G4 proposals) + warn 单测 (22 pass) 全补齐.
+      ship: front dfe76d1 + backend 1755d90, push origin main。

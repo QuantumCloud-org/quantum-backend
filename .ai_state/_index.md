@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "review"                   # impl+runtime-verify 完成; review 三件套按用户指令交 fable5
+stage: "ship"                     # review pass2=CONCERNS (P0 已清, D1/M1 已补, warn 单测已补); ship 中
 current_sprint_slug: "2026-07-09-s4-fe-scaffold-loop-verify"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -58,7 +58,7 @@ counts:
   refactors_count: 0
   systems_count: 3
   requirements_count: 1
-  reviews_count: 11
+  reviews_count: 13
   cleanup_count: 5
   compound:
     learning: 1
@@ -74,7 +74,7 @@ pointers:
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
   latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
-  latest_architecture_update: "2026-07-07T04:36:20.235170Z"
+  latest_architecture_update: "2026-07-07T04:36:20.235Z"
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===

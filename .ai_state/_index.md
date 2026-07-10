@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "ship — S4 pass2 review VERDICT=CONCERNS (fable5): F1 P0 已解决 (两家独立复核 production grep 零泄漏), 无新 P0. ship 前条件 D1(conventions 文档漂移)+M1(G4 proposals 记录) 已补; warn 单测为 deferred P1 debt. 待 commit+push, 然后 be-hardening 接棒. 排队: be-hardening → cowork-docs → drill 静态基线 → F7"
+next_action: "S4 已 ship (front dfe76d1 / backend fe264ea, push origin main). 下一 sprint: be-runtime-contract-hardening (design R2 已就绪, 接棒 current_sprint_slug). 排队: be-hardening → cowork-docs → drill 静态基线转绿 → F7 真动态 E2E"
 last_subagent: "evaluator"
 last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []

@@ -36,3 +36,15 @@
 - **提案**: fullstack-delivery roadmap 增补 F7 (真·动态 E2E): 起 FE(mock off)+BE, 走
   authorize→consent→token→/mcp tools/call 全链 + playwright-e2e 证据; 前置 = S4 + be-hardening + cowork-docs 三 sprint。
 - **触发 sprint**: 本轮三 sprint 设计 critic Round 1 全局 G2。
+
+## 2026-07-10 · scaffold-page-gen G4 门禁应升级为构建产物层校验
+
+- **现象**: FE Convention Pack 的 G4 门禁 (validate.md §2) 只 grep `.env.dev`/`.env.produce` 有无
+  `VITE_FEATURE_MOCK=true`, 挡"已提交文件"向量; 但 **shell 传参 → production build** 这条向量
+  完全没覆盖 (开发者跑完 `VITE_FEATURE_MOCK=true bun run dev` demo 后同 shell 跑 `bun run build`,
+  或 CI 复用容器 env, 会把会话/导航 mock 短路烤进生产 bundle)。S4 review pass1 F1 (P0) 即此洞。
+- **提案**: G4 从"grep .env 文本"升级为**构建产物层真实校验** —
+  `VITE_FEATURE_MOCK=true bun run build` 后 grep `dist/` 确认无 `VITE_FEATURE_MOCK`/fixture 名残留;
+  或 CI 显式 `unset VITE_FEATURE_MOCK` 后再跑 production build。S4 已在 `vite.config.ts` 用
+  `mode==='production'` pin 'false' + 短路裸内联 DCE 从代码侧堵死, 但 pack 门禁文本尚未同步这条验收。
+- **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (review pass1 F1 / pass2 evaluator 返工清单第 3 项)。

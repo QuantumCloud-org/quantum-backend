@@ -1,44 +1,47 @@
 sprint: 2026-07-09-s4-fe-scaffold-loop-verify
 path: Feature
-stage: design
+stage: review
 items:
   - id: env-preflight
     title: bun install 预检 + 端口 5173 空闲确认
-    status: todo
-    evidence: ""
+    status: done
+    evidence: bun 1.3.14, port 5173 FREE, git clean, node_modules exists
   - id: athena-init-fe
     title: quantum-front 执行 athena-init, 建 FE 自有 .ai_state
-    status: todo
-    evidence: ""
+    status: done
+    evidence: quantum-front/.ai_state/_index.md (v9.9.0, 探测值实测 bun/rg/jq)
   - id: pack-check
     title: check_frontend_pack.py 校验 FE Convention Pack 结构
-    status: todo
-    evidence: ""
+    status: done
+    evidence: '{"status":"ok","errors":[],"warnings":[]}'
   - id: nav-mock-infra
     title: 导航层 mock 基建 (探依赖链 + navigation api USE_MOCK 短路 + conventions.md 增补, 永久)
-    status: todo
-    evidence: ""
+    status: done
+    evidence: src/lib/mock/index.ts + session-fixtures.ts; auth/api.ts + navigation/api.ts 短路; vite.config process.env 注入; 依赖链清单落 runtime-verify.md (2 网络出口)
   - id: generate
     title: generator subagent 按 skill 生成 system/asset 演示页面模块 (含 deptId 关联维度, mock 契约冻结)
-    status: todo
-    evidence: ""
+    status: done
+    evidence: generator subagent afca79baff6a3aa9c; src/features/system/asset/ 19 文件 + page-registry 注册 (验后回滚)
   - id: static-gates
     title: tsc/lint/build 全绿 + G1-G6 门禁, 主 agent 独立复核
-    status: todo
-    evidence: ""
+    status: done
+    evidence: 主 checkout 独立复核 tsc 0 / lint 0 / build 769ms / model 6 tests; G1-G6 全 PASS
   - id: demo-verify
     title: VITE_FEATURE_MOCK demo 起服 + 探活 + 经 mock 导航直达 asset 页渲染列表 (runtime-verify.md)
-    status: todo
-    evidence: ""
+    status: done
+    evidence: curl root 200; Claude_Browser preview navigate /system/asset → 1 table 5 rows, 新建资产 button, console 0 error; screenshot 存证
   - id: agnostic-proof
     title: Rlues skill 核心 diff=0 验证; pack/adapter 纠偏留痕
-    status: todo
-    evidence: ""
+    status: done
+    evidence: git status Rlues scaffold-page-gen/ 空 (skill 核心 diff=0); 纠偏留痕 conventions.md (导航 mock + 验证实体原则) + vite.config env 注入
   - id: rollback
     title: 演示生成物回滚 (保留导航 mock/pack/.ai_state 永久项), git status 仅余白名单, bun test 回归
-    status: todo
-    evidence: ""
+    status: done
+    evidence: asset 删除 + page-registry checkout + launch.json 删; git status 仅永久白名单; tsc 0 / lint 0 / bun test 15 pass
   - id: review-ship
     title: review 三件套 + ship (sprint 档案落 BE .ai_state bridge)
-    status: todo
-    evidence: ""
+    status: in_progress
+    evidence: >-
+      pass1 REWORK (F1 P0) → Opus rework → pass2 CONCERNS (fable5): F1 已解决 (两家独立复核 production grep 零泄漏),
+      剩 P1/P2 无新 P0. ship 前 D1 (conventions isMockEnabled 文档漂移) + M1 (G4 门禁升级 proposals 记录) 已由 evaluator 补齐;
+      warn 逻辑单测为 deferred P1 debt. 待 ship (commit+push)。

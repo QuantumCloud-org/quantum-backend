@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "design"                   # brainstorm | roadmap | plan | design | impl | runtime-verify | review | polish | ship
+stage: "review"                   # impl+runtime-verify 完成; review 三件套按用户指令交 fable5
 current_sprint_slug: "2026-07-09-s4-fe-scaffold-loop-verify"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -69,7 +69,7 @@ counts:
 # === Pointers (指向最新相关文件) ===
 pointers:
   latest_design: "sprints/2026-07-09-s4-fe-scaffold-loop-verify/design.md"               # sprints/{current_sprint_slug}/design.md
-  latest_review: "sprints/2026-07-07-quantum-mcp-s3-impl/reviews/pass1.md"
+  latest_review: "sprints/2026-07-09-s4-fe-scaffold-loop-verify/reviews/pass2.md"
   latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-impl/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "S4 design R2 待用户确认后进 impl; 排队: be-runtime-contract-hardening → (独立仓) cowork-runtime-contract-docs; 三清后重跑 drill=静态基线转绿; F7 真动态 E2E 见 proposals.md"
+next_action: "ship — S4 pass2 review VERDICT=CONCERNS (fable5): F1 P0 已解决 (两家独立复核 production grep 零泄漏), 无新 P0. ship 前条件 D1(conventions 文档漂移)+M1(G4 proposals 记录) 已补; warn 单测为 deferred P1 debt. 待 commit+push, 然后 be-hardening 接棒. 排队: be-hardening → cowork-docs → drill 静态基线 → F7"
 last_subagent: "evaluator"
 last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []
@@ -114,6 +114,9 @@ fingerprint: ""
 - 2026-07-08 16:38: Critic Round 1 发现 OAuth scope 未进入 tool 授权链; 已补 `McpAuthenticationDetails` + Manifest `scope` + tool scope guard, `mvn -pl quantum-mcp -am test` 通过。
 - 2026-07-09: S4 (FE 生成链闭环) design R2 落盘: critic R1 抓 P0 (导航层无 mock 通路 / BE actuator 前提失实 / interceptor switch 哑弹), 演示实体 notice→asset, 已全修。模块遗留立项 2 sprint: be-runtime-contract-hardening (本仓) + cowork-runtime-contract-docs (cowork 仓)。proposals +2 (drill 路径重复 / F7 真动态 E2E)。推进序: S4 → BE 接棒, current_sprint_slug 串行互斥。
 - 2026-07-09: critic Round 2 复核 **三份设计全 PASS** (S4 / BE / cowork), 4 条 P2 观察项已写入各 design 的 impl 关注清单。stage=design 完成, 待用户确认后 S4 进 impl。
+- 2026-07-10: S4 review pass1 (fable5 三件套): reviewer 1×P0+2×P1, spec-compliance PASS (MISSING/EXTRA/DEVIATED=0, 5/8 AC 独立复核), evaluator **REWORK** — F1 P0 vite.config 生产构建未隔离 VITE_FEATURE_MOCK 注入 (design 缓解缺口, 非 impl 偏离)。next_action=rework_impl, 最小修复集 3 项见 pass1.md。
+- 2026-07-10: S4 rework (Opus) F1/F2/F3 全修 → pass2 review (fable5 三件套) VERDICT=**CONCERNS**: F1 P0 已解决 (reviewer+spec-compliance 各自独立重跑 production build+grep, 6 pattern 全 0 命中, 真 DCE 剔除)。新增 P1: D1 conventions.md 仍引用已删 isMockEnabled (文档漂移) + warn 逻辑零单测。ship 前 D1 (文档同步) + M1 (G4 门禁升级 proposals) 已由 evaluator 补齐; warn 单测记 deferred P1 debt。next_action=ship。
+- 2026-07-09: S4 impl+runtime-verify 完成 (Opus 4.8), **8/8 验收 PASS**。永久基建: quantum-front 会话/导航层 mock (src/lib/mock/ + auth/nav api 短路 + vite.config env 注入) + conventions.md 增补 (导航 mock 约定 + 验证实体原则) + FE athena-init (.ai_state)。generator subagent 生成 system/asset 19 文件, 主 agent 独立复核 tsc/lint/build/G1-G6 全绿, Claude_Browser 实测页面渲染 5 行列表 (非降级态)。脚手架无关论成立 (Rlues skill 核心 diff=0)。演示物验后回滚, bun test 15 pass 回归。runtime-verify.md 落 bridge; stage=review 交 fable5。
 
 ## 工具调度建议
 
@@ -153,6 +156,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-10 04:14:29`: stage=design sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
 - `2026-07-07 03:03:48`: stage=ship sprint=2026-07-07-fe-be-convention-pack-expansion turn-end
 - `2026-07-07 01:38:44`: stage=ship sprint=2026-07-06-s2-scaffold-loop-verify turn-end
 - `2026-07-06 12:34:04`: stage=ship sprint=2026-07-06-ai-capability-architecture-design turn-end

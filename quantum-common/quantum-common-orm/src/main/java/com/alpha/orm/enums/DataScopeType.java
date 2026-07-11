@@ -38,7 +38,12 @@ public enum DataScopeType {
     /**
      * 仅本人数据权限
      */
-    SELF(5, "仅本人");
+    SELF(5, "仅本人"),
+
+    /**
+     * 拒绝全部数据权限（fail-closed 兜底，例如无用户上下文场景）
+     */
+    DENY_ALL(6, "拒绝全部");
 
     private final int code;
     private final String desc;

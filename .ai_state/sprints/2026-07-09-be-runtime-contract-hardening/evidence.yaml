@@ -1,0 +1,22 @@
+sprint_slug: 2026-07-09-be-runtime-contract-hardening
+collected_evidence:
+  - tool_use_id: "be-orm-test-independent-rerun"
+    tool: "Bash"
+    detail: "mvn -pl quantum-common/quantum-common-orm -am test → 16 pass / 0 fail (aspect 3 + system 3 + interceptor 10)"
+    timestamp: "2026-07-11T09:00:00Z"
+    result: pass
+  - tool_use_id: "be-full-regression"
+    tool: "Bash"
+    detail: "mvn -pl quantum-server -am test → Reactor 11/11 SUCCESS (biz-system 25 incl DataScope tests)"
+    timestamp: "2026-07-11T08:50:00Z"
+    result: pass
+  - tool_use_id: "be-drill-recheck"
+    tool: "Bash"
+    detail: "test-end-to-end-drill.py → backend-runtime-env: ok (转绿), failures:[]"
+    timestamp: "2026-07-11T09:02:00Z"
+    result: pass
+  - tool_use_id: "be-credential-gate"
+    tool: "Bash"
+    detail: "grep mcp-test-access.md → PASS 仅 <YOUR_*> 占位, 无 bcrypt/真实凭证"
+    timestamp: "2026-07-11T09:03:00Z"
+    result: pass

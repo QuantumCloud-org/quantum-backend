@@ -67,6 +67,10 @@ public class DataPermissionInterceptor {
                     queryWrapper.and(userField + " = " + permission.getUserId().longValue());
                 }
             }
+            case DENY_ALL -> queryWrapper.and("1 = 0");
+            // fail-closed 兜底：未来枚举新增值若漏加 case，默认拒绝而非静默放行
+            // （ALL 已在方法开头 early-return，不会落到这里）
+            default -> queryWrapper.and("1 = 0");
         }
     }
 

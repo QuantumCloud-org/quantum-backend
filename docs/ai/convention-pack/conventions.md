@@ -75,6 +75,17 @@ quantum-biz-<module>/
 
 见 `validate.md`。生成后未通过 `mvn compile` 不算完成。
 
+## 验证 / 演示实体选择原则（2026-07-10 · 与 FE conventions.md 对称）
+
+- 用于验证脚手架生成链的**演示实体不得选无关联维度的简单实体**（如纯字段的公告 `SysNotice`）。
+  教训见 `compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities`：无部门维度的实体
+  会让 `@DataScope` 数据权限分支从未被真实走到，掩盖越权/数据域缺口（S1 用 SysNotice 试算即踩过）。
+- 演示实体**必须含部门或角色关联字段**（如资产 `asset` 带 `deptId`，用 `@DataScope(type = DEPT_AND_CHILD)`
+  标注查询方法），这样 `assertReadable` / `assertWritable` / `applyDataScope` 的数据权限链才被实证覆盖。
+- 数据权限现状（2026-07-10 fail-closed 加固后）：无用户上下文时 `DataScopeAspect` 注入 `DENY_ALL`
+  （`1 = 0` 恒假），`DataPermissionInterceptor` 的 switch 有 `default` fail-closed 兜底；系统级任务
+  需数据全域时显式用 `SystemDataScope.execute(...)`。生成的模块沿用 `@DataScope` 即自动受此保护。
+
 ## 新增模块 pom（runtime-verify 实证补充）
 
 - parent：`com.alpha:quantum-backend:${revision}`；新模块自身 groupId 惯例为 `com.alpha.<module>`。

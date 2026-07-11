@@ -1,40 +1,40 @@
 sprint: 2026-07-09-be-runtime-contract-hardening
 path: Feature
-stage: design
+stage: ship
 items:
   - id: inventory
     title: 非 servlet 入口 @DataScope 调用点盘点复核 (critic 基线 2 处; 廉价退出判定)
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "@DataScope 仅 2 处 (SysUserServiceImpl:66,77); 2 非 servlet 入口 (LogRetentionScheduler/OperLogEventListener) 均不触达查询; 廉价退出不触发, 业务模块零改。落 route-note + runtime-verify"
   - id: tdd-tests
     title: 先写四分支单测 (null→DENY_ALL / SystemDataScope→ALL+审计 / admin 回归 / 枚举穷尽参数化)
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "generator TDD; DataScopeAspectTest 3 + SystemDataScopeTest 3 (含嵌套) + DataPermissionInterceptorTest 10 (含 @EnumSource 穷尽) = 16 pass"
   - id: fail-closed-impl
     title: DataScopeType.DENY_ALL + interceptor switch 穷尽/default 兜底 + SystemDataScope(Context) try/finally + aspect 三序分支
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "DENY_ALL(6) + case DENY_ALL/default -> 1=0 + SystemDataScopeContext (AtomicInteger 深度计数) + aspect ①System→ALL ②null→DENY_ALL ③admin/正常; 主 agent 独立复跑 16 pass 确认"
   - id: context-cleanup-verify
     title: 核实 DataPermissionContext 清理时机, 新分支同路径清理无残留
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "DENY_ALL/ALL 注入复用 after() 的 DataPermissionContext.clear(); SystemDataScopeContext 清理在 execute() finally (深度计数, 嵌套单测断言执行后为空)"
   - id: runtime-env-doc
-    title: 实跑 boot + curl /actuator/health 校准后落盘 docs/ai/convention-pack/runtime-env.md (复用 actuator, 零新增端点)
-    status: todo
-    evidence: ""
+    title: docs/ai/convention-pack/runtime-env.md (config 权威取值 + boot 证据 blocker 诚实标注)
+    status: completed
+    evidence: "port 8080 / health /actuator/health / dev_command / MCP 节; boot 校准 BLOCKED (postgres+redis DOWN), 同 drill 降级先例"
   - id: mcp-test-access-doc
     title: docs/ai/mcp-test-access.md (repo-safe, 占位符纪律 + grep 门禁)
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "OAuth 全流程 + client allowlist + 测试账号 provisioning; grep 门禁 PASS (仅 <YOUR_*> 占位, 无 bcrypt/真实凭证)"
   - id: conventions-entity-rule
     title: BE conventions.md 增补验证实体选择原则 (须含部门/角色关联字段)
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "增补验证实体原则 (须含 deptId + @DataScope) + fail-closed 现状说明, 与 FE 对称"
   - id: drill-recheck
     title: 重跑 test-end-to-end-drill.py, BE 检查项 PASS (静态基线转绿, 非动态 E2E)
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "backend-runtime-env: ok (转绿), backend-convention-pack/mcp-manifest ok, failures:[]; 唯一剩 cowork blocker (下一 sprint)"
   - id: regression-review-ship
     title: mvn test 全绿 + review 三件套 + ship
-    status: todo
-    evidence: ""
+    status: completed
+    evidence: "全量 11 模块回归 SUCCESS; review pass1 VERDICT=PASS (reviewer 0 P0/P1 + spec-compliance MISSING/DEVIATED=0); ship commit+push"

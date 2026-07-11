@@ -139,3 +139,20 @@ fail-open) 则按 route-note 降级。
    会提前清掉外层标记 — TDD 补一条嵌套调用回归测试。
 2. "S4 触发降级通道时本 sprint 插队" 与 `current_sprint_slug` 串行互斥的切换/切回操作步骤, 届时在
    route-note 追加 re-route 记录并显式换指针, 不留隐式状态。
+
+## Critic Findings (审议记录)
+
+### Critic Findings Round 1 (2026-07-09, critic acfd82c7a06340fdb) — NEEDS_REVISION
+
+- F1 **P0**: 原设计 "BE 无 actuator、无 /health" 前提失实 — actuator 已是 quantum-common-framework 直接依赖,
+  application.yml 已暴露 health 且 SecurityConfig permitAll → 修: health_url 复用 `/actuator/health`, 删自定义端点。
+- F2 **P0**: interceptor switch 无 default, 新增 DENY_ALL 漏 case 会编译通过且静默放行 (把"拒绝"变"放行") →
+  修: switch 表达式穷尽 或 显式 `default -> 1=0` 兜底 + TDD 枚举穷尽参数化测试。
+- F3 P1: 逃生门机制未定 → 修: 选定独立 ThreadLocal SystemDataScopeContext + execute try/finally,
+  否决 synthetic system user (污染 isAdmin 语义)。
+- F4 P1: drill 的 test_account_doc 与 runtime-env 同路径, mcp-test-access.md 不被 drill 校验 → 修: 背景写明 + 回流 proposals。
+
+### Critic Findings Round 2 (2026-07-09, 续审) — PASS
+
+- Round 1 F1-F4 全部 CLOSED (逐条核实修法落盘)。
+- 残留 2 条 P2 (SystemDataScopeContext 深度计数器防嵌套 / 串行互斥切换步骤) 记入上方 "impl 关注清单", 均在 impl 兑现。

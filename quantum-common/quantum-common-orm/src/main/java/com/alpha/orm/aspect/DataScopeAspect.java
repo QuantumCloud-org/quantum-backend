@@ -3,6 +3,7 @@ package com.alpha.orm.aspect;
 import com.alpha.orm.context.DataPermissionContext;
 import com.alpha.orm.enums.DataScopeType;
 import com.alpha.orm.permission.DataScope;
+import com.alpha.orm.permission.SystemDataScopeContext;
 import com.alpha.framework.context.UserContext;
 import lombok.extern.slf4j.Slf4j;
 import org.aspectj.lang.JoinPoint;
@@ -55,13 +56,26 @@ public class DataScopeAspect {
             return;
         }
 
-        Long userId = UserContext.getUserId();
-        if (userId == null) {
-            log.debug("数据权限：用户未登录，跳过");
+        // ① 系统级逃生门激活（定时任务 / 系统内部调用显式声明）—— 注入 ALL + 审计
+        if (SystemDataScopeContext.isActive()) {
+            DataPermissionContext.DataPermission permission = new DataPermissionContext.DataPermission();
+            permission.setDataScopeType(DataScopeType.ALL);
+            DataPermissionContext.set(permission);
+            log.info("数据权限：系统级逃生门激活，注入 ALL | Method: {}", point.getSignature());
             return;
         }
 
-        // 管理员跳过数据权限
+        Long userId = UserContext.getUserId();
+        // ② 无用户上下文（未登录 / 非 servlet 入口无认证前置）—— fail-closed 注入 DENY_ALL
+        if (userId == null) {
+            DataPermissionContext.DataPermission permission = new DataPermissionContext.DataPermission();
+            permission.setDataScopeType(DataScopeType.DENY_ALL);
+            DataPermissionContext.set(permission);
+            log.warn("数据权限：无用户上下文，fail-closed 注入 DENY_ALL | Method: {}", point.getSignature());
+            return;
+        }
+
+        // ③ 管理员跳过数据权限
         if (UserContext.isAdmin()) {
             DataPermissionContext.DataPermission permission = new DataPermissionContext.DataPermission();
             permission.setUserId(userId);

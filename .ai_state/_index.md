@@ -5,8 +5,8 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "ship"                     # review pass2=CONCERNS (P0 已清, D1/M1 已补, warn 单测已补); ship 中
-current_sprint_slug: "2026-07-09-s4-fe-scaffold-loop-verify"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+stage: "ship"                     # be-hardening: impl 全绿 + review pass1 PASS; ship 中
+current_sprint_slug: "2026-07-09-be-runtime-contract-hardening"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
@@ -58,7 +58,7 @@ counts:
   refactors_count: 0
   systems_count: 3
   requirements_count: 1
-  reviews_count: 13
+  reviews_count: 14
   cleanup_count: 5
   compound:
     learning: 1
@@ -156,6 +156,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-11 09:06:15`: stage=impl sprint=2026-07-09-be-runtime-contract-hardening turn-end
 - `2026-07-10 12:42:22`: stage=ship sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
 - `2026-07-10 04:14:29`: stage=design sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
 - `2026-07-07 03:03:48`: stage=ship sprint=2026-07-07-fe-be-convention-pack-expansion turn-end

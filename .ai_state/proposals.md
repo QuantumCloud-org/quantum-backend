@@ -60,3 +60,15 @@
   ② 更优: subagent-tracker hook 在 spawn/stop 时**自动写** assignments/events.jsonl (机器生成机器验,
   别让 agent 手补); checklist/evidence 模板默认用 gate 认可的词表。
 - **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (ship 收尾, 本条)。
+
+## 2026-07-10 · DataPermissionInterceptor 分支内字段级 fail-open (相邻风险, 本 sprint 未触)
+
+- **现象**: fail-closed 加固 (be-runtime-contract-hardening) 修的是 **switch 缺 default 导致枚举漏 case 静默放行**
+  这一层 (已加 `DENY_ALL` case + `default -> 1=0`)。但 generator 盘点发现相邻未修点: `DEPT` case 内
+  `deptId==null` 时、`SELF` case 内 `userId==null` 时, 仍是"条件为 null 就不追加任何过滤" (字段级 fail-open),
+  与 `DEPT_AND_CHILD/CUSTOM` 已有的 `else → 1=0` fail-closed 分支**不对称**。
+- **现状风险低**: 生产路径 deptId/userId 始终有值 (登录时计算), 全量 16+回归测试未暴露; critic F2/F3 与
+  本 sprint design 明确只指向 switch-default 层, 未要求改分支内部。
+- **提案**: 后续单独立项把 `DEPT`/`SELF` case 内的 null 分支也补 fail-closed `else → and("1=0")`, 使三类
+  数据域分支的 null 处理对称。非紧急, 攒进下一次 orm 加固。
+- **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (generator 盘点发现)。

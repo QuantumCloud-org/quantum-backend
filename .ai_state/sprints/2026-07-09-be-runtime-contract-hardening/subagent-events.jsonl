@@ -1,0 +1,6 @@
+{"schema_version":1,"event":"SubagentStart","agent_id":"a1f413b14a6179c9e","agent_type":"generator","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T08:18:54.267Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a1f413b14a6179c9e","agent_type":"generator","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T08:29:27.004Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"a070e22ecc40f9031","agent_type":"reviewer","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T09:05:39.222Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"a9b3d30a436de4222","agent_type":"spec-compliance","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T09:05:50.080Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a9b3d30a436de4222","agent_type":"spec-compliance","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T09:07:03.700Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a070e22ecc40f9031","agent_type":"reviewer","sprint_slug":"2026-07-09-be-runtime-contract-hardening","timestamp":"2026-07-11T09:07:50.347Z"}

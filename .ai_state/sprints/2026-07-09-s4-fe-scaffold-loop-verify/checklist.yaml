@@ -1,6 +1,6 @@
 sprint: 2026-07-09-s4-fe-scaffold-loop-verify
 path: Feature
-stage: review
+stage: ship
 items:
   - id: env-preflight
     title: bun install 预检 + 端口 5173 空闲确认

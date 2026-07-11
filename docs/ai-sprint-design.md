@@ -248,8 +248,10 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
 | S1 | 补全 quantum-backend Convention Pack（模板全层齐套 + menu SQL 模板） | ✅ 本 PR（runtime-verify 实证：模板实例化模块一次编译通过） |
 | S2 | scaffold-module-gen skill 迁入 aether/pace + 编译闭环实跑 | ✅ 2026-07-06（skill 双端迁入 + generator 端到端实跑 quantum-biz-asset：全 11 模板独立模块零返工 BUILD SUCCESS + G1-G4 全过，证据见 sprints/2026-07-06-s2-scaffold-loop-verify/runtime-verify.md） |
 | S3 | `quantum-mcp` 标准 MCP 只读能力适配（契约②） | 已实现 S3 skeleton：2026-07-07 新增 `quantum-mcp` module、OAuth 独立 token store、Bearer filter、Manifest v1、JSON-RPC `initialize/tools/list/tools/call` 与首批只读 tools |
-| S4 | quantum-front Convention Pack | 待办：验证"脚手架无关"，skill 不改只换约定包 |
-| S5（外部） | 下游 chat 产品对接 MCP | 平面 C，独立项目独立节奏 |
+| S4 | quantum-front Convention Pack | ✅ 2026-07-10（sprint `2026-07-09-s4-fe-scaffold-loop-verify`：scaffold-page-gen 零改动实跑 quantum-front，asset 演示页浏览器渲染实证，Rlues skill 核心 diff=0 → **脚手架无关论成立**；永久产物=FE 会话/导航层 mock 基建 + pack 纠偏；review pass1 REWORK→rework→pass2 PASS） |
+| S4.5（补） | BE/cowork 运行时契约 + DataScope fail-closed | ✅ 2026-07-10（`be-runtime-contract-hardening`：runtime-env.md + mcp-test-access.md + DENY_ALL/switch-default/SystemDataScope 16 测试；`cowork-runtime-contract-docs`：docs/ai 三件套。F6 drill 全 blocker 清，`status: ok`） |
+| S5（外部） | 下游 chat 产品对接 MCP | 平面 C，独立项目独立节奏（接口已由 S3 preflight 冻结） |
+| S6（待环境） | F7 真·动态 E2E（FE mock-off + BE 起服 + OAuth→/mcp tools/call 全链 + playwright 证据） | ⏸ blocked：本机 PostgreSQL/Redis 未运行；环境就绪即立项（提案见 .ai_state/proposals.md） |
 
 ---
 

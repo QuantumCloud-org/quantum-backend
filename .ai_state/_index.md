@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "S4 已 ship (front dfe76d1 / backend fe264ea, push origin main). 下一 sprint: be-runtime-contract-hardening (design R2 已就绪, 接棒 current_sprint_slug). 排队: be-hardening → cowork-docs → drill 静态基线转绿 → F7 真动态 E2E"
+next_action: "be-hardening 已 ship (28fdf8b): DataScope fail-closed + runtime-env/mcp-test-access 文档, drill backend-runtime-env 转绿. 下一 sprint: cowork-runtime-contract-docs (独立仓 quantum-cowork, design critic PASS). 排队: cowork-docs → drill 全绿 (仅剩 cowork blocker) → F7 真动态 E2E"
 last_subagent: "evaluator"
 last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []
@@ -114,6 +114,7 @@ fingerprint: ""
 - 2026-07-08 16:38: Critic Round 1 发现 OAuth scope 未进入 tool 授权链; 已补 `McpAuthenticationDetails` + Manifest `scope` + tool scope guard, `mvn -pl quantum-mcp -am test` 通过。
 - 2026-07-09: S4 (FE 生成链闭环) design R2 落盘: critic R1 抓 P0 (导航层无 mock 通路 / BE actuator 前提失实 / interceptor switch 哑弹), 演示实体 notice→asset, 已全修。模块遗留立项 2 sprint: be-runtime-contract-hardening (本仓) + cowork-runtime-contract-docs (cowork 仓)。proposals +2 (drill 路径重复 / F7 真动态 E2E)。推进序: S4 → BE 接棒, current_sprint_slug 串行互斥。
 - 2026-07-09: critic Round 2 复核 **三份设计全 PASS** (S4 / BE / cowork), 4 条 P2 观察项已写入各 design 的 impl 关注清单。stage=design 完成, 待用户确认后 S4 进 impl。
+- 2026-07-10: be-runtime-contract-hardening ship (28fdf8b, Opus 4.8): DataScope fail-closed (DENY_ALL + switch default 兜底 + SystemDataScope 嵌套逃生门 + aspect 三序) + runtime-env/mcp-test-access 文档 + conventions 验证实体原则. 盘点 @DataScope 仅 2 处业务零改; 16 orm 测试 + 全量 11 模块回归全绿; drill backend-runtime-env 转绿; review pass1 PASS (0 P0/P1). boot 证据环境 blocker; DEPT/SELF 字段级 fail-open 回流 proposals.
 - 2026-07-10: S4 review pass1 (fable5 三件套): reviewer 1×P0+2×P1, spec-compliance PASS (MISSING/EXTRA/DEVIATED=0, 5/8 AC 独立复核), evaluator **REWORK** — F1 P0 vite.config 生产构建未隔离 VITE_FEATURE_MOCK 注入 (design 缓解缺口, 非 impl 偏离)。next_action=rework_impl, 最小修复集 3 项见 pass1.md。
 - 2026-07-10: S4 rework (Opus) F1/F2/F3 全修 → pass2 review (fable5 三件套) VERDICT=**CONCERNS**: F1 P0 已解决 (reviewer+spec-compliance 各自独立重跑 production build+grep, 6 pattern 全 0 命中, 真 DCE 剔除)。新增 P1: D1 conventions.md 仍引用已删 isMockEnabled (文档漂移) + warn 逻辑零单测。ship 前 D1 (文档同步) + M1 (G4 门禁升级 proposals) 已由 evaluator 补齐; warn 单测记 deferred P1 debt。next_action=ship。
 - 2026-07-09: S4 impl+runtime-verify 完成 (Opus 4.8), **8/8 验收 PASS**。永久基建: quantum-front 会话/导航层 mock (src/lib/mock/ + auth/nav api 短路 + vite.config env 注入) + conventions.md 增补 (导航 mock 约定 + 验证实体原则) + FE athena-init (.ai_state)。generator subagent 生成 system/asset 19 文件, 主 agent 独立复核 tsc/lint/build/G1-G6 全绿, Claude_Browser 实测页面渲染 5 行列表 (非降级态)。脚手架无关论成立 (Rlues skill 核心 diff=0)。演示物验后回滚, bun test 15 pass 回归。runtime-verify.md 落 bridge; stage=review 交 fable5。

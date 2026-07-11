@@ -156,6 +156,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-10 12:42:22`: stage=ship sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
 - `2026-07-10 04:14:29`: stage=design sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
 - `2026-07-07 03:03:48`: stage=ship sprint=2026-07-07-fe-be-convention-pack-expansion turn-end
 - `2026-07-07 01:38:44`: stage=ship sprint=2026-07-06-s2-scaffold-loop-verify turn-end

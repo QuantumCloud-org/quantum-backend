@@ -1,7 +1,7 @@
 # quantum-backend · 技术栈 / 阻碍 / 完善设计
 
-> 2026-07-11 由全景对账产出。配套阅读: [ai-sprint-design.md](ai-sprint-design.md) (§8 阶段表) ·
-> [docs/ai/convention-pack/runtime-env.md](ai/convention-pack/runtime-env.md) · `.ai_state/proposals.md`。
+> 2026-07-11 由全景对账产出。配套阅读: [ai-sprint-design.md](../../docs/ai-sprint-design.md) (§8 阶段表) ·
+> [docs/ai/convention-pack/runtime-env.md](../../docs/ai/convention-pack/runtime-env.md) · [proposals.md](../proposals.md)。
 > 总路线 (跨项目): **① 完善 quantum (本仓优先) → ② Rlues 9.9.1 双端收尾 → ③ AI infra (S5 chat 产品, 独立项目)**。
 
 ## 技术栈
@@ -40,5 +40,5 @@
 | 4 | orm 对称加固小 sprint: DEPT/SELF null 分支补 `1=0` (TDD, 影响面 = 2 个 case 分支) | 清阻碍 3 |
 | 5 | 业务生产: 用 `scaffold-module-gen` 生成真实业务模块 (S2 已证零返工), 权限 SQL 走 menu-permission 模板 | 业务迭代提速 |
 
-> 阶段 ② (Rlues) 与 ③ (AI infra) 的对应文档: `Rlues/docs/blockers-and-roadmap.md` ·
+> 阶段 ② (Rlues) 与 ③ (AI infra) 的对应文档: `Rlues/.ai_state/architecture/blockers-and-roadmap.md` ·
 > S5 chat 产品单开项目维护 (平面 C, 接口已由 S3 preflight 冻结, 本仓无需再动)。

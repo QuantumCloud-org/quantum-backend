@@ -102,6 +102,8 @@ fingerprint: ""
 
 ## 当前状态
 
+> 技术栈 / 阻碍 / 完善路线 (三步走 quantum→Rlues→AI infra): [architecture/blockers-and-roadmap.md](architecture/blockers-and-roadmap.md)
+
 - 2026-07-05: /athena-init 完成；项目位于 CX-only 模式，CX=codex-cli 0.142.5，CC/AG/ctx7 未探测到，rg/jq 可用，VM 未注册。
 - 2026-07-05 22:12: origin/main 已先快进到 5c0fd54，再叠加本地业务改动与 Athena 初始化；`mvn test` 通过；提交 71ae4b7 已推送到 main。
 - 2026-07-06: 后端安全修复 sprint 完成 7 个修复点，进入 ship 合并；review、runtime-verify、cleanup 与 architecture 档案已落盘。

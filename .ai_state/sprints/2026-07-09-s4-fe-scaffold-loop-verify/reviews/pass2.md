@@ -85,3 +85,17 @@ done_without_evidence = 0。
 3. **可推后 (P1 debt)**: warnOnUnpairedMockRoutes 单测 — 快速 follow-up 或记 debt; F2 demo 不可用状态已在 conventions 配对条款说明。
 
 D1+M1 为纯文档/记录, 零功能风险, evaluator 直接补齐后即可 ship, 不需二次 impl 往返。
+
+## Verdict 闭环 (2026-07-10, evaluator=fable5)
+
+CONCERNS 附带的三个 ship 前条件全部完成并实证:
+
+1. **D1 (conventions 文档漂移)** — 已修: conventions.md L205/210/227 + index.test.ts 注释同步为裸内联 + parseMockFlag 描述; `grep -rn isMockEnabled src/ docs/` = 空。
+2. **M1 (G4 门禁升级记录)** — 已补: proposals.md 追加 "scaffold-page-gen G4 门禁应升级为构建产物层校验" 条目。
+3. **warn 单测 (P1 debt, 用户拍板补上)** — 已补: `findUnpairedRouteComponents` 纯函数抽取 + session-fixtures.test.ts (3 场景) + parseMockFlag 三态; `bun test` 22 pass / tsc 0 / lint 0。
+
+无未决 P0/P1 阻塞项残留; F2 demo 404 与 DRY 三副本为已记录的可接受债 (conventions 配对条款 + P2 观察)。
+
+注: design.md 于 verdict 后追加 "Critic Findings" 存档段 (gate 要求的审议记录格式化补录, 无设计内容变更) — 不构成 design_changed_after_impl, 不触发 re-review。终判:
+
+VERDICT: PASS

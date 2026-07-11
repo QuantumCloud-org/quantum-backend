@@ -1,0 +1,14 @@
+{"schema_version":1,"event":"SubagentStart","agent_id":"acfd82c7a06340fdb","agent_type":"critic","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-09T09:14:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"acfd82c7a06340fdb","agent_type":"critic","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-09T09:52:00Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"afca79baff6a3aa9c","agent_type":"generator","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T04:28:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"afca79baff6a3aa9c","agent_type":"generator","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T04:38:10Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"aaeb96c766be374bd","agent_type":"reviewer","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:30:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"aaeb96c766be374bd","agent_type":"reviewer","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:32:30Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"af4891bfe679e1891","agent_type":"spec-compliance","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:30:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"af4891bfe679e1891","agent_type":"spec-compliance","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:32:25Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"a540d6f70688a4bd3","agent_type":"evaluator","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:36:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a540d6f70688a4bd3","agent_type":"evaluator","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T06:37:20Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"a9297bfacf9d88d9d","agent_type":"reviewer","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T07:40:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a9297bfacf9d88d9d","agent_type":"reviewer","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T07:42:50Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"a22e9b6c2281e42fd","agent_type":"spec-compliance","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T07:40:00Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"a22e9b6c2281e42fd","agent_type":"spec-compliance","sprint_slug":"2026-07-09-s4-fe-scaffold-loop-verify","timestamp":"2026-07-10T07:43:10Z"}

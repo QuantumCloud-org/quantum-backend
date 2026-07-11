@@ -105,3 +105,21 @@ FE Convention Pack 的**数据纠偏** (含步骤 3 导航 mock 约定增补, �
 1. 依赖链清单必须含 **mock 会话用户的权限点/角色**: `ensureRouteAccess` 依赖 `meta.permission`/`meta.roles`
    判定链 — mock 用户若无 asset 对应权限, 过了导航仍会在第二道 `/403` 卡住。
 2. 备选 C 触发阈值 "网络出口 >2" 在步骤 3 探链时**定义为具体请求列表** (auth 会话可能拆多个请求, 计数边界要先钉死)。
+
+## Critic Findings (审议记录)
+
+### Critic Findings Round 1 (2026-07-09, critic acfd82c7a06340fdb) — NEEDS_REVISION
+
+- F1 **P0**: mock-only demo 无法达成验收 4 — `_authenticated` 动态路由 beforeLoad 强制真实
+  `fetchMenuRouters()`/auth 会话, 实体级 mock 不覆盖导航层, 页面永远打不开 → 修: 新增步骤 3 导航层
+  mock 基建 (依赖链探明 + navigation api 短路 + component 精确匹配), 备选 C 从否决改为量化降级通道。
+- F2 P1: 演示实体 notice 复刻历史教训 (无部门维度掩盖数据权限分支, compound/2026-07-06-learning) →
+  修: 换 `system/asset` (含 deptId + dept treeselect 前置权限进验收 4)。
+- F3 P2: `system/asset` 与现有代码无冲突 (已核实)。
+- 全局 G1 (BE .ai_state 单例竞态) → 修: 串行互斥条款; G2 (drill 措辞过度) → 修: "静态基线转绿";
+  G3 (验证实体原则制度化) → 修: 写入 FE/BE conventions。
+
+### Critic Findings Round 2 (2026-07-09, 同 critic 续审) — PASS
+
+- Round 1 findings 全部 CLOSED (逐条核实修法落盘)。
+- 残留 2 条 P2 (非阻塞) 记入上方 "impl 关注清单"。

@@ -48,3 +48,15 @@
   或 CI 显式 `unset VITE_FEATURE_MOCK` 后再跑 production build。S4 已在 `vite.config.ts` 用
   `mode==='production'` pin 'false' + 短路裸内联 DCE 从代码侧堵死, 但 pack 门禁文本尚未同步这条验收。
 - **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (review pass1 F1 / pass2 evaluator 返工清单第 3 项)。
+
+## 2026-07-10 · delivery-gate 新档案要求缺文档, ship 现场 5 轮试错
+
+- **现象**: delivery-gate 升级后要求 subagent-assignments/events.jsonl (schema_version=1 精确 6/6 字段 +
+  Start≤assign≤Stop 时序)、checklist status 字面量 `completed` (非 done)、evidence.yaml 每条带
+  `result: pass|fail|unknown`、review 末行整行 `VERDICT: PASS`、design.md 含字面 "Critic Findings" 段、
+  design mtime ≤ latest review — 这些约定**没有任何 skill/文档记载**, S4 ship 时靠读 hook 源码 + 5 轮
+  现场试错才过检。主 agent 正常执行流程 (subagent 真跑了、critic 真审了) 仍被拦, 纯格式债。
+- **提案**: ① Rlues 侧把 gate 档案 schema 写进 pace/references 或 athena-review skill (含模板);
+  ② 更优: subagent-tracker hook 在 spawn/stop 时**自动写** assignments/events.jsonl (机器生成机器验,
+  别让 agent 手补); checklist/evidence 模板默认用 gate 认可的词表。
+- **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (ship 收尾, 本条)。

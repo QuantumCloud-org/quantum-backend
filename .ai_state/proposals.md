@@ -59,7 +59,12 @@
 - **提案**: ① Rlues 侧把 gate 档案 schema 写进 pace/references 或 athena-review skill (含模板);
   ② 更优: subagent-tracker hook 在 spawn/stop 时**自动写** assignments/events.jsonl (机器生成机器验,
   别让 agent 手补); checklist/evidence 模板默认用 gate 认可的词表。
-- **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (ship 收尾, 本条)。
+- **追加 (2026-07-11, cowork 复踩)**: `skip_impl_subagent_check` 是**项目级** flag 而 gate 检查的是
+  current_sprint — 纯文档 sprint ship 后想复位 flag (防未来代码 sprint 被跳检) 会被 gate 反拦
+  (指针仍指旧 sprint, 复位即要 generator 档案)。建议 ③: 豁免改 **sprint 级粒度** (如 checklist.yaml
+  或 route-note frontmatter 里声明 `no_generator: docs-only`), gate 按 sprint 自身声明判定,
+  项目级 flag 废除 — 同一坑 S4/cowork 两轮各踩一次。
+- **触发 sprint**: 2026-07-09-s4-fe-scaffold-loop-verify (ship 收尾, 本条) + 2026-07-09-cowork-runtime-contract-docs (追加段)。
 
 ## 2026-07-10 · DataPermissionInterceptor 分支内字段级 fail-open (相邻风险, 本 sprint 未触)
 

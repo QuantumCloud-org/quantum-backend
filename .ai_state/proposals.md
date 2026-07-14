@@ -94,4 +94,7 @@
   `architecture/athena-*.md` 类版本档案不进通用 schema; ② gate 新档案要求只对 schema 升级**之后
   开工**的 sprint 生效 (按 route-note 时间戳判定), 不追溯已 ship sprint; ③ 与既有 "sprint 级豁免粒度"
   提案同属一类: gate 判定依据应来自 sprint 自身档案而非全局硬编码。
-- **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (被追溯拦) → 2026-07-14-be-env-compose (立项消解)。
+- **追加 (2026-07-14 第三次触发)**: Quick 路径 (be-env-compose) ship 收口后同样被 review-manifest 拦 —
+  证明该检查独立于 GENERATOR_PATHS, **所有 path 的 ship 终态都会被追打**, 收口后只能靠"立项下一个
+  sprint 前移指针"逃逸。修复优先级应提到最高。
+- **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (被追溯拦) → 2026-07-14-be-env-compose (立项消解, 后自身又被拦) → 2026-07-14-first-biz-module-loop (再次前移消解)。

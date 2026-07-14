@@ -1,14 +1,14 @@
 sprint_slug: 2026-07-14-be-env-compose
-updated_at: "2026-07-14T08:18:05.300Z"
+updated_at: "2026-07-14T08:36:00.700Z"
 status: "ok"
 totals:
-  cache_creation_input_tokens: 22249906
-  cache_read_input_tokens: 354939022
-  cached_input_tokens: 377188928
-  input_tokens: 455886
-  output_tokens: 1248388
+  cache_creation_input_tokens: 22270028
+  cache_read_input_tokens: 371129843
+  cached_input_tokens: 393399871
+  input_tokens: 455929
+  output_tokens: 1265990
   reasoning_output_tokens: 0
-  total_tokens: 2379754
+  total_tokens: 2397399
 by_model:
   "<synthetic>":
     calls: 9
@@ -20,14 +20,14 @@ by_model:
     reasoning_output_tokens: 0
     total_tokens: 0
   "claude-fable-5":
-    calls: 478
-    cache_creation_input_tokens: 17580389
-    cache_read_input_tokens: 166394854
-    cached_input_tokens: 183975243
-    input_tokens: 389210
-    output_tokens: 641071
+    calls: 501
+    cache_creation_input_tokens: 17600511
+    cache_read_input_tokens: 182585675
+    cached_input_tokens: 200186186
+    input_tokens: 389253
+    output_tokens: 658673
     reasoning_output_tokens: 0
-    total_tokens: 1030281
+    total_tokens: 1047926
   "claude-opus-4-8":
     calls: 452
     cache_creation_input_tokens: 4652100
@@ -84,6 +84,16 @@ by_stage:
       output_tokens: 34489
       reasoning_output_tokens: 0
       total_tokens: 709985
+  "ship":
+    "claude-fable-5":
+      calls: 23
+      cache_creation_input_tokens: 20122
+      cache_read_input_tokens: 16190821
+      cached_input_tokens: 16210943
+      input_tokens: 43
+      output_tokens: 17602
+      reasoning_output_tokens: 0
+      total_tokens: 17645
 records:
   - fingerprint: "762a16db355f60ca"
     platform: "cc"
@@ -13455,5 +13465,327 @@ records:
     output_tokens: 200
     reasoning_output_tokens: 0
     total_tokens: 202
+  - fingerprint: "32546eb3edef7c7c"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:18:05.228Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 248
+    cache_read_input_tokens: 699051
+    cached_input_tokens: 699299
+    input_tokens: 2
+    output_tokens: 898
+    reasoning_output_tokens: 0
+    total_tokens: 900
+  - fingerprint: "0fc9ece6ab070d11"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:19:53.979Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1155
+    cache_read_input_tokens: 699299
+    cached_input_tokens: 700454
+    input_tokens: 2
+    output_tokens: 1364
+    reasoning_output_tokens: 0
+    total_tokens: 1366
+  - fingerprint: "045bd509e2873254"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:19:55.383Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1155
+    cache_read_input_tokens: 699299
+    cached_input_tokens: 700454
+    input_tokens: 2
+    output_tokens: 1364
+    reasoning_output_tokens: 0
+    total_tokens: 1366
+  - fingerprint: "802bcda26ba82276"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:19:58.051Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1155
+    cache_read_input_tokens: 699299
+    cached_input_tokens: 700454
+    input_tokens: 2
+    output_tokens: 1364
+    reasoning_output_tokens: 0
+    total_tokens: 1366
+  - fingerprint: "7a7bd04631b89e76"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:20:50.918Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1412
+    cache_read_input_tokens: 700454
+    cached_input_tokens: 701866
+    input_tokens: 2
+    output_tokens: 200
+    reasoning_output_tokens: 0
+    total_tokens: 202
+  - fingerprint: "5427a8a87bf14726"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:21:50.203Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 327
+    cache_read_input_tokens: 701866
+    cached_input_tokens: 702193
+    input_tokens: 2
+    output_tokens: 187
+    reasoning_output_tokens: 0
+    total_tokens: 189
+  - fingerprint: "410aa052b294e384"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:23:01.347Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 348
+    cache_read_input_tokens: 702193
+    cached_input_tokens: 702541
+    input_tokens: 2
+    output_tokens: 593
+    reasoning_output_tokens: 0
+    total_tokens: 595
+  - fingerprint: "23a8d5c051fc4b7c"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:23:01.398Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 348
+    cache_read_input_tokens: 702193
+    cached_input_tokens: 702541
+    input_tokens: 2
+    output_tokens: 593
+    reasoning_output_tokens: 0
+    total_tokens: 595
+  - fingerprint: "544a8d75a0cba7b6"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:23:05.625Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 348
+    cache_read_input_tokens: 702193
+    cached_input_tokens: 702541
+    input_tokens: 2
+    output_tokens: 593
+    reasoning_output_tokens: 0
+    total_tokens: 595
+  - fingerprint: "a47d9fa6dfc48675"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:24:03.593Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1074
+    cache_read_input_tokens: 702541
+    cached_input_tokens: 703615
+    input_tokens: 1
+    output_tokens: 763
+    reasoning_output_tokens: 0
+    total_tokens: 764
+  - fingerprint: "bea21ce26ac4da1c"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:24:03.594Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1074
+    cache_read_input_tokens: 702541
+    cached_input_tokens: 703615
+    input_tokens: 1
+    output_tokens: 763
+    reasoning_output_tokens: 0
+    total_tokens: 764
+  - fingerprint: "31318d70bd1c3fdd"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:24:05.147Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1074
+    cache_read_input_tokens: 702541
+    cached_input_tokens: 703615
+    input_tokens: 1
+    output_tokens: 763
+    reasoning_output_tokens: 0
+    total_tokens: 764
+  - fingerprint: "1fd52e3c6244a935"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:24:48.304Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 775
+    cache_read_input_tokens: 703615
+    cached_input_tokens: 704390
+    input_tokens: 2
+    output_tokens: 150
+    reasoning_output_tokens: 0
+    total_tokens: 152
+  - fingerprint: "a3378868ce4b7bb2"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:25:39.971Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 523
+    cache_read_input_tokens: 704390
+    cached_input_tokens: 704913
+    input_tokens: 2
+    output_tokens: 136
+    reasoning_output_tokens: 0
+    total_tokens: 138
+  - fingerprint: "7e9648e1c0e6630f"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:26:34.136Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1051
+    cache_read_input_tokens: 704913
+    cached_input_tokens: 705964
+    input_tokens: 2
+    output_tokens: 770
+    reasoning_output_tokens: 0
+    total_tokens: 772
+  - fingerprint: "6a7c2b7817bb1ecb"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:27:40.476Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 847
+    cache_read_input_tokens: 705964
+    cached_input_tokens: 706811
+    input_tokens: 2
+    output_tokens: 939
+    reasoning_output_tokens: 0
+    total_tokens: 941
+  - fingerprint: "5ab024443f8e17b8"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:28:49.607Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1016
+    cache_read_input_tokens: 706811
+    cached_input_tokens: 707827
+    input_tokens: 2
+    output_tokens: 1090
+    reasoning_output_tokens: 0
+    total_tokens: 1092
+  - fingerprint: "619356d69963ba06"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:29:05.016Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1016
+    cache_read_input_tokens: 706811
+    cached_input_tokens: 707827
+    input_tokens: 2
+    output_tokens: 1090
+    reasoning_output_tokens: 0
+    total_tokens: 1092
+  - fingerprint: "ad0f6b5ed029099d"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:30:55.059Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1177
+    cache_read_input_tokens: 707827
+    cached_input_tokens: 709004
+    input_tokens: 2
+    output_tokens: 921
+    reasoning_output_tokens: 0
+    total_tokens: 923
+  - fingerprint: "b12abfc47facd5f3"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:31:57.312Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1004
+    cache_read_input_tokens: 709004
+    cached_input_tokens: 710008
+    input_tokens: 2
+    output_tokens: 975
+    reasoning_output_tokens: 0
+    total_tokens: 977
+  - fingerprint: "12ddbab93750627d"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:31:57.315Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1004
+    cache_read_input_tokens: 709004
+    cached_input_tokens: 710008
+    input_tokens: 2
+    output_tokens: 975
+    reasoning_output_tokens: 0
+    total_tokens: 977
+  - fingerprint: "b1a29291fbf31a94"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:32:08.202Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 1004
+    cache_read_input_tokens: 709004
+    cached_input_tokens: 710008
+    input_tokens: 2
+    output_tokens: 975
+    reasoning_output_tokens: 0
+    total_tokens: 977
+  - fingerprint: "c054bffd3057dc0e"
+    platform: "cc"
+    stage: "ship"
+    source_type: "transcript_path"
+    source_id: "/Users/mi_manchi/.claude/projects/-Users-mi-manchi-workspace-quantum/665bb58d-5ca5-43cd-a385-e79ed10733bd.jsonl"
+    timestamp: "2026-07-14T08:33:22.130Z"
+    model: "claude-fable-5"
+    cache_creation_input_tokens: 987
+    cache_read_input_tokens: 710008
+    cached_input_tokens: 710995
+    input_tokens: 2
+    output_tokens: 136
+    reasoning_output_tokens: 0
+    total_tokens: 138
 notes:
   []

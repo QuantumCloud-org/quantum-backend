@@ -81,3 +81,17 @@
 - **提案**: 后续单独立项把 `DEPT`/`SELF` case 内的 null 分支也补 fail-closed `else → and("1=0")`, 使三类
   数据域分支的 null 处理对称。非紧急, 攒进下一次 orm 加固。
 - **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (generator 盘点发现)。
+
+
+## 2026-07-14 · 9.9.3 review-manifest 对历史/外部项目 sprint 追溯误拦
+
+- **现象**: 9.9.3 delivery-gate 的 `review-manifest.yaml` 要求**精确 9 个文件** hash
+  (含 `rework-notes.md` / `tdd-evidence.yaml` / `architecture/athena-9.9.3.md`) — 这是 Rlues 自身
+  release sprint 的专属产物集, 硬编码进了通用 gate。quantum-backend 的 be-runtime-contract-hardening
+  (9.9.1 时代已 ship 的 Feature sprint, 无 polish/rework, 无 athena-9.9.3.md) 被追溯拦截,
+  且 stage=ship 期间 gate 拦所有写入 → 状态机死锁 (改 stage 也要写文件), 只能经 Bash 通道解。
+- **提案**: ① manifest required 文件集按 path 分级 (Feature 不要求 rework/cleanup/tdd 档) 且
+  `architecture/athena-*.md` 类版本档案不进通用 schema; ② gate 新档案要求只对 schema 升级**之后
+  开工**的 sprint 生效 (按 route-note 时间戳判定), 不追溯已 ship sprint; ③ 与既有 "sprint 级豁免粒度"
+  提案同属一类: gate 判定依据应来自 sprint 自身档案而非全局硬编码。
+- **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (被追溯拦) → 2026-07-14-be-env-compose (立项消解)。

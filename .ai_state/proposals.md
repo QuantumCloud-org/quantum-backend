@@ -2,6 +2,10 @@
 
 > 铁律[Hook 是进化器]: Stop 反思沉淀于此, 定期回流 Rlues 框架仓库。
 
+> **2026-07-14 消化对账 (Rlues 9.9.2/9.9.3 发布后)**: P1 gate schema + P6 CX 互认 ✅ 已消化;
+> P2/P3 drill 相关 ♻️ 标的物已删作废/转化; P4 ⏳ 待核; P5 frontmatter 共享库 + skip flag sprint 级粒度 ❌ 仍开放;
+> P7 DEPT/SELF 本仓自留。逐条明细见 `Rlues/.ai_state/architecture/blockers-and-roadmap.md` 对账表。
+
 ## 2026-07-06 · 跨平台 sprint 的 generator 证据互认
 
 - **现象**: delivery-gate (CC) 要求 System 路径 impl 必须在 CC 端 subagent-log.md 有 generator 记录;

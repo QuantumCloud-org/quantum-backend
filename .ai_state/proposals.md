@@ -85,6 +85,9 @@
 
 ## 2026-07-14 · 9.9.3 review-manifest 对历史/外部项目 sprint 追溯误拦
 
+> ✅ **已修复 (2026-07-14 hotfix, Rlues 6e7a4b9)**: manifest 按 path 分级 + opt-in (R/S 强制) +
+> Evidence Cross-Check 限 R/S + ship 期维护写入放行 + idle 态合法化, 双端同构落地并同步 9.9.3 分发包。
+
 - **现象**: 9.9.3 delivery-gate 的 `review-manifest.yaml` 要求**精确 9 个文件** hash
   (含 `rework-notes.md` / `tdd-evidence.yaml` / `architecture/athena-9.9.3.md`) — 这是 Rlues 自身
   release sprint 的专属产物集, 硬编码进了通用 gate。quantum-backend 的 be-runtime-contract-hardening

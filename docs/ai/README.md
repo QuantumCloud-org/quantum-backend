@@ -1,36 +1,31 @@
 # docs/ai — AI 开发工具资产索引
 
 本目录是 AI Sprint（详见 [`../ai-sprint-design.md`](../ai-sprint-design.md)）的落地资产。
-**quantum-backend 不含任何 AI 运行时**；这里只有两类东西：给 AI 生成/读取用的**约定与 skill 起点**。
+**quantum-backend 不含任何 AI 运行时**；这里只有**平面 B 的契约实现** — 给 AI 生成/读取用的约定。
 
 ```
 docs/ai/
-├── skills/                     # 平面 A —— 两个脚手架无关的 Agent Skill 起点
-│   │                           #   （最终迁入你的 aether/pace，遵循官方 SKILL.md 规范）
-│   ├── scaffold-module-gen/    #   ① 基于需求 + 框架约定，快速生成模块（dev-time，写源码）
-│   │   └── SKILL.md
-│   └── project-data-reader/    #   ② 通过 MCP 读取运行中项目的数据能力（runtime，只读）
-│       └── SKILL.md
-│
-└── convention-pack/            # 平面 B —— quantum-backend 的契约①实现（本仓库的活）
-    ├── conventions.md          #   生成约定：分层/命名/权限/数据权限
-    ├── templates/              #   各层骨架模板（占位 {{Entity}} 等）
-    │   ├── Entity.java.tmpl
-    │   ├── ServiceImpl.java.tmpl
-    │   └── Controller.java.tmpl
-    └── validate.md             #   校验命令 + 自修流程 + 人工确认项
+├── convention-pack/            # 平面 B —— quantum-backend 的契约①实现（本仓库的活）
+│   ├── conventions.md          #   生成约定：分层/命名/权限/数据权限 + 验证实体选择原则
+│   ├── db-conventions.md       #   数据库设计约定
+│   ├── test-conventions.md     #   测试约定
+│   ├── runtime-env.md          #   启动命令 / 端口 / 探活 URL（drill 与 skill 消费）
+│   ├── templates/              #   各层骨架模板（占位 {{Entity}} 等）
+│   └── validate.md             #   校验命令 + 自修流程 + 人工确认项
+└── mcp-test-access.md          # 契约② 的测试接入手册（OAuth 2.1 流程 + 测试账号 provisioning，repo-safe）
 ```
 
-## 两个 skill 一句话区分
+## 历史注记：skills/ 已迁出（2026-07-14 清理）
 
-| skill | 时机 | 作用对象 | 碰源码 | 碰运行时数据 |
-|---|---|---|---|---|
-| `scaffold-module-gen` | dev-time | 脚手架源码仓库 | 是 | 否 |
-| `project-data-reader` | runtime | 运行实例（经 MCP） | 否 | 是（穿权限+脱敏） |
+早期（S0, 2026-07-06）本目录曾放两个 skill 的**孵化起点**（`scaffold-module-gen` / `project-data-reader`），
+设计文档 §5.5 当时即声明"最终迁入 aether/pace"。它们已在 Rlues（提示词架构仓）正式落户并演化两代：
+
+- `scaffold-module-gen` → 9.9.3 的 **`quantum-codegen`**（单 skill 六 mode: page/module/db/unit/security/e2e）
+- `project-data-reader` → 9.9.3 的 **`quantum-data`**
+
+skill 的唯一真相源 = `Rlues/vibeCoding/{claude,codex}/{version}/`；本仓库不再保留副本（避免双真相源）。
 
 ## 边界提醒
 
-- `skills/` 里两个 SKILL.md 是**脚手架无关**的起点，属于你的 aether/pace（平面 A），放这里只是给你/codex 一个现成骨架；
-  它们不依赖 quantum-backend，接 quantum-front / 客户脚手架时不改。
-- `convention-pack/` 才是 quantum-backend 专属（平面 B）；换脚手架就换一份 convention-pack，skill 不动。
-- 运行期 MCP 能力适配（契约②，`quantum-mcp` 模块，标准 MCP 协议）在设计文档 §3.2 / §7，S3 阶段交付。
+- `convention-pack/` 是 quantum-backend 专属（平面 B）；换脚手架就换一份 convention-pack，skill 不动。
+- 运行期 MCP 能力适配（契约②，`quantum-mcp` 模块，标准 MCP 协议）在设计文档 §3.2 / §7，S3 已交付。

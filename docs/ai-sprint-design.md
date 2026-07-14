@@ -199,8 +199,10 @@ AI 相关的一切分布在三个平面，quantum-backend 只处在中间平面�
     data-permission enforced by the target system.
   ---
   ```
-- 本仓库提供两个 skill 的**参考起点**于 `docs/ai/skills/`（脚手架无关，属平面 A，最终迁入 aether/pace），
-  以及 quantum-backend 的 Convention Pack 于 `docs/ai/convention-pack/`（属平面 B，本仓库的活）。
+- ~~本仓库提供两个 skill 的**参考起点**于 `docs/ai/skills/`~~（**2026-07-14 已清理**：孵化使命完成，
+  两 skill 已迁入 Rlues 并演化为 9.9.3 的 `quantum-codegen` 六 mode 与 `quantum-data`，唯一真相源在
+  `Rlues/vibeCoding/`，本仓库不留副本）；quantum-backend 的 Convention Pack 于 `docs/ai/convention-pack/`
+  （属平面 B，本仓库的活，长期保留）。
 
 ---
 

@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "Quick"                     # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "plan"                     # be-env-compose 立项 (阶段① 第1步: docker-compose 解环境总闸)
+stage: "ship"                     # be-env-compose: 两笔欠据实证完成 (health 200 + MCP 冒烟), 收口
 current_sprint_slug: "2026-07-14-be-env-compose"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -78,7 +78,7 @@ pointers:
   latest_requirement: "requirements/ai-capability-platform.md"
 
 # === PACE 联动字段 (v9.8.0 新, hook 自动维护) ===
-next_action: "be-hardening 已 ship (28fdf8b): DataScope fail-closed + runtime-env/mcp-test-access 文档, drill backend-runtime-env 转绿. 下一 sprint: cowork-runtime-contract-docs (独立仓 quantum-cowork, design critic PASS). 排队: cowork-docs → drill 全绿 (仅剩 cowork blocker) → F7 真动态 E2E"
+next_action: "be-env-compose 收口: 环境总闸解除 (boot health 200 + OAuth 元数据 200 + /mcp 401 fail-closed 全实证), docs/ai/skills 残留已清. 阶段① 下一步 = 第2步: 真实业务需求走 biz-delivery-loop 全链 (quantum-codegen 六 mode, 同时充当 F7 终验 + 9.9.3 实战验证), 等用户点题"
 last_subagent: "evaluator"
 last_subagent_at: "2026-07-08T09:00:20.936764Z"
 active_worktrees: []
@@ -159,6 +159,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-14 08:18:05`: stage=plan sprint=2026-07-14-be-env-compose turn-end
 - `2026-07-14 07:44:22`: stage=ship sprint=2026-07-09-be-runtime-contract-hardening turn-end
 - `2026-07-11 09:06:15`: stage=impl sprint=2026-07-09-be-runtime-contract-hardening turn-end
 - `2026-07-10 12:42:22`: stage=ship sprint=2026-07-09-s4-fe-scaffold-loop-verify turn-end
@@ -168,7 +169,6 @@ fingerprint: ""
 - `2026-07-06 12:34:04`: stage=ship sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:40:45`: stage=review sprint=2026-07-06-ai-capability-architecture-design turn-end
 - `2026-07-06 11:38:11`: stage=design sprint=2026-07-06-ai-capability-architecture-design turn-end
-- `2026-07-06 05:02:43`: stage=ship sprint=2026-07-06-backend-import-data-scope-hardening turn-end
 - 2026-07-06 Claude critic Round 1: NEEDS_REVISION (F1 P0 归属冲突) → Round 2 re-scope: chat→独立 ai-service, ToolRegistry→quantum-mcp; 治理文档 docs/ai-sprint-design.md
 - 2026-07-06 impl (S1): Convention Pack 模板补全 + runtime-verify 试算
 - 2026-07-06 runtime-verify PASS: 模板实例化 sys_notice 编译一次通过 (9/9 BUILD SUCCESS); 发现并回写 groupId 约定缺口 → stage=review

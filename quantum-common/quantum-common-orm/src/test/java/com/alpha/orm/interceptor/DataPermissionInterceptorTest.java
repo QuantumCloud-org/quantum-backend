@@ -85,6 +85,37 @@ class DataPermissionInterceptorTest {
         }
     }
 
+    /**
+     * 字段级 fail-closed 对称（proposals P7）：
+     * DEPT 的 deptId、SELF 的 userId 为 null 时必须注入 "1 = 0" 恒假条件，
+     * 与 DEPT_AND_CHILD/CUSTOM 的 else 兜底及 DENY_ALL/default 语义对称 ——
+     * 正常登录链路值恒在，此分支只在手工构造 permission 或新调用面失误时触达，
+     * 触达即拒绝而非静默放行。
+     */
+    @Test
+    void deptWithNullDeptIdShouldFailClosed() {
+        DataPermissionContext.DataPermission permission = permissionOf(DataScopeType.DEPT);
+        permission.setDeptId(null);
+        DataPermissionContext.set(permission);
+        QueryWrapper wrapper = QueryWrapper.create().from(TABLE);
+
+        DataPermissionInterceptor.applyDataScope(wrapper, "");
+
+        assertThat(wrapper.toSQL()).contains("1 = 0");
+    }
+
+    @Test
+    void selfWithNullUserIdShouldFailClosed() {
+        DataPermissionContext.DataPermission permission = permissionOf(DataScopeType.SELF);
+        permission.setUserId(null);
+        DataPermissionContext.set(permission);
+        QueryWrapper wrapper = QueryWrapper.create().from(TABLE);
+
+        DataPermissionInterceptor.applyDataScope(wrapper, "");
+
+        assertThat(wrapper.toSQL()).contains("1 = 0");
+    }
+
     private DataPermissionContext.DataPermission permissionOf(DataScopeType type) {
         DataPermissionContext.DataPermission permission = new DataPermissionContext.DataPermission();
         permission.setUserId(9L);

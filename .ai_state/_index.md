@@ -4,9 +4,9 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System (预判, 需求点题后定)
-stage: "plan"                     # first-biz-module-loop 占位立项, 等用户点题业务需求
-current_sprint_slug: "2026-07-14-first-biz-module-loop"  # 当前 sprint 目录名, 如 "2026-05-25-jwt-refresh"
+path: "Bugfix"                    # orm-datascope-symmetry: DEPT/SELF 字段级 fail-open 对称加固
+stage: "ship"                     # orm-datascope-symmetry: TDD 红→绿 + 全量回归 SUCCESS, ship 中
+current_sprint_slug: "2026-07-14-orm-datascope-symmetry"  # 占位 first-biz-module-loop 暂让指针, ship 后切回
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查
@@ -159,6 +159,7 @@ fingerprint: ""
 - Refactor/System 还需检查 architecture/ 更新 (delivery-gate)
 
 ## 历史 (由 pace-continuator hook 自动追加, 最多保留近 10 条)
+- `2026-07-14 09:40:12`: stage=plan sprint=2026-07-14-first-biz-module-loop turn-end
 - `2026-07-14 08:36:00`: stage=ship sprint=2026-07-14-be-env-compose turn-end
 - `2026-07-14 08:18:05`: stage=plan sprint=2026-07-14-be-env-compose turn-end
 - `2026-07-14 07:44:22`: stage=ship sprint=2026-07-09-be-runtime-contract-hardening turn-end
@@ -168,7 +169,6 @@ fingerprint: ""
 - `2026-07-07 03:03:48`: stage=ship sprint=2026-07-07-fe-be-convention-pack-expansion turn-end
 - `2026-07-07 01:38:44`: stage=ship sprint=2026-07-06-s2-scaffold-loop-verify turn-end
 - `2026-07-06 12:34:04`: stage=ship sprint=2026-07-06-ai-capability-architecture-design turn-end
-- `2026-07-06 11:40:45`: stage=review sprint=2026-07-06-ai-capability-architecture-design turn-end
 - 2026-07-06 Claude critic Round 1: NEEDS_REVISION (F1 P0 归属冲突) → Round 2 re-scope: chat→独立 ai-service, ToolRegistry→quantum-mcp; 治理文档 docs/ai-sprint-design.md
 - 2026-07-06 impl (S1): Convention Pack 模板补全 + runtime-verify 试算
 - 2026-07-06 runtime-verify PASS: 模板实例化 sys_notice 编译一次通过 (9/9 BUILD SUCCESS); 发现并回写 groupId 约定缺口 → stage=review

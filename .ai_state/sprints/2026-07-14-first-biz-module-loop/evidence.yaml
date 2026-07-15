@@ -1,0 +1,7 @@
+sprint_slug: "2026-07-14-first-biz-module-loop"
+collected_evidence:
+  - tool_use_id: "toolu_01Kv6kNrmmvDNZo43EJ93CF2"
+    tool: "Bash"
+    result: pass
+    command: "node --check ~/.claude/hooks/delivery-gate.cjs && echo \"syntax OK\"\nrun_gate() { (cd \"$1\" && echo '{}' | node ~/.claude/hooks/delivery-gate.cjs 2>&1 | head -1; ); }\necho \"③ front (双空 idle 态): $(run_gate /Users/mi_manchi/workspace/quantum/quantum-front)_(空=放行)\"\necho \"=== ⑤ 模拟 quantum 收口态回归 (Quick ship 无 manifest, 修复前必拦):\"\ncd /Users/mi_manchi/workspace/quantum/quantum-backend\ncp .ai_state/_index.md /tmp/idx.bak\npython3 -c \"\ns=open('.ai_state/_index.md').read()\ns=s.replace('path: \\\"Feature\\\"        "
+    timestamp: "2026-07-14T09:16:40.443Z"

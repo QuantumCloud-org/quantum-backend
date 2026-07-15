@@ -45,6 +45,9 @@ public class DataPermissionInterceptor {
             case DEPT -> {
                 if (permission.getDeptId() != null) {
                     queryWrapper.and(deptField + " = " + permission.getDeptId().longValue());
+                } else {
+                    // 无本部门 — fail-closed: 与 DEPT_AND_CHILD/CUSTOM 的兜底语义对称
+                    queryWrapper.and("1 = 0");
                 }
             }
             case DEPT_AND_CHILD, CUSTOM -> {
@@ -65,6 +68,9 @@ public class DataPermissionInterceptor {
             case SELF -> {
                 if (permission.getUserId() != null) {
                     queryWrapper.and(userField + " = " + permission.getUserId().longValue());
+                } else {
+                    // 无用户 ID — fail-closed: 触达即拒绝而非静默放行
+                    queryWrapper.and("1 = 0");
                 }
             }
             case DENY_ALL -> queryWrapper.and("1 = 0");

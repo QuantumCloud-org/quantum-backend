@@ -72,6 +72,8 @@
 
 ## 2026-07-10 · DataPermissionInterceptor 分支内字段级 fail-open (相邻风险, 本 sprint 未触)
 
+> ✅ **已闭环 (2026-07-15, 523f5c8)**: DEPT/SELF null 分支补 fail-closed `1=0`, TDD 红绿 + 全量回归; 至此 DataScopeType 全枚举×字段空缺均 fail-closed。
+
 - **现象**: fail-closed 加固 (be-runtime-contract-hardening) 修的是 **switch 缺 default 导致枚举漏 case 静默放行**
   这一层 (已加 `DENY_ALL` case + `default -> 1=0`)。但 generator 盘点发现相邻未修点: `DEPT` case 内
   `deptId==null` 时、`SELF` case 内 `userId==null` 时, 仍是"条件为 null 就不追加任何过滤" (字段级 fail-open),

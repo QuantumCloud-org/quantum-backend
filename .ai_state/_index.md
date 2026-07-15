@@ -4,9 +4,9 @@
 version: "9.9.0"
 
 # === PACE 路由状态 ===
-path: "Bugfix"                    # orm-datascope-symmetry: DEPT/SELF 字段级 fail-open 对称加固
-stage: "ship"                     # orm-datascope-symmetry: TDD 红→绿 + 全量回归 SUCCESS, ship 中
-current_sprint_slug: "2026-07-14-orm-datascope-symmetry"  # 占位 first-biz-module-loop 暂让指针, ship 后切回
+path: "Feature"                   # Hotfix | Bugfix | Quick | Feature | Refactor | System (预判, 需求点题后定)
+stage: "plan"                     # first-biz-module-loop 占位立项, 等用户点题业务需求
+current_sprint_slug: "2026-07-14-first-biz-module-loop"  # orm-datascope-symmetry 已 ship (523f5c8), 指针切回占位
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
 skip_architecture_check: false    # System/Refactor ship 前是否跳过 architecture 更新检查

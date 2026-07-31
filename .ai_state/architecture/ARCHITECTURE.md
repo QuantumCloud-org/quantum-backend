@@ -4,7 +4,7 @@
 
 Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 
-最近更新: 2026-07-07T04:31:00Z
+最近更新: 2026-07-31T02:00:00Z
 
 | 模块 | 职责 |
 |---|---|
@@ -17,6 +17,15 @@ Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 | `quantum-biz-system` | 用户、角色、菜单、部门、字典、文件记录等系统域 |
 | `quantum-mcp` | MCP OAuth 授权、Manifest v1、只读 tool 适配 |
 | `quantum-server` | 启动入口与 profile 配置 |
+
+## 依赖治理
+
+单一治理入口: root `pom.xml` 的 `<parent>` = `spring-boot-starter-parent`, 由它继承 Spring Boot BOM 的 dependencyManagement。
+
+- **不再重复 import** `spring-boot-dependencies` / `netty-bom` / `jackson-bom`。Boot BOM 的优先级高于同级 import 的组件 BOM, 重复导入会让 property 值与实际解析版本长期不一致 (2026-07-30 实测: 属性写 Jackson 3.2.0 / Netty 4.2.14, 实际解析 3.1.4 / 4.2.15)。
+- **组件版本用 Boot 官方覆盖属性调整**: `jackson-bom.version`、`jackson-2-bom.version`、`netty.version`、`tomcat.version`、`hikaricp.version`、`postgresql.version`。
+- **例外**: 不受 Boot BOM 管理的组件 (MyBatis-Flex BOM、Hutool、Redisson、AWS SDK S3、springdoc、ip2region、fastexcel 等) 仍在 root `dependencyManagement` 显式钉版本。
+- **验收口径**: 版本升级的完成证据是 effective POM / `dependency:list` 的**实际解析版本**, 不是 property 文本值。只改属性不改解析结果 = 未完成。
 
 ## 安全与权限现状
 

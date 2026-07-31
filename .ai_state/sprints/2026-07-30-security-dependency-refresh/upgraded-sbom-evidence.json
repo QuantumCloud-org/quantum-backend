@@ -1,0 +1,16 @@
+{
+  "schema_version": 1,
+  "format": "CycloneDX 1.6 JSON",
+  "component_count": 211,
+  "sha256": "40c539a533392eaaa1858e8d05dc53df6a7ecfabc3b64f1b615df3b4a1f4da70",
+  "resolved_targets": {
+    "cn.hutool:hutool-all": "5.8.47",
+    "tools.jackson.core:jackson-databind": "3.2.1",
+    "com.fasterxml.jackson.core:jackson-databind": "2.22.1",
+    "io.netty:netty-handler": "4.2.16.Final",
+    "org.postgresql:postgresql": "42.7.13",
+    "software.amazon.awssdk:s3": "2.49.6",
+    "org.apache.tomcat.embed:tomcat-embed-core": "11.0.24",
+    "com.zaxxer:HikariCP": "7.1.0"
+  }
+}

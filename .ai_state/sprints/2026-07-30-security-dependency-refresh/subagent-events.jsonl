@@ -29,3 +29,7 @@
 {"schema_version":1,"event":"SubagentStart","agent_id":"019fb3eb-ddc9-7d53-b80c-ce57cfca5adb","agent_type":"default","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-30T16:46:47.807933Z"}
 {"schema_version":1,"event":"SubagentStart","agent_id":"019fb3ed-b04e-7f82-81bf-eebc7dcc91c6","agent_type":"default","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-30T16:48:47.232962Z"}
 {"schema_version":1,"event":"SubagentStart","agent_id":"019fb3ee-366a-79f2-a7ca-424e94f47f90","agent_type":"default","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-30T16:49:21.569580Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"ae3c5f76f65955473","agent_type":"polish-worker","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-31T06:50:08.425Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"ae3c5f76f65955473","agent_type":"polish-worker","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-31T06:57:38.129Z"}
+{"schema_version":1,"event":"SubagentStart","agent_id":"ae3c5f76f65955473","agent_type":"polish-worker","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-31T06:59:03.907Z"}
+{"schema_version":1,"event":"SubagentStop","agent_id":"ae3c5f76f65955473","agent_type":"polish-worker","sprint_slug":"2026-07-30-security-dependency-refresh","timestamp":"2026-07-31T07:02:00.757Z"}

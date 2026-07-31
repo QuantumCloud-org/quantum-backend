@@ -5,7 +5,7 @@ version: "9.9.0"
 
 # === PACE 路由状态 ===
 path: "System"                    # Hotfix | Bugfix | Quick | Feature | Refactor | System
-stage: "ship"                     # 依赖升级切片收口：主 agent 复核 101 tests 全绿 + 8 版本实解析后 commit/push main
+stage: "ship"                     # 依赖升级切片：6ea787a 已 push；polish 补跑完成 (F1 已修 + cleanup-pass.md)，收口第二个 commit
 current_sprint_slug: "2026-07-30-security-dependency-refresh"
 current_roadmap_slug: ""          # 仅 roadmap stage 期间填
 skip_polish: false                # 项目级 opt-out (默认 false)
@@ -60,7 +60,7 @@ counts:
   systems_count: 4
   requirements_count: 1
   reviews_count: 14
-  cleanup_count: 5
+  cleanup_count: 6
   compound:
     learning: 1
     trick: 0
@@ -71,7 +71,7 @@ counts:
 pointers:
   latest_design: "sprints/2026-07-30-security-dependency-refresh/design.md"               # sprints/{current_sprint_slug}/design.md
   latest_review: "sprints/2026-07-09-s4-fe-scaffold-loop-verify/reviews/pass2.md"
-  latest_cleanup: "sprints/2026-07-07-quantum-mcp-s3-impl/cleanup-pass.md"
+  latest_cleanup: "sprints/2026-07-30-security-dependency-refresh/cleanup-pass.md"
   latest_brainstorm: ""
   latest_decisions: ["compound/2026-07-06-decision-codegen-security-gates-default-on.md"]
   latest_lessons: ["compound/2026-07-06-learning-templates-replicate-fixed-vulnerabilities.md"]
@@ -122,6 +122,7 @@ fingerprint: ""
 - 2026-07-10: S4 rework (Opus) F1/F2/F3 全修 → pass2 review (fable5 三件套) VERDICT=**CONCERNS**: F1 P0 已解决 (reviewer+spec-compliance 各自独立重跑 production build+grep, 6 pattern 全 0 命中, 真 DCE 剔除)。新增 P1: D1 conventions.md 仍引用已删 isMockEnabled (文档漂移) + warn 逻辑零单测。ship 前 D1 (文档同步) + M1 (G4 门禁升级 proposals) 已由 evaluator 补齐; warn 单测记 deferred P1 debt。next_action=ship。
 - 2026-07-09: S4 impl+runtime-verify 完成 (Opus 4.8), **8/8 验收 PASS**。永久基建: quantum-front 会话/导航层 mock (src/lib/mock/ + auth/nav api 短路 + vite.config env 注入) + conventions.md 增补 (导航 mock 约定 + 验证实体原则) + FE athena-init (.ai_state)。generator subagent 生成 system/asset 19 文件, 主 agent 独立复核 tsc/lint/build/G1-G6 全绿, Claude_Browser 实测页面渲染 5 行列表 (非降级态)。脚手架无关论成立 (Rlues skill 核心 diff=0)。演示物验后回滚, bun test 15 pass 回归。runtime-verify.md 落 bridge; stage=review 交 fable5。
 - 2026-07-31 02:00: **依赖升级切片 ship** (安全报告切片拆出另立 sprint, 用户显式批准)。root `pom.xml` 8 行: 8 个组件升到 Maven Central 最新稳定版 + 删除冗余 Boot/Netty/Jackson BOM import (改用 Boot 4.1.0 官方覆盖属性)。主 agent 独立复核 (非转述 worker 报告): `dependency:list` 实解析 8/8 命中目标版本 (Hutool 5.8.47 / Jackson3 3.2.1 / Jackson2 2.22.1 / HikariCP 7.1.0 / Netty 4.2.16.Final / Tomcat 11.0.24 / PG 42.7.13 / S3 2.49.6); `mvn clean test` 11/11 模块 BUILD SUCCESS, 101 tests 0 failure/error/skip。worktree `quantum-backend-security-deps` 零 commit 零分支、pom 与主 checkout 逐字节相同 → 无可合并内容, 已 remove+prune。ARCHITECTURE.md 新增「依赖治理」节 (单一入口 = spring-boot-starter-parent; 完成证据取实解析版本而非 property 文本)。**未闭环**: AC1 安全扫描 canonical 产物未入仓 (仍在仓外临时 artifacts)、review 三件套未跑、cleanup 未做 → 全部转入后继安全报告 sprint。
+- 2026-07-31 03:10: **polish 补跑闭环** (delivery-gate 在 Stop 拦下 "System polish 未跑", 未绕过)。cleanup-pass.md 落盘 4 条 finding: F1 (P1 已修) 删除死属性 `spring-boot.version` —— 删掉 Boot BOM import 后它失去唯一 Maven 消费者, 而 `<parent>` 已硬写 4.1.0, 留着就是同一版本号两处存放, 下次升 Boot 必静默漂移; F2/F3 (P2 记录不修), F4 (P1 已修, architecture 依赖治理节)。可达性论证覆盖三条路径: 不限文件类型全仓检索 / 资源过滤间接消费 (parent POM 只过滤 `application*` 且分隔符 `@` + `useDefaultDelimiters=false`) / 上游 POM 继承链 (两个 Boot POM 对该属性命中数 0)。**验证**: `mvn clean test` 101 tests 全绿; 解析集合 A/B 232 vs 232 diff 为空 (11/11 模块全覆盖)。过程两次自纠已如实记入 cleanup-pass: worker 推翻自己对 `dependency:list` EXIT=1 的首轮归因并主动暴露 "10/11 覆盖" 缺口; 主 agent 首轮 A/B 因 Bash cwd 跨调用保持而两侧可能同源, 作废重做 (改 `-f` 绝对路径 + 跑前先验两侧 POM 确实不同)。**proposals +1**: delivery-gate `role === "generator"` 严格相等与实际描述性 role 词表不匹配 (31 条 assignment 严格匹配 0 条), 且 6ea787a 是在该检查从未通过的情况下推出去的 —— 未改 JSONL 迎合门禁, 按 铁律[Hook 是进化器] 上报。
 
 ## 工具调度建议
 

@@ -103,3 +103,26 @@
   证明该检查独立于 GENERATOR_PATHS, **所有 path 的 ship 终态都会被追打**, 收口后只能靠"立项下一个
   sprint 前移指针"逃逸。修复优先级应提到最高。
 - **触发 sprint**: 2026-07-09-be-runtime-contract-hardening (被追溯拦) → 2026-07-14-be-env-compose (立项消解, 后自身又被拦) → 2026-07-14-first-biz-module-loop (再次前移消解)。
+
+
+## 2026-07-31 · delivery-gate 的 `role === "generator"` 严格相等与实际 assignment 词表不匹配
+
+- **现象**: `validateGeneratorChain` (delivery-gate.cjs:155) 要求 `subagent-assignments.jsonl` 中存在
+  `role` **严格等于** `"generator"` 的记录。但 Athena 实际写入的 role 是**描述性短语**, 本 sprint 那条真实
+  的依赖升级 generator 记的是 `"PACE generator for isolated dependency upgrade"`
+  (`task_name: "backend_dependency_generator"`)。31 条 assignment 中严格匹配数 = **0**。
+- **后果**: ① System 路径 `stage=ship` 时任何实现写入 (非 `.ai_state/` 路径) 被 `no role=generator
+  assignment found` 拦死, 且该 sprint **永远无法**靠补跑 subagent 解除 —— 除非把已落盘的历史记录改写成
+  `"generator"`, 而那是伪造证据, 不做。② 更严重: 本 sprint 的 ship commit `6ea787a` 是在这条检查**从未
+  通过**的情况下推出去的 (推送时 `_index.stage` 被主 agent 提前置为 `ship`, 但 Stop 期 gate 先拦在
+  polish 检查上, generator 检查未走到)。检查存在, 却没在它该生效的时刻生效。
+- **提案**: ① 判定改为 `role` 含 `generator` 子串, 或新增独立 `role_kind` 枚举字段 (`generator|critic|
+  reviewer|polish|worker`), 描述性文案留在 `role`, 机器判定只读 `role_kind`; ② gate 的写者身份检查应按
+  **当前 stage 的法定写者**判定 —— polish stage 的法定写者是 `polish-worker` 而非 `generator`,
+  现在 `validateShip` 只认 generator, 等于 polish 阶段的合法实现写入天然无解; ③ 与既有「gate 判定依据应
+  来自 sprint 自身档案而非全局硬编码」提案同源。
+- **旁证 (同轮暴露的第二个缺陷)**: gate 经 `--git-common-dir` 解析 repo root, 因此 subagent 在
+  `isolation: worktree` 内写入时, 读的是**主 checkout** 的 `_index.md`。worktree 内的 stage 状态对 gate
+  不可见 —— 隔离写者与门禁状态源不同步, 后续并行写者场景会放大。
+- **触发 sprint**: 2026-07-30-security-dependency-refresh (polish stage 补跑时暴露; 由 polish-worker
+  读 delivery-gate.cjs 源码定位, 全程未绕过)。

@@ -31,7 +31,8 @@
         <maven.compiler.source>25</maven.compiler.source>
         <maven.compiler.target>25</maven.compiler.target>
         <!--核心框架-->
-        <spring-boot.version>4.1.0</spring-boot.version>
+        <!-- Spring Boot 版本由 <parent> 单点声明; 此处不再重复属性, 避免升级时两处漂移。
+             banner.txt 的 ${spring-boot.version} 由 Boot 运行期 ResourceBanner 解析, 不经 Maven 过滤。 -->
         <postgresql.version>42.7.13</postgresql.version>
         <mybatis-flex.version>1.11.8</mybatis-flex.version>
         <!-- 组件版本管理 -->

@@ -130,3 +130,27 @@
   门禁。豁免留下的痕迹是「我们跳过了这项检查」, 而非「这项检查通过了」, 两者不可混淆。
 - **触发 sprint**: 2026-07-30-security-dependency-refresh (polish stage 补跑时暴露; 由 polish-worker
   读 delivery-gate.cjs 源码定位, 全程未绕过)。
+
+
+## 2026-07-31 · light-ship 判定对「已推送」的 ship 结构性不可达 (高优先级)
+
+- **现象**: `shipChangeIsLight()` (delivery-gate.cjs:916-947) 取 base = `@{upstream}` (回退
+  `origin/<branch>`), 算 `base..HEAD` 的 numstat。**ship 一旦 push, 这个区间恒为空**,
+  `files.length === 0` → 946 行前的 `return false` → fail-closed 落进完整契约
+  (evidence.yaml + `reviews/passN.md` VERDICT=PASS + critic rounds + …)。
+- **判据本身是满足的**: 本 sprint 非 `.ai_state` 改动只有 `pom.xml` 一个文件, `10 增 32 删 = 42 行`
+  ≤ `SHIP_LIGHT_MAX_LINES = 60`; `isLightShipFile("pom.xml")` 为 true (`.xml` 不在 isCode 正则内);
+  `.ai_state/` 按设计不计入行数预算。**按 gate 自己的标准这就是 light ship, 本不该要 review/evidence**,
+  却因为「先推后验」的时序而走了完整契约。
+- **根因是时序假设**: light 通道隐含假设 gate 在 push **之前**跑。但 Stop hook 天然在主 agent 完成
+  commit+push **之后**触发, 两者冲突。任何「push 完再让 Stop 收口」的正常工作流都踩得到。
+- **`files.length === 0` 的语义被用错**: 空 diff 不是「无法分类」, 而是「本地没有待 ship 的东西」。
+  把它当 unclassifiable 走 fail-closed, 等于对**已经安全落地**的改动施加最严契约 —— 惩罚方向反了。
+- **提案**: ① base 选择增加回退: 若 `base..HEAD` 为空, 改用 sprint 起始 commit (route-note/
+  `_index` 时间戳可定位) 或 reflog 中该分支 push 前的位置, 使判定对象是「本 sprint 实际 ship 的 diff」
+  而非「尚未推送的 diff」; ② `files.length === 0` 单独分支: 无本地待 ship 改动 → 无物可验, 直接放行,
+  不与 unclassifiable 共用 fail-closed; ③ 二者取其一即可, ② 更小。
+- **本轮处置 (用户显式决定)**: 认定为门禁缺陷, **不为过闸而制造 evidence.yaml 与 review 文档**。
+  交付物 (3 个 commit) 已在 main 且证据充分 (101 tests 全绿 + 解析集合 A/B 232 vs 232 diff 为空 +
+  runtime-verify 实启动/HTTP/fail-closed)。Stop 将持续 block, 属已知且已记录状态。
+- **触发 sprint**: 2026-07-30-security-dependency-refresh (依赖升级切片收口时暴露)。

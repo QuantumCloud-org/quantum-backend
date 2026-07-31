@@ -124,5 +124,9 @@
 - **旁证 (同轮暴露的第二个缺陷)**: gate 经 `--git-common-dir` 解析 repo root, 因此 subagent 在
   `isolation: worktree` 内写入时, 读的是**主 checkout** 的 `_index.md`。worktree 内的 stage 状态对 gate
   不可见 —— 隔离写者与门禁状态源不同步, 后续并行写者场景会放大。
+- **本轮处置 (2026-07-31, 用户显式批准)**: 置 `_index.skip_impl_subagent_check: true` (harness 自带的合规
+  豁免开关, `delivery-gate.cjs:993` `if (!truthy(fm.skip_impl_subagent_check)) validateGeneratorChain(...)`),
+  **本 sprint 限定, 下个 sprint 须复位 `false`**。未改写历史 JSONL 的 `role` 字段 —— 那是重写审计记录迎合
+  门禁。豁免留下的痕迹是「我们跳过了这项检查」, 而非「这项检查通过了」, 两者不可混淆。
 - **触发 sprint**: 2026-07-30-security-dependency-refresh (polish stage 补跑时暴露; 由 polish-worker
   读 delivery-gate.cjs 源码定位, 全程未绕过)。

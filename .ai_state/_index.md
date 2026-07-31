@@ -90,7 +90,14 @@ design_changed_after_impl: false  # 2026-07-31 用户显式批准: 依赖升级�
 plan_critique_max_rounds: 4       # 默认 4, 可调 2-6
 plan_critique_min_rounds: 0       # v9.9.0 (U2): 0=auto (Refactor/System=2, 其余=1); delivery-gate 在 ship 验 design.md 轮数
 plan_critique_disabled: false     # 关闭多轮 critique (用户自负责)
-skip_impl_subagent_check: false   # v9.9.0 (U1): S2 sprint 生成走 CC generator subagent, 复位豁免
+skip_impl_subagent_check: true    # 2026-07-31 用户显式批准豁免 (本 sprint 限定, 下个 sprint 须复位 false)。
+                                  # 理由: gate 的 validateGeneratorChain 认 role==="generator" 严格相等, 而本项目
+                                  # platforms_enabled=["cx"], CX 侧握手写的是描述性文案 "PACE generator for
+                                  # isolated dependency upgrade" (task_name: backend_dependency_generator),
+                                  # 31 条 assignment 严格匹配 0 条。实质要求 (实现写入经法定 subagent 而非主 agent)
+                                  # 事实上满足: 依赖升级由该 generator 落, polish 的 F1 由 polish-worker 落。
+                                  # 选择豁免开关而非改写历史 JSONL 的 role 字段 —— 后者是重写审计记录迎合门禁。
+                                  # 词表不匹配缺陷已上报 proposals.md (2026-07-31 条)。
 network_in_polish: true           # polish_worker 是否允许 network
 
 # === Fingerprint (index-updater 用于 mtime 比对) ===

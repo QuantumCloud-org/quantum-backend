@@ -29,10 +29,14 @@ public class AuditManagerMessage implements MessageCollector {
     @Override
     public void collect(AuditMessage message) {
         long elapsed = message.getElapsedTime();
-        String sql = message.getFullSql();
+        boolean slow = elapsed >= SLOW_SQL_THRESHOLD;
+        if (!slow && !(logAllSql && sqlAuditLogger.isInfoEnabled())) {
+            return;
+        }
+        String sql = message.getQuery();
 
         // 慢 SQL 告警（写入 app.log + error.log）
-        if (elapsed >= SLOW_SQL_THRESHOLD) {
+        if (slow) {
             log.warn("慢SQL告警 | {}ms | TraceId: {} | SQL: {}",
                     elapsed,
                     UserContext.getTraceId(),
@@ -40,7 +44,7 @@ public class AuditManagerMessage implements MessageCollector {
         }
 
         // SQL 审计日志（写入 sql-audit.log）
-        if (logAllSql || elapsed >= SLOW_SQL_THRESHOLD) {
+        if (sqlAuditLogger.isInfoEnabled()) {
             sqlAuditLogger.info("{\"traceId\":\"{}\",\"userId\":{},\"username\":\"{}\","
                             + "\"sql\":\"{}\",\"elapsedMs\":{},\"dsName\":\"{}\"}",
                     escape(UserContext.getTraceId()),

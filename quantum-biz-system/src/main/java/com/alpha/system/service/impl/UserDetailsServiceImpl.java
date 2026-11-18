@@ -1,6 +1,5 @@
 package com.alpha.system.service.impl;
 
-import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.orm.enums.DataScopeType;
 import com.alpha.system.domain.SysRole;
@@ -11,7 +10,9 @@ import com.alpha.system.mapper.SysRoleMapper;
 import com.alpha.system.mapper.SysUserMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
@@ -29,7 +30,7 @@ import java.util.stream.Collectors;
 @Slf4j
 @Service
 @RequiredArgsConstructor
-public class UserDetailsServiceImpl implements UserDetailsService {
+public class UserDetailsServiceImpl implements UserDetailsService, UserDetailsPasswordService {
 
     private final SysUserMapper userMapper;
     private final SysRoleMapper roleMapper;
@@ -44,6 +45,28 @@ public class UserDetailsServiceImpl implements UserDetailsService {
             throw new UsernameNotFoundException("用户不存在: " + username);
         }
 
+        return buildLoginUser(user);
+    }
+
+    @Override
+    public UserDetails updatePassword(UserDetails user, String newPassword) {
+        var login = (LoginUser) user;
+        if (userMapper.upgradePassword(login.getUserId(), login.getPassword(), newPassword) != 1) {
+            throw new BadCredentialsException("Bad credentials");
+        }
+        return login.setPassword(newPassword);
+    }
+
+    /** Loads the current identity and permissions for an existing session. */
+    public LoginUser loadUserById(Long userId) {
+        SysUser user = userMapper.selectOneById(userId);
+        if (user == null) {
+            throw new UsernameNotFoundException("用户不存在");
+        }
+        return buildLoginUser(user);
+    }
+
+    private LoginUser buildLoginUser(SysUser user) {
         List<SysRole> assignedRoles = safeRoles(roleMapper.selectRolesByUserId(user.getId()));
         Set<String> roles = assignedRoles.stream()
                 .map(SysRole::getRoleKey)
@@ -51,7 +74,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .collect(Collectors.toSet());
 
         Set<String> permissions;
-        if (isAdmin(user.getId())) {
+        if (LoginUser.isSuperAdmin(user.getId())) {
             permissions = Set.of("*:*:*");
         } else {
             permissions = menuMapper.selectPermsByUserId(user.getId());
@@ -59,7 +82,7 @@ public class UserDetailsServiceImpl implements UserDetailsService {
 
         String deptName = null;
         if (user.getDeptId() != null) {
-            deptName = userMapper.selectDeptNameById(user.getDeptId());
+            deptName = deptMapper.selectDeptNameById(user.getDeptId());
         }
 
         DataScopeResolution dataScope = resolveDataScope(user, assignedRoles);
@@ -78,16 +101,12 @@ public class UserDetailsServiceImpl implements UserDetailsService {
                 .setDeptIds(dataScope.deptIds());
     }
 
-    private boolean isAdmin(Long userId) {
-        return CommonConstants.SUPER_ADMIN_ID.equals(userId);
-    }
-
     private List<SysRole> safeRoles(List<SysRole> roles) {
         return roles == null ? Collections.emptyList() : roles;
     }
 
     private DataScopeResolution resolveDataScope(SysUser user, List<SysRole> assignedRoles) {
-        if (isAdmin(user.getId())) {
+        if (LoginUser.isSuperAdmin(user.getId())) {
             return new DataScopeResolution(DataScopeType.ALL, Collections.emptySet());
         }
 

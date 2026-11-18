@@ -4,6 +4,8 @@ import cn.hutool.core.util.StrUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.ResponseCookie;
 
 /**
  * Refresh Token Cookie 工具。
@@ -11,13 +13,20 @@ import jakarta.servlet.http.HttpServletResponse;
 public final class CookieUtil {
 
     public static final String REFRESH_TOKEN_COOKIE_NAME = "refresh_token";
-    public static final String REFRESH_TOKEN_COOKIE_PATH = "/";
+    private static final String LEGACY_PATH = "/";
 
     private CookieUtil() {
     }
 
-    public static void writeRefreshCookie(HttpServletResponse response, String refreshToken, boolean persistent, int maxAgeSeconds, boolean secure) {
-        response.addHeader("Set-Cookie", buildRefreshCookieHeader(refreshToken, persistent, maxAgeSeconds, secure));
+    public static void writeRefreshCookie(HttpServletResponse response, String token, boolean persistent,
+                                          int maxAgeSeconds, boolean secure, String path) {
+        if (LEGACY_PATH.equals(path)) {
+            writeCookie(response, "", 0, secure, LEGACY_PATH);
+        }
+        writeCookie(response, token, persistent ? maxAgeSeconds : -1, secure, path);
+        if (!LEGACY_PATH.equals(path)) {
+            writeCookie(response, "", 0, secure, LEGACY_PATH);
+        }
     }
 
     public static String readRefreshCookie(HttpServletRequest request) {
@@ -34,28 +43,16 @@ public final class CookieUtil {
         return null;
     }
 
-    public static void clearRefreshCookie(HttpServletResponse response, boolean secure) {
-        response.addHeader("Set-Cookie", buildRefreshCookieHeader("", true, 0, secure));
+    public static void clearRefreshCookie(HttpServletResponse response, boolean secure, String path) {
+        writeCookie(response, "", 0, secure, path);
+        if (!LEGACY_PATH.equals(path)) {
+            writeCookie(response, "", 0, secure, LEGACY_PATH);
+        }
     }
 
-    private static String buildRefreshCookieHeader(String value, boolean persistent, int maxAgeSeconds, boolean secure) {
-        StringBuilder builder = new StringBuilder();
-        builder.append(REFRESH_TOKEN_COOKIE_NAME)
-                .append("=")
-                .append(value == null ? "" : value)
-                .append("; HttpOnly")
-                .append("; SameSite=Strict")
-                .append("; Path=")
-                .append(REFRESH_TOKEN_COOKIE_PATH);
-
-        if (secure) {
-            builder.append("; Secure");
-        }
-
-        if (persistent) {
-            builder.append("; Max-Age=").append(Math.max(maxAgeSeconds, 0));
-        }
-
-        return builder.toString();
+    private static void writeCookie(HttpServletResponse response, String value, int maxAge, boolean secure, String path) {
+        var cookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, value)
+                .httpOnly(true).sameSite("Strict").secure(secure).path(path).maxAge(maxAge).build();
+        response.addHeader(HttpHeaders.SET_COOKIE, cookie.toString());
     }
 }

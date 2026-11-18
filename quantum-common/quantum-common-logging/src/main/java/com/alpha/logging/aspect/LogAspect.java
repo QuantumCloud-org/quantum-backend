@@ -4,6 +4,7 @@ import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.util.IpUtil;
 import com.alpha.framework.util.JsonUtil;
+import com.alpha.framework.exception.BizException;
 import com.alpha.logging.annotation.SystemLog;
 import com.alpha.logging.entity.SysOperLog;
 import com.alpha.logging.event.OperLogEvent;
@@ -40,7 +41,6 @@ import tools.jackson.databind.ser.std.SimpleFilterProvider;
 
 import java.time.LocalDateTime;
 import java.util.*;
-import java.util.stream.Collectors;
 
 /**
  * 操作日志切面
@@ -55,6 +55,7 @@ import java.util.stream.Collectors;
 public class LogAspect {
 
     private static final String SENSITIVE_FILTER_ID = "sensitiveFilter";
+    private static final String PROTECTED_VALUE = "[PROTECTED]";
     private static final int MAX_PARAM_LENGTH = 2000;
     private static final ThreadLocal<Long> START_TIME = new ThreadLocal<>();
 
@@ -63,9 +64,11 @@ public class LogAspect {
     private final OperLogProperties operLogProperties;
 
     private ObjectMapper sensitiveAwareMapper;
+    private Set<String> sensitiveFields;
 
     @PostConstruct
     public void initSensitiveAwareMapper() {
+        this.sensitiveFields = OperLogProperties.normalizeFields(operLogProperties.getSensitiveFields());
         this.sensitiveAwareMapper = createSensitiveAwareMapper();
     }
 
@@ -135,7 +138,7 @@ public class LogAspect {
         // 异常信息
         if (e != null) {
             operLog.setStatus(1);
-            operLog.setErrorMsg(StrUtil.sub(e.getMessage(), 0, MAX_PARAM_LENGTH));
+            operLog.setErrorMsg(e instanceof BizException ? StrUtil.sub(e.getMessage(), 0, MAX_PARAM_LENGTH) : e.getClass().getSimpleName());
         } else {
             operLog.setStatus(0);
         }
@@ -184,16 +187,16 @@ public class LogAspect {
             return "";
         }
 
-        Set<String> excludeSet = buildExcludeSet(excludeParams);
-        Set<String> sensitiveFields = buildSensitiveFieldSet();
+        Set<String> excludeSet = OperLogProperties.normalizeFields(java.util.Arrays.asList(excludeParams));
 
         Map<String, Object> params = new LinkedHashMap<>();
         for (int i = 0; i < paramNames.length; i++) {
             String paramName = paramNames[i];
             Object arg = args[i];
 
-            if (excludeSet.contains(paramName.toLowerCase(Locale.ROOT))) {
-                params.put(paramName, "[PROTECTED]");
+            String normalizedName = paramName.toLowerCase(Locale.ROOT);
+            if (excludeSet.contains(normalizedName) || sensitiveFields.contains(normalizedName)) {
+                params.put(paramName, PROTECTED_VALUE);
                 continue;
             }
 
@@ -204,7 +207,7 @@ public class LogAspect {
             if (arg instanceof MultipartFile[] files) {
                 params.put(paramName, Arrays.stream(files)
                         .map(MultipartFile::getOriginalFilename)
-                        .collect(Collectors.toList()));
+                        .toList());
                 continue;
             }
 
@@ -219,36 +222,6 @@ public class LogAspect {
         return jsonUtil.toJson(params);
     }
 
-    /**
-     * 构建顶层方法参数 mask 名单。
-     * <p>
-     * 这里只处理方法参数名级别的显式排除；对象内部的敏感字段由
-     * {@link #sanitizeRequestParamValue(Object, Set)} 递归改写为
-     * {@code [PROTECTED]}，避免和响应结果的 {@link SensitiveFieldFilter}
-     * “直接删 key” 语义冲突。
-     */
-    private Set<String> buildExcludeSet(String[] excludeParams) {
-        Set<String> excludeSet = new LinkedHashSet<>();
-        if (excludeParams != null) {
-            for (String field : excludeParams) {
-                if (field != null && !field.isBlank()) {
-                    excludeSet.add(field.toLowerCase(Locale.ROOT));
-                }
-            }
-        }
-        return excludeSet;
-    }
-
-    private Set<String> buildSensitiveFieldSet() {
-        Set<String> sensitiveFieldSet = new LinkedHashSet<>();
-        for (String field : operLogProperties.getSensitiveFields()) {
-            if (field != null && !field.isBlank()) {
-                sensitiveFieldSet.add(field.toLowerCase(Locale.ROOT));
-            }
-        }
-        return sensitiveFieldSet;
-    }
-
     private String serializeSensitiveAware(Object value) {
         if (value == null) {
             return null;
@@ -256,13 +229,14 @@ public class LogAspect {
         try {
             return sensitiveAwareMapper.writeValueAsString(value);
         } catch (Exception e) {
-            log.error("敏感字段过滤序列化失败: {}", value.getClass().getName(), e);
-            return jsonUtil.toJson(value);
+            log.warn("操作日志响应脱敏失败 | type={} | errorType={}",
+                    value.getClass().getName(), e.getClass().getName());
+            return null;
         }
     }
 
     private ObjectMapper createSensitiveAwareMapper() {
-        SensitiveFieldFilter filter = new SensitiveFieldFilter(operLogProperties.getSensitiveFields());
+        SensitiveFieldFilter filter = new SensitiveFieldFilter(sensitiveFields);
         ObjectMapper baseMapper = jsonUtil.getObjectMapper();
         JsonMapper.Builder builder = baseMapper instanceof JsonMapper jsonMapper
                 ? jsonMapper.rebuild()
@@ -288,8 +262,8 @@ public class LogAspect {
             JsonNode tree = jsonUtil.getObjectMapper().valueToTree(value);
             return sanitizeRequestJsonNode(tree, sensitiveFields);
         } catch (IllegalArgumentException e) {
-            log.debug("请求参数脱敏失败，回退原值 | type={}", value.getClass().getName(), e);
-            return value;
+            log.debug("操作日志请求参数脱敏失败 | type={}", value.getClass().getName());
+            return PROTECTED_VALUE;
         }
     }
 
@@ -298,10 +272,10 @@ public class LogAspect {
             return node;
         }
         if (node.isObject()) {
-            ObjectNode objectNode = ((ObjectNode) node).deepCopy();
+            ObjectNode objectNode = (ObjectNode) node;
             for (String fieldName : new ArrayList<>(objectNode.propertyNames())) {
                 if (sensitiveFields.contains(fieldName.toLowerCase(Locale.ROOT))) {
-                    objectNode.put(fieldName, "[PROTECTED]");
+                    objectNode.put(fieldName, PROTECTED_VALUE);
                     continue;
                 }
                 objectNode.set(fieldName, sanitizeRequestJsonNode(objectNode.get(fieldName), sensitiveFields));
@@ -309,7 +283,7 @@ public class LogAspect {
             return objectNode;
         }
         if (node.isArray()) {
-            ArrayNode arrayNode = ((ArrayNode) node).deepCopy();
+            ArrayNode arrayNode = (ArrayNode) node;
             for (int i = 0; i < arrayNode.size(); i++) {
                 arrayNode.set(i, sanitizeRequestJsonNode(arrayNode.get(i), sensitiveFields));
             }

@@ -132,7 +132,7 @@ class UserDetailsServiceImplDataScopeTest {
 
     private void stubUser(SysUser user) {
         when(userMapper.selectByUsername(user.getUsername())).thenReturn(user);
-        when(userMapper.selectDeptNameById(user.getDeptId())).thenReturn("研发部");
+        when(deptMapper.selectDeptNameById(user.getDeptId())).thenReturn("研发部");
         when(menuMapper.selectPermsByUserId(user.getId())).thenReturn(Set.of("system:user:list"));
     }
 

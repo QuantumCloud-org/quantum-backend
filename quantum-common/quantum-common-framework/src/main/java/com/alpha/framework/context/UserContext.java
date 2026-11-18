@@ -1,6 +1,8 @@
 package com.alpha.framework.context;
 
 import com.alpha.framework.entity.LoginUser;
+import cn.hutool.http.useragent.UserAgent;
+import cn.hutool.http.useragent.UserAgentUtil;
 import lombok.extern.slf4j.Slf4j;
 
 import java.util.Collections;
@@ -20,7 +22,7 @@ public class UserContext {
     private static final ThreadLocal<LoginUser> USER_HOLDER = new InheritableThreadLocal<>();
     private static final ThreadLocal<String> IP_HOLDER = new InheritableThreadLocal<>();
     private static final ThreadLocal<String> TRACE_ID_HOLDER = new InheritableThreadLocal<>();
-    private static final ThreadLocal<String> USER_AGENT_HOLDER = new InheritableThreadLocal<>();
+    private static final ThreadLocal<RequestUserAgent> USER_AGENT_HOLDER = new InheritableThreadLocal<>();
     private static final ThreadLocal<String> REQUEST_URI_HOLDER = new InheritableThreadLocal<>();
 
     // ==================== 用户操作 ====================
@@ -121,11 +123,21 @@ public class UserContext {
     }
 
     public static void setUserAgent(String userAgent) {
-        USER_AGENT_HOLDER.set(userAgent);
+        USER_AGENT_HOLDER.set(new RequestUserAgent(userAgent,
+                userAgent == null || userAgent.isBlank() ? null : UserAgentUtil.parse(userAgent)));
     }
 
     public static String getUserAgent() {
-        return USER_AGENT_HOLDER.get();
+        var agent = USER_AGENT_HOLDER.get();
+        return agent == null ? null : agent.raw();
+    }
+
+    public static UserAgent getParsedUserAgent() {
+        var agent = USER_AGENT_HOLDER.get();
+        return agent == null ? null : agent.parsed();
+    }
+
+    private record RequestUserAgent(String raw, UserAgent parsed) {
     }
 
     public static void setRequestUri(String uri) {

@@ -28,10 +28,6 @@ public class LogInfo implements Serializable {
      */
     private String username;
 
-    /**
-     * 租户 ID（多租户场景）
-     */
-    private Long tenantId;
 
     /**
      * 客户端 IP
@@ -71,25 +67,5 @@ public class LogInfo implements Serializable {
     /**
      * 扩展属性（自定义数据）
      */
-    private java.util.Map<String, Object> extra;
-
-    /**
-     * 设置扩展属性
-     */
-    public LogInfo putExtra(String key, Object value) {
-        if (this.extra == null) {
-            this.extra = new java.util.HashMap<>();
-        }
-        this.extra.put(key, value);
-        return this;
-    }
-
-    /**
-     * 获取扩展属性
-     */
-    @SuppressWarnings("unchecked")
-    public <T> T getExtra(String key) {
-        return this.extra != null ? (T) this.extra.get(key) : null;
-    }
 
 }

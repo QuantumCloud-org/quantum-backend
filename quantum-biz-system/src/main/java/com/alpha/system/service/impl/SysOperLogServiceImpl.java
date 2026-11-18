@@ -9,7 +9,6 @@ import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
@@ -30,14 +29,9 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     /**
      * 异步新增操作日志
      */
-    @Async
     @Override
     public void insertOperLog(SysOperLog operLog) {
-        try {
-            operLogMapper.insert(operLog);
-        } catch (Exception e) {
-            log.error("记录操作日志异常: {}", e.getMessage(), e);
-        }
+        operLogMapper.insert(operLog);
     }
 
     @Override
@@ -48,13 +42,6 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
                 Page.of(pageQuery.getPageNum(), pageQuery.getPageSize()),
                 wrapper
         );
-    }
-
-    @Override
-    public List<SysOperLog> selectOperLogList(SysOperLog query, LogPageQuery pageQuery) {
-        QueryWrapper wrapper = buildQueryWrapper(query, pageQuery);
-        wrapper.orderBy(SYS_OPER_LOG.OPER_ID.desc());
-        return operLogMapper.selectListByQuery(wrapper);
     }
 
     @Override
@@ -77,16 +64,6 @@ public class SysOperLogServiceImpl extends ServiceImpl<SysOperLogMapper, SysOper
     @Override
     public int deleteOperLogByDays(int days) {
         return operLogMapper.deleteOperLogByDays(days);
-    }
-
-    @Override
-    public long countOperLog() {
-        return operLogMapper.countOperLog();
-    }
-
-    @Override
-    public long countErrorLog() {
-        return operLogMapper.countOperLogByStatus(1); // 1 = 异常
     }
 
     /**

@@ -11,11 +11,9 @@ import com.mybatisflex.spring.boot.ConfigurationCustomizer;
 import com.mybatisflex.spring.boot.MyBatisFlexCustomizer;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.ibatis.logging.slf4j.Slf4jImpl;
+import org.apache.ibatis.logging.nologging.NoLoggingImpl;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Configuration;
-
-import java.time.LocalDateTime;
 
 /**
  * MyBatis-Flex 核心配置
@@ -51,8 +49,8 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
             AuditManager.setAuditEnable(true);
             AuditManager.setMessageCollector(message -> {
                 // SQL 打印
-                if (sqlPrintEnabled) {
-                    log.debug("SQL执行 | {}ms | {}", message.getElapsedTime(), message.getFullSql());
+                if (sqlPrintEnabled && log.isDebugEnabled()) {
+                    log.debug("SQL执行 | {}ms | {}", message.getElapsedTime(), message.getQuery());
                 }
                 // 审计收集
                 if (auditEnabled) {
@@ -71,8 +69,8 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
      */
     @Override
     public void customize(FlexConfiguration configuration) {
-        // 使用 SLF4J 日志
-        configuration.setLogImpl(Slf4jImpl.class);
+        // SQL diagnostics use the parameterized query collector above.
+        configuration.setLogImpl(NoLoggingImpl.class);
         // 下划线转驼峰
         configuration.setMapUnderscoreToCamelCase(true);
         // 空值也调用 setter
@@ -89,7 +87,6 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
                 Long currentUserId = UserContext.getUserId();
                 baseEntity.setCreateBy(currentUserId);
                 baseEntity.setUpdateBy(currentUserId);
-                baseEntity.setCreateTime(LocalDateTime.now());
             }
         }
     }
@@ -102,7 +99,6 @@ public class MybatisFlexConfig implements MyBatisFlexCustomizer, ConfigurationCu
         public void onUpdate(Object entity) {
             if (entity instanceof BaseEntity baseEntity) {
                 baseEntity.setUpdateBy(UserContext.getUserId());
-                baseEntity.setUpdateTime(LocalDateTime.now());
             }
         }
     }

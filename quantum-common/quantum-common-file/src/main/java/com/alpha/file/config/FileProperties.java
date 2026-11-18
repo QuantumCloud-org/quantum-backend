@@ -99,7 +99,7 @@ public class FileProperties {
         /**
          * 最大文件大小（MB）
          */
-        private int maxSize = 100;
+        private int maxSize = 50;
 
         /**
          * 允许的文件扩展名

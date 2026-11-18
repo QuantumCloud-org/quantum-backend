@@ -37,20 +37,8 @@ public final class CommonConstants {
      */
     public static final String HEADER_TRACE_ID = "X-Trace-Id";
 
-    /**
-     * 跨度 ID Header（分布式追踪）
-     */
-    public static final String HEADER_SPAN_ID = "X-Span-Id";
 
-    /**
-     * 父跨度 ID Header
-     */
-    public static final String HEADER_PARENT_SPAN_ID = "X-Parent-Span-Id";
 
-    /**
-     * 租户 ID
-     */
-    public static final String HEADER_TENANT_ID = "X-Tenant-Id";
 
     /**
      * Token Header
@@ -69,10 +57,6 @@ public final class CommonConstants {
      */
     public static final String MDC_TRACE_ID = "traceId";
 
-    /**
-     * MDC - 跨度 ID
-     */
-    public static final String MDC_SPAN_ID = "spanId";
 
     /**
      * MDC - 客户端 IP
@@ -111,25 +95,9 @@ public final class CommonConstants {
      */
     public static final String ONLINE_TOKENS_KEY = "online:tokens";
 
-    /**
-     * Token 黑名单前缀
-     */
-    public static final String BLACKLIST_PREFIX = "auth:blacklist:";
 
-    /**
-     * 用户权限缓存前缀
-     */
-    public static final String REDIS_PERM_PREFIX = "auth:perm:";
 
-    /**
-     * 限流前缀
-     */
-    public static final String REDIS_RATE_LIMIT_PREFIX = "rate:";
 
-    /**
-     * 防重复提交前缀
-     */
-    public static final String REDIS_REPEAT_SUBMIT_PREFIX = "repeat:";
 
     // ==================== 系统常量 ====================
 
@@ -158,13 +126,5 @@ public final class CommonConstants {
      */
     public static final Integer STATUS_DISABLE = 0;
 
-    /**
-     * 是
-     */
-    public static final String YES = "Y";
 
-    /**
-     * 否
-     */
-    public static final String NO = "N";
 }

@@ -34,6 +34,12 @@ public class LoginResponse {
      */
     private String accessToken;
 
+    /** Access token lifetime in seconds. */
+    private int expiresIn;
+
+    /** Identifies the same Web session across refreshes. */
+    private String sessionId;
+
     /**
      * Refresh Token
      */
@@ -53,6 +59,8 @@ public class LoginResponse {
                 .setUsername(loginUser.getUsername())
                 .setNickname(loginUser.getNickname())
                 .setAccessToken(tokenInfo.getAccessToken())
+                .setExpiresIn(tokenInfo.getExpiresIn())
+                .setSessionId(tokenInfo.getSessionId())
                 .setRefreshToken(tokenInfo.getRefreshToken())
                 .setExpireTime(tokenInfo.getExpireTime());
     }

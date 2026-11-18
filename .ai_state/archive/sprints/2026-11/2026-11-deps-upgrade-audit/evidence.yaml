@@ -1,0 +1,13 @@
+sprint: "2026-11-deps-upgrade-audit"
+shipped: "2026-11-18T05:54:18.554Z"
+tree_sha: "5b4d9bd3982ec7869e5ac572a5c3406ed75c5a5d"
+review: {run: "da9e673b-d263-44f6-b9fc-d8c8ad39d53b", verdict: "PASS"}
+final: {id: "879b0553ffd5", command: "mvn clean test", kind: "test", exit: 0}
+acceptance:
+  - {id: AC1, text: "上表组件均升到目标版本或在 `upgrade-report.md` 写明回退原因；无预发布版。验证: athena run --covers AC1 -- mvn -q -DskipTests validate", evidence: ["879b0553ffd5"]}
+  - {id: AC2, text: "`mvn clean test` 全模块退出码 0。验证: athena run --covers AC2 -- mvn clean test", evidence: ["879b0553ffd5"]}
+  - {id: AC3, text: "升级引入的 breaking/弃用有最小修复；项目代码编译无 deprecation 告警新增。验证: athena run --covers AC3 -- mvn clean compile", evidence: ["879b0553ffd5"]}
+  - {id: AC4, text: "`audit-report.md` 覆盖安全/性能/写法，每条含 文件:行、严重度、处置；已修项随 AC2 测试通过。验证: athena run --covers AC4 -- mvn clean test", evidence: ["879b0553ffd5"]}
+  - {id: AC5, text: "合并清单里的低效/安全/重复/垃圾项（P0-P2）全部已修，或写明不修的原因；重构后测试全绿。验证: athena run --covers AC5 -- mvn clean test", evidence: ["879b0553ffd5"]}
+  - {id: AC6, text: "用户批准的高风险项 S17（按下方契约）、D03（DelegatingPasswordEncoder；遗留的 username+password 哈希在登录时升级）、S19（Redis codec 加类型白名单）、S23（审计表清空仅限超管）都已实现并有测试；S06（yml 凭证）按用户裁定不动。验证: athena ", evidence: ["879b0553ffd5"]}
+  - {id: AC7, text: "独立 review 放行（H3）。", evidence: []}

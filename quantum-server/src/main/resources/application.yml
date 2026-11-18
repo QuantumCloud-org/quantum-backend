@@ -27,8 +27,7 @@ spring:
   autoconfigure:
     exclude:
       - org.springframework.boot.devtools.autoconfigure.DevToolsDataSourceAutoConfiguration
-      # cache.mode=local 时禁用 Redisson 自动装配，避免启动时连接不存在的 Redis
-      # 切换为 redis 模式时删除以下两行，并在对应 profile 配置 spring.data.redis.*
+      # RedisConfig 仅在 cache.mode=redis 时导入 Redisson。
       - org.redisson.spring.starter.RedissonAutoConfigurationV4
       - org.redisson.spring.starter.RedissonAutoConfigurationV2
 
@@ -92,6 +91,7 @@ security:
     - http://localhost:5173
     - http://127.0.0.1:5173
   refresh-cookie-secure: false
+  refresh-cookie-path: /api/auth
   xss-enabled: true
   # 允许传 HTML 的富文本字段接口
   #xss-excludes:

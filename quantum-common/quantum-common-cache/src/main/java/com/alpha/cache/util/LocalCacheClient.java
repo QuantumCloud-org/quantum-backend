@@ -1,518 +1,270 @@
 package com.alpha.cache.util;
 
+import com.alpha.cache.constant.CacheKeyConstant;
 import com.github.benmanes.caffeine.cache.Cache;
 import com.github.benmanes.caffeine.cache.Caffeine;
 import com.github.benmanes.caffeine.cache.Expiry;
-import lombok.extern.slf4j.Slf4j;
-import org.jspecify.annotations.NonNull;
+import com.github.benmanes.caffeine.cache.Scheduler;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 
 import java.time.Duration;
-import java.util.*;
-import java.util.concurrent.*;
-import java.util.concurrent.atomic.AtomicLong;
-import java.util.function.Supplier;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
-/**
- * 本地 Caffeine 缓存实现，用于无 Redis 环境（{@code cache.mode=local}）。
- * <p>
- * - KV + 变长 TTL：Caffeine variable expiry + expiryNanos 辅助追踪
- * - Hash：ConcurrentHashMap&lt;field, value&gt;
- * - List：ConcurrentLinkedDeque（thread-safe 双端队列）
- * - Set：ConcurrentHashMap keySet
- * - ZSet：member→score map，查询时按 score 排序
- * - 原子计数：AtomicLong（独立 counters map，通过 get/expire/delete 统一访问）
- * - 限流：TokenBucket（固定窗口令牌桶，纯 Java 无外部依赖）
- * <p>
- * <b>已知限制</b>：Hash/List/Set/ZSet 的过期时间采用懒惰清理（访问时检查）。
- * 后台定时清理不在当前实现范围内，适用于本地开发/测试环境。
- */
-@Slf4j
+/** In-process cache with bounded storage and per-key expiration. */
+@ConditionalOnProperty(name = "cache.mode", havingValue = "local")
 public class LocalCacheClient implements CacheClient {
 
-    /** key → 绝对过期时刻（System.nanoTime 纳秒），所有存储类型共享。无过期时不存在。 */
-    private final ConcurrentHashMap<String, Long> expiryNanos = new ConcurrentHashMap<>();
-
-    private final Cache<String, Object> kvCache = Caffeine.newBuilder()
+    private final Cache<String, Entry> cache = Caffeine.newBuilder()
             .maximumSize(50_000)
-            .expireAfter(new Expiry<String, Object>() {
+            .scheduler(Scheduler.systemScheduler())
+            .expireAfter(new Expiry<String, Entry>() {
                 @Override
-                public long expireAfterCreate(@NonNull String key, @NonNull Object value, long currentTime) {
-                    Long abs = expiryNanos.get(key);
-                    return abs == null ? Long.MAX_VALUE : Math.max(0L, abs - currentTime);
+                public long expireAfterCreate(String key, Entry entry, long now) {
+                    return remaining(entry, now);
                 }
 
                 @Override
-                public long expireAfterUpdate(@NonNull String key, @NonNull Object value,
-                                              long currentTime, long currentDuration) {
-                    Long abs = expiryNanos.get(key);
-                    return abs == null ? Long.MAX_VALUE : Math.max(0L, abs - currentTime);
+                public long expireAfterUpdate(String key, Entry entry, long now, long duration) {
+                    return remaining(entry, now);
                 }
 
                 @Override
-                public long expireAfterRead(@NonNull String key, @NonNull Object value,
-                                            long currentTime, long currentDuration) {
-                    return currentDuration;
+                public long expireAfterRead(String key, Entry entry, long now, long duration) {
+                    return duration;
                 }
-            })
-            .removalListener((key, value, cause) -> {
-                if (key != null) expiryNanos.remove(key);
             })
             .build();
 
-    /** Hash 存储：redisKey → (field → value) */
-    private final ConcurrentHashMap<String, ConcurrentHashMap<String, Object>> hashStore = new ConcurrentHashMap<>();
+    private final Cache<String, TokenBucket> limiters = Caffeine.newBuilder()
+            .maximumSize(50_000)
+            .scheduler(Scheduler.systemScheduler())
+            .expireAfterAccess(Duration.ofMinutes(5))
+            .build();
 
-    /** List 存储：redisKey → deque（左=头部=lPush端，右=尾部=rPush端） */
-    private final ConcurrentHashMap<String, ConcurrentLinkedDeque<Object>> listStore = new ConcurrentHashMap<>();
-
-    /** Set 集合存储：redisKey → 线程安全 Set */
-    private final ConcurrentHashMap<String, Set<Object>> setStore = new ConcurrentHashMap<>();
-
-    /** ZSet 存储：redisKey → (member → score) */
-    private final ConcurrentHashMap<String, ConcurrentHashMap<Object, Double>> zsetStore = new ConcurrentHashMap<>();
-
-    /**
-     * 原子计数器。与 kvCache 相互独立，但共享 expiryNanos 做 TTL 追踪。
-     * get/expire/delete/exists 会统一查询两者，保证调用方视角一致。
-     */
-    private final ConcurrentHashMap<String, AtomicLong> counters = new ConcurrentHashMap<>();
-
-    /** 限流器 */
-    private final ConcurrentHashMap<String, TokenBucket> rateLimiters = new ConcurrentHashMap<>();
-
-    // ==================== 基础 KV ====================
+    // Generation loss invalidates the affected sessions. Keep it independent of general cache traffic.
+    private final Cache<String, Entry> sessionGenerations = Caffeine.newBuilder().maximumSize(50_000).build();
 
     @Override
-    public <T> void set(String key, T value, Duration expire) {
-        recordExpiry(key, expire);
-        kvCache.put(key, value);
+    public <T> void set(String key, T value, Duration ttl) {
+        store(key).put(key, entry(value, ttl));
     }
 
-    /**
-     * 先查 kvCache，再查 counters（返回 Integer 以兼容 `Integer x = cacheClient.get(key)` 调用）。
-     * Counter 过期时惰性清理。
-     */
     @Override
     @SuppressWarnings("unchecked")
     public <T> T get(String key) {
-        Object val = kvCache.getIfPresent(key);
-        if (val != null) return (T) val;
-
-        AtomicLong counter = counters.get(key);
-        if (counter != null) {
-            if (isCounterExpired(key)) return null;
-            // 以 Integer 返回以兼容 Redis 小整数反序列化行为
-            return (T) (Integer) (int) counter.get();
-        }
-        return null;
+        Entry entry = store(key).getIfPresent(key);
+        return entry == null ? null : (T) entry.value();
     }
 
     @Override
-    public <T> T getOrLoad(String key, Supplier<T> loader, Duration expire) {
-        T v = get(key);
-        if (v == null) {
-            v = loader.get();
-            if (v != null) set(key, v, expire);
+    public <T> Map<String, T> getAll(Collection<String> keys) {
+        Map<String, T> values = new LinkedHashMap<>();
+        for (String key : keys) {
+            T value = get(key);
+            if (value != null) {
+                values.put(key, value);
+            }
         }
-        return v;
+        return values;
+    }
+
+    @Override
+    public boolean replaceIfPresent(String key, Object value, Duration ttl) {
+        return store(key).asMap().computeIfPresent(key, (name, previous) -> new Entry(value, previous.expiresAt())) != null;
+    }
+
+    @Override
+    public boolean compareAndSet(String key, String expected, String replacement, Duration ttl) {
+        Entry next = entry(replacement, ttl);
+        return store(key).asMap().computeIfPresent(key, (name, old) -> expected.equals(old.value()) ? next : old) == next;
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> T getAndDelete(String key) {
-        Object value = kvCache.asMap().remove(key);
-        expiryNanos.remove(key);
-        counters.remove(key);
-        hashStore.remove(key);
-        listStore.remove(key);
-        setStore.remove(key);
-        zsetStore.remove(key);
-        return (T) value;
+        Entry old = store(key).asMap().remove(key);
+        return old == null ? null : (T) old.value();
     }
 
     @Override
     public void delete(String key) {
-        kvCache.invalidate(key);
-        expiryNanos.remove(key);
-        // 清理所有次级存储，保证 delete 语义一致
-        counters.remove(key);
-        hashStore.remove(key);
-        listStore.remove(key);
-        setStore.remove(key);
-        zsetStore.remove(key);
-    }
-
-    @Override
-    public void deleteKeysByPattern(String pattern) {
-        Pattern p = globToPattern(pattern);
-        kvCache.asMap().keySet().removeIf(k -> p.matcher(k).matches());
-        expiryNanos.keySet().removeIf(k -> p.matcher(k).matches());
-        counters.keySet().removeIf(k -> p.matcher(k).matches());
-        hashStore.keySet().removeIf(k -> p.matcher(k).matches());
-        listStore.keySet().removeIf(k -> p.matcher(k).matches());
-        setStore.keySet().removeIf(k -> p.matcher(k).matches());
-        zsetStore.keySet().removeIf(k -> p.matcher(k).matches());
+        store(key).invalidate(key);
     }
 
     @Override
     public boolean exists(String key) {
-        if (kvCache.getIfPresent(key) != null) return true;
-        if (counters.containsKey(key) && !isCounterExpired(key)) return true;
-        return hashStore.containsKey(key) || listStore.containsKey(key)
-                || setStore.containsKey(key) || zsetStore.containsKey(key);
+        return store(key).getIfPresent(key) != null;
     }
 
     @Override
-    public boolean expire(String key, Duration expire) {
-        boolean existsInKv = kvCache.getIfPresent(key) != null;
-        boolean existsInCounters = counters.containsKey(key);
-        boolean existsInSecondary = hashStore.containsKey(key) || listStore.containsKey(key)
-                || setStore.containsKey(key) || zsetStore.containsKey(key);
-
-        if (!existsInKv && !existsInCounters && !existsInSecondary) return false;
-        recordExpiry(key, expire);
-        // kvCache 需要 re-put 才能触发 expireAfterUpdate
-        Object value = kvCache.getIfPresent(key);
-        if (value != null) kvCache.put(key, value);
-        return true;
+    public boolean expire(String key, Duration ttl) {
+        return store(key).asMap().computeIfPresent(key, (name, existing) -> entry(existing.value(), ttl)) != null;
     }
 
     @Override
     public long getExpire(String key) {
-        Long abs = expiryNanos.get(key);
-        if (abs == null) return -1L;
-        long remaining = abs - System.nanoTime();
-        return remaining > 0 ? TimeUnit.NANOSECONDS.toSeconds(remaining) : -1L;
+        Entry current = store(key).getIfPresent(key);
+        return current == null || current.expiresAt() == Long.MAX_VALUE
+                ? -1 : TimeUnit.NANOSECONDS.toSeconds(Math.max(0, current.expiresAt() - System.nanoTime()));
     }
 
     @Override
-    public boolean setIfAbsent(String key, Object value, Duration expire) {
-        boolean[] wrote = {false};
-        kvCache.asMap().compute(key, (k, existing) -> {
-            if (existing != null) {
-                Long abs = expiryNanos.get(k);
-                if (abs != null && System.nanoTime() > abs) {
-                    recordExpiry(k, expire);
-                    wrote[0] = true;
-                    return value;
-                }
-                return existing;
-            }
-            recordExpiry(k, expire);
-            wrote[0] = true;
-            return value;
-        });
-        return wrote[0];
+    public boolean setIfAbsent(String key, Object value, Duration ttl) {
+        return store(key).asMap().putIfAbsent(key, entry(value, ttl)) == null;
     }
-
-    // ==================== 原子计数 ====================
 
     @Override
     public long increment(String key) {
-        return increment(key, 1L);
+        return increment(key, 1);
     }
 
-    /**
-     * 若 key 在 expiryNanos 中已过期，先重置计数器再递增（惰性过期）。
-     */
     @Override
     public long increment(String key, long delta) {
-        if (isCounterExpired(key)) {
-            counters.remove(key);
-        }
-        return counters.computeIfAbsent(key, k -> new AtomicLong(0)).addAndGet(delta);
+        Entry updated = cache.asMap().compute(key, (name, old) -> {
+            long value = old == null ? delta : ((Number) old.value()).longValue() + delta;
+            Number number;
+            if (value >= Integer.MIN_VALUE && value <= Integer.MAX_VALUE) {
+                number = (int) value;
+            } else {
+                number = value;
+            }
+            return new Entry(number, old == null ? Long.MAX_VALUE : old.expiresAt());
+        });
+        return ((Number) updated.value()).longValue();
     }
-
-    // ==================== Hash 操作 ====================
-
-    @Override
-    public <T> void hSet(String key, String field, T value) {
-        hashStore.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(field, value);
-    }
-
-    @Override
-    public void hSetAll(String key, Map<String, Object> map) {
-        hashStore.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).putAll(map);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T hGet(String key, String field) {
-        if (checkAndCleanExpiredSecondary(key, hashStore)) return null;
-        ConcurrentHashMap<String, Object> hash = hashStore.get(key);
-        return hash == null ? null : (T) hash.get(field);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> Map<String, T> hGetAll(String key) {
-        if (checkAndCleanExpiredSecondary(key, hashStore)) return Collections.emptyMap();
-        ConcurrentHashMap<String, Object> hash = hashStore.get(key);
-        return hash == null ? Collections.emptyMap() : (Map<String, T>) new HashMap<>(hash);
-    }
-
-    @Override
-    public boolean hDelete(String key, String... fields) {
-        ConcurrentHashMap<String, Object> hash = hashStore.get(key);
-        if (hash == null) return false;
-        boolean removed = false;
-        for (String field : fields) {
-            removed |= hash.remove(field) != null;
-        }
-        return removed;
-    }
-
-    @Override
-    public boolean hExists(String key, String field) {
-        if (checkAndCleanExpiredSecondary(key, hashStore)) return false;
-        ConcurrentHashMap<String, Object> hash = hashStore.get(key);
-        return hash != null && hash.containsKey(field);
-    }
-
-    // ==================== List 操作 ====================
-
-    @Override
-    public <T> void lPush(String key, T value) {
-        listStore.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).addFirst(value);
-    }
-
-    @Override
-    public <T> void rPush(String key, T value) {
-        listStore.computeIfAbsent(key, k -> new ConcurrentLinkedDeque<>()).addLast(value);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T lPop(String key) {
-        if (checkAndCleanExpiredSecondary(key, listStore)) return null;
-        ConcurrentLinkedDeque<Object> deque = listStore.get(key);
-        return deque == null ? null : (T) deque.pollFirst();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> T rPop(String key) {
-        if (checkAndCleanExpiredSecondary(key, listStore)) return null;
-        ConcurrentLinkedDeque<Object> deque = listStore.get(key);
-        return deque == null ? null : (T) deque.pollLast();
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> List<T> lRange(String key, int start, int end) {
-        if (checkAndCleanExpiredSecondary(key, listStore)) return Collections.emptyList();
-        ConcurrentLinkedDeque<Object> deque = listStore.get(key);
-        if (deque == null) return Collections.emptyList();
-
-        List<Object> snapshot = new ArrayList<>(deque);
-        int size = snapshot.size();
-        int s = start < 0 ? Math.max(0, size + start) : start;
-        int e = end < 0 ? size + end : Math.min(end, size - 1);
-
-        if (s > e || s >= size) return Collections.emptyList();
-        return (List<T>) new ArrayList<>(snapshot.subList(s, e + 1));
-    }
-
-    @Override
-    public long lSize(String key) {
-        if (checkAndCleanExpiredSecondary(key, listStore)) return 0L;
-        ConcurrentLinkedDeque<Object> deque = listStore.get(key);
-        return deque == null ? 0L : deque.size();
-    }
-
-    // ==================== Set 集合 ====================
 
     @Override
     @SafeVarargs
     public final <T> void sAdd(String key, T... values) {
-        setStore.computeIfAbsent(key, k -> ConcurrentHashMap.newKeySet())
-                .addAll(Arrays.asList(values));
+        cache.asMap().compute(key, (name, old) -> {
+            Entry updated = old == null ? new Entry(ConcurrentHashMap.newKeySet(), Long.MAX_VALUE) : old;
+            asSet(updated.value()).addAll(Arrays.asList(values));
+            return updated;
+        });
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> Set<T> sMembers(String key) {
-        if (checkAndCleanExpiredSecondary(key, setStore)) return Collections.emptySet();
-        Set<Object> s = setStore.get(key);
-        return s == null ? Collections.emptySet() : (Set<T>) new HashSet<>(s);
-    }
-
-    @Override
-    public <T> boolean sIsMember(String key, T value) {
-        if (checkAndCleanExpiredSecondary(key, setStore)) return false;
-        Set<Object> s = setStore.get(key);
-        return s != null && s.contains(value);
+        Object members = get(key);
+        return members == null ? Set.of() : Set.copyOf((Set<T>) members);
     }
 
     @Override
     public <T> boolean sRemove(String key, T value) {
-        Set<Object> s = setStore.get(key);
-        return s != null && s.remove(value);
+        Set<Object> members = get(key);
+        return members != null && members.remove(value);
     }
-
-    @Override
-    @SafeVarargs
-    public final <T> boolean sRemove(String key, T... values) {
-        Set<Object> s = setStore.get(key);
-        return s != null && s.removeAll(Arrays.asList(values));
-    }
-
-    // ==================== ZSet 有序集合 ====================
 
     @Override
     public <T> void zAdd(String key, T value, double score) {
-        zsetStore.computeIfAbsent(key, k -> new ConcurrentHashMap<>()).put(value, score);
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> Collection<T> zRange(String key, int start, int end) {
-        if (checkAndCleanExpiredSecondary(key, zsetStore)) return Collections.emptyList();
-        ConcurrentHashMap<Object, Double> scores = zsetStore.get(key);
-        if (scores == null) return Collections.emptyList();
-
-        List<Map.Entry<Object, Double>> entries = new ArrayList<>(scores.entrySet());
-        entries.sort(Map.Entry.comparingByValue());
-
-        int size = entries.size();
-        int s = start < 0 ? Math.max(0, size + start) : start;
-        int e = end < 0 ? size + end : Math.min(end, size - 1);
-
-        if (s > e || s >= size) return Collections.emptyList();
-
-        List<T> result = new ArrayList<>();
-        for (int i = s; i <= e; i++) {
-            result.add((T) entries.get(i).getKey());
-        }
-        return result;
+        cache.asMap().compute(key, (name, old) -> {
+            Entry updated = old == null ? new Entry(new ConcurrentHashMap<>(), Long.MAX_VALUE) : old;
+            asScores(updated.value()).put(value, score);
+            return updated;
+        });
     }
 
     @Override
     @SuppressWarnings("unchecked")
     public <T> Collection<T> zRangeByScore(String key, double min, double max) {
-        if (checkAndCleanExpiredSecondary(key, zsetStore)) return Collections.emptyList();
-        ConcurrentHashMap<Object, Double> scores = zsetStore.get(key);
-        if (scores == null) return Collections.emptyList();
-
+        Map<Object, Double> scores = get(key);
+        if (scores == null) {
+            return List.of();
+        }
         return scores.entrySet().stream()
                 .filter(e -> e.getValue() >= min && e.getValue() <= max)
                 .sorted(Map.Entry.comparingByValue())
                 .map(e -> (T) e.getKey())
-                .collect(Collectors.toList());
-    }
-
-    @Override
-    @SuppressWarnings("unchecked")
-    public <T> Double zScore(String key, T value) {
-        if (checkAndCleanExpiredSecondary(key, zsetStore)) return null;
-        ConcurrentHashMap<Object, Double> scores = zsetStore.get(key);
-        return scores == null ? null : scores.get(value);
+                .toList();
     }
 
     @Override
     public boolean zRemove(String key, Object value) {
-        ConcurrentHashMap<Object, Double> scores = zsetStore.get(key);
+        Map<Object, Double> scores = get(key);
         return scores != null && scores.remove(value) != null;
     }
 
     @Override
     public long zSize(String key) {
-        if (checkAndCleanExpiredSecondary(key, zsetStore)) return 0L;
-        ConcurrentHashMap<Object, Double> scores = zsetStore.get(key);
-        return scores == null ? 0L : scores.size();
+        Map<Object, Double> scores = get(key);
+        return scores == null ? 0 : scores.size();
     }
 
-    // ==================== 限流 ====================
+    @Override
+    public void zRemoveThrough(String key, double maxScore) {
+        Map<Object, Double> scores = get(key);
+        if (scores != null) {
+            scores.forEach((value, score) -> {
+                if (score <= maxScore) {
+                    scores.remove(value, score);
+                }
+            });
+        }
+    }
 
     @Override
     public boolean tryAcquire(String key, long rate, long interval) {
-        return rateLimiters.computeIfAbsent(key, k -> new TokenBucket(rate, interval)).tryAcquire();
+        return limiters.get(key, name -> new TokenBucket(rate, Duration.ofSeconds(interval).toNanos()))
+                .tryAcquire();
     }
 
-    // ==================== 内部工具 ====================
-
-    private void recordExpiry(String key, Duration expire) {
-        if (expire != null && !expire.isNegative() && !expire.isZero()) {
-            expiryNanos.put(key, System.nanoTime() + expire.toNanos());
-        } else {
-            expiryNanos.remove(key);
-        }
+    private static Entry entry(Object value, Duration ttl) {
+        return new Entry(value, ttl == null ? Long.MAX_VALUE : System.nanoTime() + ttl.toNanos());
     }
 
-    /**
-     * 判断 counter key 是否已过期，并惰性清理 counters + expiryNanos。
-     */
-    private boolean isCounterExpired(String key) {
-        Long abs = expiryNanos.get(key);
-        if (abs == null) return false;
-        if (System.nanoTime() > abs) {
-            counters.remove(key);
-            expiryNanos.remove(key);
-            return true;
-        }
-        return false;
+    private Cache<String, Entry> store(String key) {
+        return key.startsWith(CacheKeyConstant.AUTH_SESSION_GENERATION) ? sessionGenerations : cache;
     }
 
-    /**
-     * 对次级存储（Hash/List/Set/ZSet）做惰性过期检查。
-     * 若 key 已过期，从该存储中移除并返回 true。
-     */
-    private <V> boolean checkAndCleanExpiredSecondary(String key, ConcurrentHashMap<String, V> store) {
-        Long abs = expiryNanos.get(key);
-        if (abs != null && System.nanoTime() > abs) {
-            store.remove(key);
-            expiryNanos.remove(key);
-            return true;
-        }
-        return false;
+    private static long remaining(Entry entry, long now) {
+        return entry.expiresAt() == Long.MAX_VALUE ? Long.MAX_VALUE : Math.max(0, entry.expiresAt() - now);
     }
 
-    /** 将 Redis glob 模式转为 Java 正则（仅处理 {@code *} 和 {@code ?}）。 */
-    private static Pattern globToPattern(String glob) {
-        StringBuilder sb = new StringBuilder("^");
-        for (char c : glob.toCharArray()) {
-            switch (c) {
-                case '*' -> sb.append(".*");
-                case '?' -> sb.append('.');
-                case '.', '(', ')', '[', ']', '{', '}', '+', '|', '^', '$', '\\' ->
-                        sb.append('\\').append(c);
-                default -> sb.append(c);
-            }
-        }
-        sb.append('$');
-        return Pattern.compile(sb.toString());
+    @SuppressWarnings("unchecked")
+    private static Set<Object> asSet(Object value) {
+        return (Set<Object>) value;
     }
 
-    /**
-     * 纯 Java 固定窗口令牌桶，无外部依赖。
-     * 每 intervalSeconds 秒重置为 rate 个令牌。
-     */
+    @SuppressWarnings("unchecked")
+    private static Map<Object, Double> asScores(Object value) {
+        return (Map<Object, Double>) value;
+    }
+
+    private record Entry(Object value, long expiresAt) {
+    }
+
     private static final class TokenBucket {
-        private final long maxTokens;
-        private final long intervalNanos;
-        private final AtomicLong tokens;
-        private final AtomicLong windowStart;
+        private final long rate;
+        private final long windowNanos;
+        private long remaining;
+        private long startedAt;
 
-        TokenBucket(long rate, long intervalSeconds) {
-            this.maxTokens = rate;
-            this.intervalNanos = intervalSeconds * 1_000_000_000L;
-            this.tokens = new AtomicLong(rate);
-            this.windowStart = new AtomicLong(System.nanoTime());
+        private TokenBucket(long rate, long windowNanos) {
+            this.rate = rate;
+            this.windowNanos = windowNanos;
+            this.remaining = rate;
+            this.startedAt = System.nanoTime();
         }
 
-        boolean tryAcquire() {
-            refillIfNeeded();
-            return tokens.getAndUpdate(t -> t > 0 ? t - 1 : 0) > 0;
-        }
-
-        private void refillIfNeeded() {
+        private synchronized boolean tryAcquire() {
             long now = System.nanoTime();
-            long start = windowStart.get();
-            if (now - start >= intervalNanos && windowStart.compareAndSet(start, now)) {
-                tokens.set(maxTokens);
+            if (now - startedAt >= windowNanos) {
+                startedAt = now;
+                remaining = rate;
             }
+            if (remaining <= 0) {
+                return false;
+            }
+            remaining--;
+            return true;
         }
     }
 }

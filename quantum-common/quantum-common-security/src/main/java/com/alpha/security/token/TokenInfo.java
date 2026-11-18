@@ -22,6 +22,11 @@ public class TokenInfo implements Serializable {
      */
     private String accessToken;
 
+    private int expiresIn;
+
+    /** Stable across refresh rotations for one Web login. */
+    private String sessionId;
+
     /**
      * Refresh Token
      */

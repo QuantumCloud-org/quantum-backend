@@ -1,17 +1,17 @@
 package com.alpha.system.service.impl;
 
-import com.alpha.cache.util.CacheClient;
-import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.security.token.TokenService;
 import com.alpha.system.dto.response.OnlineUser;
+import com.alpha.system.security.ForceLogoutEvent;
 import com.alpha.system.service.ISysOnlineService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
-import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 在线用户服务实现
@@ -21,31 +21,19 @@ import java.util.List;
 @RequiredArgsConstructor
 public class SysOnlineServiceImpl implements ISysOnlineService {
 
-    private final CacheClient cacheClient;
     private final TokenService tokenService;
+    private final ApplicationEventPublisher events;
 
     @Override
     public List<OnlineUser> getOnlineUsers() {
-        List<OnlineUser> onlineUsers = new ArrayList<>();
-
-        for (String tokenKey : cacheClient.<String>sMembers(CommonConstants.ONLINE_TOKENS_KEY)) {
-            try {
-                LoginUser loginUser = cacheClient.get(tokenKey);
-                if (loginUser != null) {
-                    onlineUsers.add(convertToOnlineUser(loginUser, extractTokenId(tokenKey)));
-                } else {
-                    cacheClient.sRemove(CommonConstants.ONLINE_TOKENS_KEY, tokenKey);
-                }
-            } catch (Exception e) {
-                log.warn("解析在线用户信息失败: {}", tokenKey, e);
-            }
-        }
-        return onlineUsers;
+        return tokenService.getOnlineSessions().entrySet().stream()
+                .map(entry -> convertToOnlineUser(entry.getValue(), TokenService.tokenIdOf(entry.getKey())))
+                .toList();
     }
 
     @Override
     public long getOnlineCount() {
-        return cacheClient.sMembers(CommonConstants.ONLINE_TOKENS_KEY).size();
+        return tokenService.getOnlineCount();
     }
 
     @Override
@@ -56,7 +44,7 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
 
     @Override
     public void forceLogoutByUserId(Long userId) {
-        tokenService.kickOut(userId);
+        events.publishEvent(new ForceLogoutEvent(Set.of(userId)));
         log.info("强制下线用户 | UserId: {}", userId);
     }
 
@@ -81,10 +69,4 @@ public class SysOnlineServiceImpl implements ISysOnlineService {
         return tokenId.substring(0, 4) + "****" + tokenId.substring(tokenId.length() - 4);
     }
 
-    private String extractTokenId(String tokenKey) {
-        String prefix = CommonConstants.REDIS_TOKEN_PREFIX + "access:";
-        return tokenKey != null && tokenKey.startsWith(prefix)
-                ? tokenKey.substring(prefix.length())
-                : tokenKey;
-    }
 }

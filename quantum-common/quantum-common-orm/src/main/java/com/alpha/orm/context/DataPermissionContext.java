@@ -45,13 +45,6 @@ public class DataPermissionContext {
     }
 
     /**
-     * 判断是否有数据权限设置
-     */
-    public static boolean hasPermission() {
-        return PERMISSION_HOLDER.get() != null;
-    }
-
-    /**
      * 数据权限信息
      */
     @Data
@@ -90,32 +83,5 @@ public class DataPermissionContext {
          * 表别名（多表查询时使用）
          */
         private String tableAlias = "";
-
-        /**
-         * 获取完整的部门字段名（带表别名）
-         */
-        public String getFullDeptField() {
-            if (tableAlias != null && !tableAlias.isEmpty()) {
-                return tableAlias + "." + deptField;
-            }
-            return deptField;
-        }
-
-        /**
-         * 获取完整的用户字段名（带表别名）
-         */
-        public String getFullUserField() {
-            if (tableAlias != null && !tableAlias.isEmpty()) {
-                return tableAlias + "." + userField;
-            }
-            return userField;
-        }
-
-        /**
-         * 是否需要过滤数据
-         */
-        public boolean needFilter() {
-            return dataScopeType != null && dataScopeType != DataScopeType.ALL;
-        }
     }
 }

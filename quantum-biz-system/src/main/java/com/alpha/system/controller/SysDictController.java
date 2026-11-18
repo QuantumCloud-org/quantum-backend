@@ -5,10 +5,15 @@ import com.alpha.logging.annotation.SystemLog;
 import com.alpha.logging.enums.BusinessType;
 import com.alpha.orm.entity.PageResult;
 import com.alpha.security.annotation.RequiresPermission;
+import com.alpha.system.convert.DictConvert;
 import com.alpha.system.domain.SysDictData;
 import com.alpha.system.domain.SysDictType;
+import com.alpha.system.dto.request.DictDataCreateRequest;
 import com.alpha.system.dto.request.DictDataQuery;
+import com.alpha.system.dto.request.DictDataUpdateRequest;
+import com.alpha.system.dto.request.DictTypeCreateRequest;
 import com.alpha.system.dto.request.DictTypeQuery;
+import com.alpha.system.dto.request.DictTypeUpdateRequest;
 import com.alpha.system.service.ISysDictDataService;
 import com.alpha.system.service.ISysDictTypeService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -61,16 +66,16 @@ public class SysDictController {
     @SystemLog(title = "字典类型", businessType = BusinessType.INSERT)
     @RequiresPermission("system:dict:add")
     @PostMapping("/type")
-    public Result<Long> addType(@Validated @RequestBody SysDictType dictType) {
-        return Result.ok(dictTypeService.insertDictType(dictType));
+    public Result<Long> addType(@Validated @RequestBody DictTypeCreateRequest request) {
+        return Result.ok(dictTypeService.insertDictType(DictConvert.toEntity(request)));
     }
 
     @Operation(summary = "修改字典类型")
     @SystemLog(title = "字典类型", businessType = BusinessType.UPDATE)
     @RequiresPermission("system:dict:edit")
     @PutMapping("/type")
-    public Result<Void> editType(@Validated @RequestBody SysDictType dictType) {
-        dictTypeService.updateDictType(dictType);
+    public Result<Void> editType(@Validated @RequestBody DictTypeUpdateRequest request) {
+        dictTypeService.updateDictType(DictConvert.toEntity(request));
         return Result.ok();
     }
 
@@ -98,8 +103,8 @@ public class SysDictController {
     @SystemLog(title = "字典数据", businessType = BusinessType.SELECT)
     @RequiresPermission("system:dict:listData")
     @GetMapping("/data/list")
-    public Result<List<SysDictData>> listData(@Validated DictDataQuery query) {
-        return Result.ok(dictDataService.selectDictDataPage(query));
+    public Result<PageResult<SysDictData>> listData(@Validated DictDataQuery query) {
+        return Result.ok(PageResult.of(dictDataService.selectDictDataPage(query)));
     }
 
     @Operation(summary = "根据字典类型查询字典数据")
@@ -122,16 +127,16 @@ public class SysDictController {
     @SystemLog(title = "字典数据", businessType = BusinessType.INSERT)
     @RequiresPermission("system:dict:add")
     @PostMapping("/data")
-    public Result<Long> addData(@Validated @RequestBody SysDictData dictData) {
-        return Result.ok(dictDataService.insertDictData(dictData));
+    public Result<Long> addData(@Validated @RequestBody DictDataCreateRequest request) {
+        return Result.ok(dictDataService.insertDictData(DictConvert.toEntity(request)));
     }
 
     @Operation(summary = "修改字典数据")
     @SystemLog(title = "字典数据", businessType = BusinessType.UPDATE)
     @RequiresPermission("system:dict:edit")
     @PutMapping("/data")
-    public Result<Void> editData(@Validated @RequestBody SysDictData dictData) {
-        dictDataService.updateDictData(dictData);
+    public Result<Void> editData(@Validated @RequestBody DictDataUpdateRequest request) {
+        dictDataService.updateDictData(DictConvert.toEntity(request));
         return Result.ok();
     }
 

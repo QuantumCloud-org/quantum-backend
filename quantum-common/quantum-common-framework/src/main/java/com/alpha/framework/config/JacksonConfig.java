@@ -1,8 +1,10 @@
 package com.alpha.framework.config;
 
 import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.util.XssCleaner;
+import org.springframework.web.context.request.RequestAttributes;
+import org.springframework.web.context.request.RequestContextHolder;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -16,9 +18,16 @@ import tools.jackson.databind.SerializationContext;
 import tools.jackson.databind.SerializationFeature;
 import tools.jackson.databind.cfg.DateTimeFeature;
 import tools.jackson.databind.deser.std.StdDeserializer;
+import tools.jackson.databind.ext.javatime.ser.LocalDateSerializer;
+import tools.jackson.databind.ext.javatime.deser.LocalDateDeserializer;
+import tools.jackson.databind.ext.javatime.ser.LocalTimeSerializer;
+import tools.jackson.databind.ext.javatime.deser.LocalTimeDeserializer;
+import tools.jackson.databind.ext.javatime.ser.LocalDateTimeSerializer;
+import tools.jackson.databind.ext.javatime.deser.LocalDateTimeDeserializer;
 import tools.jackson.databind.json.JsonMapper;
 import tools.jackson.databind.module.SimpleModule;
 import tools.jackson.databind.ser.std.StdSerializer;
+import tools.jackson.databind.ser.std.ToStringSerializer;
 
 import java.math.BigDecimal;
 import java.math.BigInteger;
@@ -33,9 +42,6 @@ import java.util.TimeZone;
  */
 @Configuration(proxyBeanMethods = false)
 public class JacksonConfig {
-
-    @Value("${security.xss-enabled:true}")
-    private boolean xssEnabled;
 
     @Bean
     @Primary
@@ -55,11 +61,8 @@ public class JacksonConfig {
                         inclusion.withValueInclusion(JsonInclude.Include.NON_NULL)
                 )
                 .addModule(customDateTimeModule())
-                .addModule(numericModule());
-
-        if (xssEnabled) {
-            builder.addModule(xssModule());
-        }
+                .addModule(numericModule())
+                .addModule(xssModule());
 
         return builder.build();
     }
@@ -71,21 +74,21 @@ public class JacksonConfig {
         DateTimeFormatter timeFormatter = DateTimeFormatter.ofPattern(CommonConstants.TIME_PATTERN);
         DateTimeFormatter dateTimeFormatter = DateTimeFormatter.ofPattern(CommonConstants.DATETIME_PATTERN);
 
-        module.addSerializer(LocalDate.class, new CustomLocalDateSerializer(dateFormatter));
-        module.addDeserializer(LocalDate.class, new CustomLocalDateDeserializer(dateFormatter));
-        module.addSerializer(LocalTime.class, new CustomLocalTimeSerializer(timeFormatter));
-        module.addDeserializer(LocalTime.class, new CustomLocalTimeDeserializer(timeFormatter));
-        module.addSerializer(LocalDateTime.class, new CustomLocalDateTimeSerializer(dateTimeFormatter));
-        module.addDeserializer(LocalDateTime.class, new CustomLocalDateTimeDeserializer(dateTimeFormatter));
+        module.addSerializer(LocalDate.class, new LocalDateSerializer(dateFormatter));
+        module.addDeserializer(LocalDate.class, new LocalDateDeserializer(dateFormatter));
+        module.addSerializer(LocalTime.class, new LocalTimeSerializer(timeFormatter));
+        module.addDeserializer(LocalTime.class, new LocalTimeDeserializer(timeFormatter));
+        module.addSerializer(LocalDateTime.class, new LocalDateTimeSerializer(dateTimeFormatter));
+        module.addDeserializer(LocalDateTime.class, new LocalDateTimeDeserializer(dateTimeFormatter));
 
         return module;
     }
 
     private SimpleModule numericModule() {
         SimpleModule module = new SimpleModule("NumericModule");
-        module.addSerializer(Long.class, new LongToStringSerializer());
-        module.addSerializer(long.class, new LongToStringSerializer());
-        module.addSerializer(BigInteger.class, new BigIntegerToStringSerializer());
+        module.addSerializer(Long.class, ToStringSerializer.instance);
+        module.addSerializer(long.class, ToStringSerializer.instance);
+        module.addSerializer(BigInteger.class, ToStringSerializer.instance);
         module.addSerializer(BigDecimal.class, new BigDecimalPlainSerializer());
         return module;
     }
@@ -94,144 +97,6 @@ public class JacksonConfig {
         SimpleModule module = new SimpleModule("XssModule");
         module.addDeserializer(String.class, new XssStringDeserializer());
         return module;
-    }
-
-    private static class CustomLocalDateSerializer extends StdSerializer<LocalDate> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalDateSerializer(DateTimeFormatter formatter) {
-            super(LocalDate.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public void serialize(LocalDate value, JsonGenerator gen, SerializationContext ctxt) {
-            if (value == null) {
-                gen.writeNull();
-            } else {
-                gen.writeString(value.format(formatter));
-            }
-        }
-    }
-
-    private static class CustomLocalDateDeserializer extends StdDeserializer<LocalDate> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalDateDeserializer(DateTimeFormatter formatter) {
-            super(LocalDate.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public LocalDate deserialize(JsonParser p, DeserializationContext ctxt) {
-            String value = p.getValueAsString();
-            if (value == null || value.isEmpty()) {
-                return null;
-            }
-            return LocalDate.parse(value, formatter);
-        }
-    }
-
-    private static class CustomLocalTimeSerializer extends StdSerializer<LocalTime> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalTimeSerializer(DateTimeFormatter formatter) {
-            super(LocalTime.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public void serialize(LocalTime value, JsonGenerator gen, SerializationContext ctxt) {
-            if (value == null) {
-                gen.writeNull();
-            } else {
-                gen.writeString(value.format(formatter));
-            }
-        }
-    }
-
-    private static class CustomLocalTimeDeserializer extends StdDeserializer<LocalTime> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalTimeDeserializer(DateTimeFormatter formatter) {
-            super(LocalTime.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public LocalTime deserialize(JsonParser p, DeserializationContext ctxt) {
-            String value = p.getValueAsString();
-            if (value == null || value.isEmpty()) {
-                return null;
-            }
-            return LocalTime.parse(value, formatter);
-        }
-    }
-
-    private static class CustomLocalDateTimeSerializer extends StdSerializer<LocalDateTime> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalDateTimeSerializer(DateTimeFormatter formatter) {
-            super(LocalDateTime.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public void serialize(LocalDateTime value, JsonGenerator gen, SerializationContext ctxt) {
-            if (value == null) {
-                gen.writeNull();
-            } else {
-                gen.writeString(value.format(formatter));
-            }
-        }
-    }
-
-    private static class CustomLocalDateTimeDeserializer extends StdDeserializer<LocalDateTime> {
-        private final DateTimeFormatter formatter;
-
-        public CustomLocalDateTimeDeserializer(DateTimeFormatter formatter) {
-            super(LocalDateTime.class);
-            this.formatter = formatter;
-        }
-
-        @Override
-        public LocalDateTime deserialize(JsonParser p, DeserializationContext ctxt) {
-            String value = p.getValueAsString();
-            if (value == null || value.isEmpty()) {
-                return null;
-            }
-            return LocalDateTime.parse(value, formatter);
-        }
-    }
-
-    private static class LongToStringSerializer extends StdSerializer<Long> {
-        public LongToStringSerializer() {
-            super(Long.class);
-        }
-
-        @Override
-        public void serialize(Long value, JsonGenerator gen, SerializationContext ctxt) {
-            if (value == null) {
-                gen.writeNull();
-            } else {
-                gen.writeString(value.toString());
-            }
-        }
-    }
-
-    private static class BigIntegerToStringSerializer extends StdSerializer<BigInteger> {
-        public BigIntegerToStringSerializer() {
-            super(BigInteger.class);
-        }
-
-        @Override
-        public void serialize(BigInteger value, JsonGenerator gen, SerializationContext ctxt) {
-            if (value == null) {
-                gen.writeNull();
-            } else {
-                gen.writeString(value.toString());
-            }
-        }
     }
 
     private static class BigDecimalPlainSerializer extends StdSerializer<BigDecimal> {
@@ -257,10 +122,12 @@ public class JacksonConfig {
         @Override
         public String deserialize(JsonParser p, DeserializationContext ctxt) {
             String value = p.getValueAsString();
-            if (value == null || value.isEmpty()) {
-                return value;
+            RequestAttributes request = RequestContextHolder.getRequestAttributes();
+            if (request != null && Boolean.TRUE.equals(request.getAttribute(
+                    XssCleaner.ENABLED_REQUEST_ATTRIBUTE, RequestAttributes.SCOPE_REQUEST))) {
+                return XssCleaner.clean(p.currentName(), value);
             }
-            return cn.hutool.http.HtmlUtil.cleanHtmlTag(value);
+            return value;
         }
     }
 }

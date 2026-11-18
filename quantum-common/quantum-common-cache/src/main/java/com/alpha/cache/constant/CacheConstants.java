@@ -44,9 +44,7 @@ public final class CacheConstants {
      */
     public static long getCaffeineMaxSize(String cacheName) {
         return switch (cacheName) {
-            case "user" -> 500L;
-            case "permission" -> 2000L;
-            case "dict", "config" -> 200L;
+            case CacheKeyConstant.SYS_DICT -> 200L;
             default -> CAFFEINE_MAX_SIZE;
         };
     }
@@ -56,10 +54,7 @@ public final class CacheConstants {
      */
     public static Duration getCaffeineExpire(String cacheName) {
         return switch (cacheName) {
-            case "user" -> Duration.ofMinutes(10);
-            case "permission" -> Duration.ofMinutes(5);
-            case "dict" -> Duration.ofMinutes(30);
-            case "config" -> Duration.ofHours(1);
+            case CacheKeyConstant.SYS_DICT -> Duration.ofMinutes(30);
             default -> CAFFEINE_EXPIRE;
         };
     }
@@ -69,9 +64,7 @@ public final class CacheConstants {
      */
     public static Duration getRedisExpire(String cacheName) {
         return switch (cacheName) {
-            case "user" -> Duration.ofHours(1);
-            case "permission" -> Duration.ofMinutes(30);
-            case "dict", "config" -> Duration.ofHours(24);
+            case CacheKeyConstant.SYS_DICT -> Duration.ofHours(24);
             default -> REDIS_EXPIRE;
         };
     }

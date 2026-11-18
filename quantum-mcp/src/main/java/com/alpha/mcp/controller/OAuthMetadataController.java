@@ -1,5 +1,7 @@
 package com.alpha.mcp.controller;
 
+import com.alpha.framework.advice.NoResultWrap;
+
 import com.alpha.mcp.config.McpProperties;
 import lombok.RequiredArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
@@ -10,6 +12,7 @@ import java.util.List;
 import java.util.Map;
 
 @RestController
+@NoResultWrap
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "ai.mcp", name = "enabled", havingValue = "true")
 public class OAuthMetadataController {

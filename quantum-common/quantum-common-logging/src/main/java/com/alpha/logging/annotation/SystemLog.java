@@ -21,7 +21,6 @@ public @interface SystemLog {
     /**
      * 方法描述
      */
-    String description() default "";
 
     /**
      * 业务类型
@@ -41,7 +40,7 @@ public @interface SystemLog {
     /**
      * 是否保存响应结果
      */
-    boolean saveResult() default true;
+    boolean saveResult() default false;
 
     /**
      * 排除的参数名称

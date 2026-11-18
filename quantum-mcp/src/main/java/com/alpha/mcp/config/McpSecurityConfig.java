@@ -21,6 +21,8 @@ import org.springframework.security.web.authentication.UsernamePasswordAuthentic
 @ConditionalOnProperty(prefix = "ai.mcp", name = "enabled", havingValue = "true")
 public class McpSecurityConfig {
 
+    public static final String MCP_PATH_PATTERN = "/mcp/**";
+
     private final OAuthBearerAuthenticationFilter oAuthBearerAuthenticationFilter;
     private final TokenAuthenticationFilter tokenAuthenticationFilter;
 
@@ -29,7 +31,7 @@ public class McpSecurityConfig {
     public SecurityFilterChain mcpSecurityFilterChain(HttpSecurity http) throws Exception {
         http
                 .securityMatcher(
-                        "/mcp/**",
+                        MCP_PATH_PATTERN,
                         "/.well-known/oauth-protected-resource",
                         "/.well-known/oauth-authorization-server",
                         "/oauth/authorize",
@@ -43,7 +45,7 @@ public class McpSecurityConfig {
                                 "/.well-known/oauth-authorization-server").permitAll()
                         .requestMatchers(HttpMethod.POST, "/oauth/token", "/oauth/revoke").permitAll()
                         .requestMatchers(HttpMethod.GET, "/oauth/authorize").authenticated()
-                        .requestMatchers("/mcp/**").authenticated()
+                        .requestMatchers(MCP_PATH_PATTERN).authenticated()
                         .anyRequest().denyAll())
                 .addFilterBefore(tokenAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(oAuthBearerAuthenticationFilter, TokenAuthenticationFilter.class);

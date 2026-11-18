@@ -3,9 +3,8 @@ package com.alpha.cache.util;
 import java.time.Duration;
 import java.util.Collection;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
-import java.util.function.Supplier;
+import java.util.Map;
 
 /**
  * 缓存客户端统一接口
@@ -15,9 +14,7 @@ import java.util.function.Supplier;
  *   <li>{@code cache.mode=redis}（默认）→ {@link RedisUtil}，L1 Caffeine + L2 Redis 双级缓存</li>
  *   <li>{@code cache.mode=local} → {@link LocalCacheClient}，纯内存，无需 Redis</li>
  * </ul>
- *
- * <b>不在此接口中的能力</b>（Redis 独有，无合理本地替代）：
- * 分布式锁、Pub/Sub、布隆过滤器、延迟队列 → 请直接注入 {@link RedisUtil}。
+
  */
 public interface CacheClient {
 
@@ -38,12 +35,13 @@ public interface CacheClient {
 
     <T> T get(String key);
 
-    default <T> T getOrDefault(String key, T defaultValue) {
-        T v = get(key);
-        return v != null ? v : defaultValue;
-    }
+    <T> Map<String, T> getAll(Collection<String> keys);
 
-    <T> T getOrLoad(String key, Supplier<T> loader, Duration expire);
+    /** Replaces a live entry without recreating a revoked or expired entry. */
+    boolean replaceIfPresent(String key, Object value, Duration ttl);
+
+    /** Replaces the expected value and resets its TTL in one operation. */
+    boolean compareAndSet(String key, String expected, String replacement, Duration ttl);
 
     /** 原子获取并删除，用于一次性消费（如 Refresh Token 防重放）。 */
     <T> T getAndDelete(String key);
@@ -51,7 +49,6 @@ public interface CacheClient {
     void delete(String key);
 
     /** 按 glob 模式批量删除（支持 {@code *} 通配符）。 */
-    void deleteKeysByPattern(String pattern);
 
     boolean exists(String key);
 
@@ -71,37 +68,19 @@ public interface CacheClient {
 
     // ==================== Hash ====================
 
-    <T> void hSet(String key, String field, T value);
-
     /** 批量写入 Hash 字段。 */
-    void hSetAll(String key, Map<String, Object> map);
-
-    <T> T hGet(String key, String field);
-
-    <T> Map<String, T> hGetAll(String key);
-
-    boolean hDelete(String key, String... fields);
-
-    boolean hExists(String key, String field);
 
     // ==================== List ====================
 
     /** 从列表左侧插入（头部）。 */
-    <T> void lPush(String key, T value);
 
     /** 从列表右侧插入（尾部）。 */
-    <T> void rPush(String key, T value);
 
     /** 从列表左侧弹出（头部），列表为空返回 null。 */
-    <T> T lPop(String key);
 
     /** 从列表右侧弹出（尾部），列表为空返回 null。 */
-    <T> T rPop(String key);
 
     /** 返回 [start, end] 范围内的元素，支持负数索引（-1 表示最后一个）。 */
-    <T> List<T> lRange(String key, int start, int end);
-
-    long lSize(String key);
 
     // ==================== Set ====================
 
@@ -110,12 +89,8 @@ public interface CacheClient {
 
     <T> Set<T> sMembers(String key);
 
-    <T> boolean sIsMember(String key, T value);
-
     <T> boolean sRemove(String key, T value);
 
-    @SuppressWarnings("unchecked")
-    <T> boolean sRemove(String key, T... values);
 
     // ==================== ZSet（有序集合）====================
 
@@ -123,18 +98,18 @@ public interface CacheClient {
     <T> void zAdd(String key, T value, double score);
 
     /** 按排名范围返回元素（升序），支持负数索引。 */
-    <T> Collection<T> zRange(String key, int start, int end);
 
     /** 按 score 区间返回元素（升序，闭区间）。 */
     <T> Collection<T> zRangeByScore(String key, double min, double max);
 
     /** 返回元素的 score，不存在返回 null。 */
-    <T> Double zScore(String key, T value);
 
     /** 移除指定元素，成功返回 true。 */
     boolean zRemove(String key, Object value);
 
     long zSize(String key);
+
+    void zRemoveThrough(String key, double maxScore);
 
     // ==================== 限流 ====================
 
@@ -146,8 +121,4 @@ public interface CacheClient {
      */
     boolean tryAcquire(String key, long rate, long interval);
 
-    /** 默认每秒 10 次。 */
-    default boolean tryAcquire(String key) {
-        return tryAcquire(key, 10, 1);
-    }
 }

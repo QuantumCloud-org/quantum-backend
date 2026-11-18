@@ -7,10 +7,6 @@
         SELECT * FROM sys_user WHERE username = #{username} AND deleted = 0
     </select>
 
-    <!-- 查询部门名称 -->
-    <select id="selectDeptNameById" resultType="java.lang.String">
-        SELECT dept_name FROM sys_dept WHERE id = #{deptId} AND deleted = 0
-    </select>
 
     <!-- 检查用户名是否存在 -->
     <select id="checkUsernameExists" resultType="java.lang.Integer">
@@ -20,13 +16,15 @@
     <!-- 检查手机号是否存在 -->
     <select id="checkPhoneExists" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM sys_user
-        WHERE phone = #{phone} AND deleted = 0 AND id != #{excludeId}
+        WHERE phone = #{phone} AND deleted = 0
+        <if test="excludeId != null">AND id != #{excludeId}</if>
     </select>
 
     <!-- 检查邮箱是否存在 -->
     <select id="checkEmailExists" resultType="java.lang.Integer">
         SELECT COUNT(*) FROM sys_user
-        WHERE email = #{email} AND deleted = 0 AND id != #{excludeId}
+        WHERE email = #{email} AND deleted = 0
+        <if test="excludeId != null">AND id != #{excludeId}</if>
     </select>
 
 </mapper>

@@ -36,7 +36,8 @@ public class ResponseAdvice implements ResponseBodyAdvice<Object> {
                             Class<? extends HttpMessageConverter<?>> converterType) {
         Class<?> type = returnType.getParameterType();
         // 排除 Result 和 ResponseEntity
-        if (Result.class.isAssignableFrom(type)
+        if (returnType.getContainingClass().isAnnotationPresent(NoResultWrap.class)
+                || Result.class.isAssignableFrom(type)
                 || ResponseEntity.class.isAssignableFrom(type)) {
             return false;
         }

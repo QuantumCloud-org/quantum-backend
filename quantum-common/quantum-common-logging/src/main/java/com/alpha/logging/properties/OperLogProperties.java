@@ -6,6 +6,10 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Locale;
+import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.List;
 
 /**
@@ -20,10 +24,10 @@ public class OperLogProperties {
      * 敏感字段列表。
      * <p>
      * 作用:
-     * 1. 请求参数日志: 递归改写敏感字段值为 {@code [PROTECTED]}
+     * 1. 请求参数日志: 按参数名及嵌套字段名匹配，将敏感值改写为 {@code [PROTECTED]}
      * 2. 响应结果日志: 通过 Jackson Filter 直接移除 key
      * <p>
-     * 顶层方法参数名是否整体屏蔽仍由 {@code @SystemLog.excludeParams} 控制。
+     * {@code @SystemLog.excludeParams} 可为当前方法指定额外的顶层参数名。
      */
     private List<String> sensitiveFields = new ArrayList<>(List.of(
             "password", "pwd", "oldPassword", "newPassword",
@@ -57,5 +61,11 @@ public class OperLogProperties {
             return Scheduled.CRON_DISABLED;
         }
         return normalized;
+    }
+
+    public static Set<String> normalizeFields(Collection<String> fields) {
+        return fields.stream().filter(field -> field != null && !field.isBlank())
+                .map(field -> field.toLowerCase(Locale.ROOT))
+                .collect(Collectors.toUnmodifiableSet());
     }
 }

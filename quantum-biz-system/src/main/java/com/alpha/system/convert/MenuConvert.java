@@ -6,9 +6,7 @@ import com.alpha.system.dto.response.TreeSelectVO;
 import com.alpha.system.domain.SysMenu;
 import org.springframework.stereotype.Component;
 
-import java.util.Collections;
 import java.util.List;
-import java.util.stream.Collectors;
 
 /**
  * 菜单转换器
@@ -68,25 +66,7 @@ public class MenuConvert {
         return menu;
     }
 
-    /**
-     * 实体 -> TreeSelectVO
-     */
-    public TreeSelectVO toTreeSelect(SysMenu menu) {
-        if (menu == null) {
-            return null;
-        }
-        return TreeSelectVO.fromMenu(menu);
-    }
-
-    /**
-     * 实体列表 -> TreeSelectVO列表
-     */
     public List<TreeSelectVO> toTreeSelectList(List<SysMenu> menus) {
-        if (menus == null) {
-            return Collections.emptyList();
-        }
-        return menus.stream()
-                .map(this::toTreeSelect)
-                .collect(Collectors.toList());
+        return TreeSelectVO.fromTree(menus, SysMenu::getMenuName);
     }
 }

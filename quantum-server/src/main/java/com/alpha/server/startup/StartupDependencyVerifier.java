@@ -1,12 +1,12 @@
 package com.alpha.server.startup;
 
 import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.Nullable;
 import org.redisson.api.RBucket;
 import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.SmartInitializingSingleton;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.core.env.Environment;
-import org.springframework.lang.Nullable;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
@@ -50,8 +50,7 @@ public class StartupDependencyVerifier implements SmartInitializingSingleton {
     }
 
     private void verifyDatabase() {
-        String datasourceUrl = environment.getProperty("spring.datasource.url", "unknown");
-        log.info("数据库依赖自检 | database | {}", datasourceUrl);
+        log.info("数据库依赖自检");
 
         try (Connection connection = dataSource.getConnection();
              Statement statement = connection.createStatement();
@@ -59,11 +58,10 @@ public class StartupDependencyVerifier implements SmartInitializingSingleton {
             if (!resultSet.next() || resultSet.getInt(1) != 1) {
                 throw new IllegalStateException("database probe returned unexpected result");
             }
-            log.info("数据库依赖自检通过 | database | {}", datasourceUrl);
+            log.info("数据库依赖自检通过");
         } catch (Exception e) {
-            log.error("启动失败，请检查数据库连接 | database | {}", datasourceUrl);
             throw new IllegalStateException(
-                    "Startup dependency check failed: database [" + datasourceUrl + "] - " + e.getMessage(), e);
+                    "Startup dependency check failed: database (" + e.getClass().getSimpleName() + ")");
         }
     }
 

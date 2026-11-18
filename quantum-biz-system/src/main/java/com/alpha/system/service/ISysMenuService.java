@@ -29,11 +29,6 @@ public interface ISysMenuService extends IService<SysMenu> {
     Set<Long> selectMenuIdsByRoleId(Long roleId);
 
     /**
-     * 根据用户ID查询权限
-     */
-    Set<String> selectPermsByUserId(Long userId);
-
-    /**
      * 根据ID查询菜单
      */
     SysMenu selectMenuById(Long menuId);
@@ -57,16 +52,6 @@ public interface ISysMenuService extends IService<SysMenu> {
      * 检查菜单名称是否唯一
      */
     boolean checkMenuNameUnique(String menuName, Long parentId, Long excludeId);
-
-    /**
-     * 检查菜单是否有子菜单
-     */
-    boolean hasChildMenu(Long menuId);
-
-    /**
-     * 检查菜单是否被角色使用
-     */
-    boolean isMenuUsed(Long menuId);
 
     /**
      * 构建路由

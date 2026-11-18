@@ -1,7 +1,9 @@
 package com.alpha.system.convert;
 
 import com.alpha.system.domain.SysUser;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.system.dto.request.UserCreateRequest;
+import com.alpha.system.dto.request.ProfileUpdateRequest;
 import com.alpha.system.dto.request.UserUpdateRequest;
 import com.alpha.system.dto.response.UserEditVO;
 import com.alpha.system.dto.response.UserExportVO;
@@ -20,6 +22,18 @@ public class UserConvert {
     /**
      * 创建请求 -> 实体
      */
+    public SysUser toEntity(Long userId, ProfileUpdateRequest request) {
+        SysUser user = new SysUser();
+        user.setId(userId);
+        user.setVersion(request.getVersion());
+        user.setNickname(request.getNickname());
+        user.setEmail(request.getEmail());
+        user.setPhone(request.getPhone());
+        user.setSex(request.getSex());
+        user.setRemark(request.getRemark());
+        return user;
+    }
+
     public SysUser toEntity(UserCreateRequest request) {
         if (request == null) {
             return null;
@@ -47,6 +61,7 @@ public class UserConvert {
         SysUser user = new SysUser();
         user.setId(request.getId());
         user.setVersion(request.getVersion());
+        user.setUsername(request.getUsername());
         user.setNickname(request.getNickname());
         user.setPhone(request.getPhone());
         user.setEmail(request.getEmail());
@@ -111,15 +126,6 @@ public class UserConvert {
     }
 
     /**
-     * 实体列表 -> VO列表
-     */
-    public List<UserVO> toVOList(List<SysUser> users) {
-        return users.stream()
-                .map(this::toVO)
-                .collect(Collectors.toList());
-    }
-
-    /**
      * 实体 -> 导出VO
      */
     public UserExportVO toExportVO(SysUser user) {
@@ -155,7 +161,7 @@ public class UserConvert {
 
     private String convertStatus(Integer status) {
         if (status == null) return "未知";
-        return status == 1 ? "正常" : "禁用";
+        return CommonConstants.STATUS_NORMAL.equals(status) ? "正常" : "禁用";
     }
 
     /**
@@ -174,8 +180,12 @@ public class UserConvert {
      * 状态文字转数字（导入用）
      */
     public Integer convertStatus(String statusLabel) {
-        if (statusLabel == null) return 0;
-        return "正常".equals(statusLabel) ? 1 : 0;
+        if (statusLabel == null) return null;
+        return switch (statusLabel) {
+            case "正常" -> CommonConstants.STATUS_NORMAL;
+            case "禁用" -> CommonConstants.STATUS_DISABLE;
+            default -> null;
+        };
     }
 
 

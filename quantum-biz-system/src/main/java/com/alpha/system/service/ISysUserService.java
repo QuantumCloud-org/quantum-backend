@@ -1,8 +1,10 @@
 package com.alpha.system.service;
 
+import com.alpha.file.util.ExcelUtil.ReadRow;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserImportRequest;
+import com.alpha.system.dto.response.ImportRowResult;
 import com.alpha.system.dto.request.UserQuery;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.service.IService;
@@ -13,6 +15,8 @@ import java.util.List;
  * 用户服务接口
  */
 public interface ISysUserService extends IService<SysUser> {
+
+    int MAX_IMPORT_ROWS = 1000;
 
     /**
      * 分页查询用户
@@ -87,5 +91,5 @@ public interface ISysUserService extends IService<SysUser> {
     /**
      * 导入用户
      */
-    String importUsers(List<UserImportRequest> userList, boolean updateSupport);
+    List<ImportRowResult> importUsers(List<ReadRow<UserImportRequest>> rows, boolean updateSupport);
 }

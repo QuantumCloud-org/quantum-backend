@@ -28,7 +28,8 @@ class SysRoleServiceImplRoleMappingTest {
                 mock(SysRoleMenuMapper.class),
                 mock(SysRoleDeptMapper.class),
                 userRoleMapper,
-                mock(ApplicationEventPublisher.class)
+                mock(ApplicationEventPublisher.class),
+                mock(com.alpha.system.security.RoleDelegationPolicy.class)
         );
         when(userRoleMapper.selectByUserIds(List.of(2L, 3L))).thenReturn(List.of(
                 relation(2L, 5L),

@@ -56,6 +56,7 @@ public class UserImportRequest implements Serializable {
      */
     private List<Long> roleIds;
 
+    @Size(max = 500, message = "备注长度不能超过500个字符")
     private String remark;
 
     public void setUsername(String username) {

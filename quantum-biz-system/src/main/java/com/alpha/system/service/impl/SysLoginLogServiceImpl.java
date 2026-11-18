@@ -1,6 +1,5 @@
 package com.alpha.system.service.impl;
 
-import com.alpha.framework.util.IpUtil;
 import com.alpha.system.domain.SysLoginLog;
 import com.alpha.system.mapper.SysLoginLogMapper;
 import com.alpha.system.dto.request.LoginLogQuery;
@@ -8,9 +7,10 @@ import com.alpha.system.service.ISysLoginLogService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.scheduling.annotation.Async;
+import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.core.task.TaskExecutor;
+import org.springframework.core.task.TaskRejectedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -25,54 +25,32 @@ import static com.alpha.system.domain.table.SysLoginLogTableDef.SYS_LOGIN_LOG;
  */
 @Slf4j
 @Service
-@RequiredArgsConstructor
 public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLoginLog> implements ISysLoginLogService {
 
     private final SysLoginLogMapper loginLogMapper;
+    private final TaskExecutor loginAuditExecutor;
 
-    @Async
+    public SysLoginLogServiceImpl(SysLoginLogMapper loginLogMapper,
+                                  @Qualifier("loginAuditExecutor") TaskExecutor loginAuditExecutor) {
+        this.loginLogMapper = loginLogMapper;
+        this.loginAuditExecutor = loginAuditExecutor;
+    }
+
     @Override
     public void insertLoginLog(SysLoginLog loginLog) {
+        try {
+            loginAuditExecutor.execute(() -> persistLoginLog(loginLog));
+        } catch (TaskRejectedException e) {
+            log.warn("登录审计队列不可用，改为同步落库");
+            persistLoginLog(loginLog);
+        }
+    }
+
+    private void persistLoginLog(SysLoginLog loginLog) {
         try {
             loginLogMapper.insert(loginLog);
         } catch (Exception e) {
             log.error("记录登录日志异常: {}", e.getMessage(), e);
-        }
-    }
-
-    @Async
-    @Override
-    public void recordLoginSuccess(String username, String ip, String browser, String os) {
-        saveLoginLog(username, ip, browser, os, 0, "登录成功");
-    }
-
-    @Async
-    @Override
-    public void recordLoginFailure(String username, String ip, String browser, String os, String message) {
-        saveLoginLog(username, ip, browser, os, 1, message);
-    }
-
-    private void saveLoginLog(String username, String ip, String browser, String os,
-                              Integer status, String msg) {
-        try {
-            SysLoginLog loginLog = new SysLoginLog();
-            loginLog.setUsername(username);
-            loginLog.setIpaddr(ip);
-            loginLog.setLoginLocation(IpUtil.getCityInfo(ip));
-            loginLog.setBrowser(browser);
-            loginLog.setOs(os);
-            loginLog.setStatus(status);
-            loginLog.setMsg(msg);
-            loginLog.setLoginTime(LocalDateTime.now());
-
-            loginLogMapper.insert(loginLog);
-
-            if (log.isDebugEnabled()) {
-                log.debug("登录日志记录成功 | User: {} | Status: {} | IP: {}",
-                        username, status == 0 ? "成功" : "失败", ip);
-            }
-        } catch (Exception e) {
-            log.error("登录日志记录失败 | User: {} | Error: {}", username, e.getMessage(), e);
         }
     }
 
@@ -84,13 +62,6 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
                 Page.of(query.getPageNum(), query.getPageSize()),
                 wrapper
         );
-    }
-
-    @Override
-    public List<SysLoginLog> selectLoginLogList(LoginLogQuery query) {
-        QueryWrapper wrapper = buildQueryWrapper(query);
-        wrapper.orderBy(SYS_LOGIN_LOG.INFO_ID.desc());
-        return loginLogMapper.selectListByQuery(wrapper);
     }
 
     @Override
@@ -112,21 +83,6 @@ public class SysLoginLogServiceImpl extends ServiceImpl<SysLoginLogMapper, SysLo
         int count = loginLogMapper.deleteByLoginTimeBefore(expireTime);
         log.info("清理过期登录日志 | 保留天数: {} | 删除数量: {}", days, count);
         return count;
-    }
-
-    @Override
-    public long countLoginLog() {
-        return loginLogMapper.countLoginLog();
-    }
-
-    @Override
-    public long countLoginSuccess() {
-        return loginLogMapper.countLoginSuccess();
-    }
-
-    @Override
-    public long countLoginFail() {
-        return loginLogMapper.countLoginFail();
     }
 
     /**

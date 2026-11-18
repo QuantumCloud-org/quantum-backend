@@ -1,5 +1,6 @@
 package com.alpha.security.annotation;
 
+import com.fasterxml.jackson.annotation.JacksonAnnotationsInside;
 import com.alpha.framework.enums.SensitiveStrategy;
 import com.alpha.security.serializer.SensitiveSerializer;
 import tools.jackson.databind.annotation.JsonSerialize;
@@ -16,6 +17,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
+@JacksonAnnotationsInside
 @JsonSerialize(using = SensitiveSerializer.class)
 public @interface Sensitive {
 

@@ -157,7 +157,6 @@ public class GlobalExceptionHandler {
     @ResponseStatus(HttpStatus.METHOD_NOT_ALLOWED) // 405
     public Result<Void> handleHttpRequestMethodNotSupportedException(HttpRequestMethodNotSupportedException e) {
         log.warn("请求方法不支持: {}", e.getMethod());
-        // 注意：ResultCode 中没有 405，这里复用 PARAM_ERROR 或 SYSTEM_ERROR，或者在 ResultCode 补充一个
         return Result.fail(ResultCode.PARAM_ERROR, "不支持 " + e.getMethod() + " 请求");
     }
 

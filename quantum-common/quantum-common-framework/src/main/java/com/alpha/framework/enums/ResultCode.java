@@ -51,7 +51,10 @@ public enum ResultCode {
     // 409 Conflict: 资源状态冲突（通常用于创建重复数据）
     DATA_ALREADY_EXISTS(409, "数据已存在"),
     DATA_CONFLICT(409, "数据冲突"),
+    SESSION_TRANSITION(409, "会话切换中，请重试"),
     DUPLICATE_REQUEST(409, "重复请求"),
+
+    CONTENT_TOO_LARGE(413, "请求体过大"),
 
     // 429 Too Many Requests: 限流
     RATE_LIMIT_EXCEEDED(429, "请求过于频繁"),

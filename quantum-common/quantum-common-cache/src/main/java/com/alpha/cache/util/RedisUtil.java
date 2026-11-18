@@ -1,52 +1,44 @@
 package com.alpha.cache.util;
 
+import com.github.benmanes.caffeine.cache.Cache;
+import com.github.benmanes.caffeine.cache.Caffeine;
 import org.redisson.api.*;
-import org.redisson.api.listener.MessageListener;
+import org.redisson.api.bucket.CompareAndSetArgs;
+import org.redisson.client.RedisException;
 
 import java.time.Duration;
 import java.util.*;
-import java.util.concurrent.TimeUnit;
-import java.util.function.Supplier;
 
-/**
- * Redis 工具类
- * <p>
- * 基于 Redisson 封装，提供：
- * 1. 基础 KV 操作
- * 2. 分布式锁
- * 3. 限流器
- * 4. 布隆过滤器
- * 5. 延迟队列
- * <p>
- * 设计原则：
- * - 方法命名直观，贴近业务语义
- * - 自动处理序列化，调用方无感知
- * - 提供安全的默认值，避免 NPE
- * <p>
- */
+/** Redis implementation of the cache client and distributed cache synchronization. */
 public class RedisUtil implements CacheClient {
 
     private final RedissonClient redisson;
+    private final Cache<String, Boolean> initializedLimiters = Caffeine.newBuilder()
+            .maximumSize(50_000)
+            .expireAfterAccess(Duration.ofMinutes(1))
+            .build();
 
     public RedisUtil(RedissonClient redisson) {
         this.redisson = redisson;
     }
 
-    private static final long DEFAULT_WAIT_TIME = 3L;
-    private static final long DEFAULT_LEASE_TIME = 10L;
 
     // ==================== 基础 KV 操作 ====================
 
     @Override
     public boolean setIfAbsent(String key, Object value, Duration expire) {
         RBucket<Object> bucket = redisson.getBucket(key);
-        return bucket.setIfAbsent(value, expire);
+        return expire == null ? bucket.setIfAbsent(value) : bucket.setIfAbsent(value, expire);
     }
 
     @Override
     public <T> void set(String key, T value, Duration expire) {
         RBucket<T> bucket = redisson.getBucket(key);
-        bucket.set(value, expire);
+        if (expire == null) {
+            bucket.set(value);
+        } else {
+            bucket.set(value, expire);
+        }
     }
 
     @Override
@@ -62,16 +54,19 @@ public class RedisUtil implements CacheClient {
     }
 
     @Override
-    public <T> T getOrLoad(String key, Supplier<T> loader, Duration expire) {
-        RBucket<T> bucket = redisson.getBucket(key);
-        T value = bucket.get();
-        if (value == null) {
-            value = loader.get();
-            if (value != null) {
-                bucket.set(value, expire);
-            }
-        }
-        return value;
+    public <T> Map<String, T> getAll(Collection<String> keys) {
+        return keys.isEmpty() ? Map.of() : redisson.getBuckets().get(keys.toArray(String[]::new));
+    }
+
+    @Override
+    public boolean replaceIfPresent(String key, Object value, Duration ttl) {
+        return redisson.getBucket(key).setIfExists(value, ttl);
+    }
+
+    @Override
+    public boolean compareAndSet(String key, String expected, String replacement, Duration ttl) {
+        return redisson.<String>getBucket(key)
+                .compareAndSet(CompareAndSetArgs.expected(expected).set(replacement).timeToLive(ttl));
     }
 
     @Override
@@ -79,7 +74,6 @@ public class RedisUtil implements CacheClient {
         redisson.getBucket(key).delete();
     }
 
-    @Override
     public void deleteKeysByPattern(String pattern) {
         if (pattern == null || pattern.isEmpty()) {
             return;
@@ -115,69 +109,7 @@ public class RedisUtil implements CacheClient {
         return redisson.getAtomicLong(key).addAndGet(delta);
     }
 
-    // ==================== Hash 操作 ====================
 
-    @Override
-    public <T> void hSet(String key, String field, T value) {
-        redisson.<String, T>getMap(key).put(field, value);
-    }
-
-    @Override
-    public void hSetAll(String key, Map<String, Object> map) {
-        redisson.<String, Object>getMap(key).putAll(map);
-    }
-
-    @Override
-    public <T> T hGet(String key, String field) {
-        return redisson.<String, T>getMap(key).get(field);
-    }
-
-    @Override
-    public <T> Map<String, T> hGetAll(String key) {
-        return new HashMap<>(redisson.<String, T>getMap(key).readAllMap());
-    }
-
-    @Override
-    public boolean hDelete(String key, String... fields) {
-        return redisson.<String, Object>getMap(key).fastRemove(fields) > 0;
-    }
-
-    @Override
-    public boolean hExists(String key, String field) {
-        return redisson.<String, Object>getMap(key).containsKey(field);
-    }
-
-    // ==================== List 操作 ====================
-
-    @Override
-    public <T> void lPush(String key, T value) {
-        redisson.<T>getDeque(key).addFirst(value);
-    }
-
-    @Override
-    public <T> void rPush(String key, T value) {
-        redisson.<T>getDeque(key).addLast(value);
-    }
-
-    @Override
-    public <T> T lPop(String key) {
-        return redisson.<T>getDeque(key).pollFirst();
-    }
-
-    @Override
-    public <T> T rPop(String key) {
-        return redisson.<T>getDeque(key).pollLast();
-    }
-
-    @Override
-    public <T> List<T> lRange(String key, int start, int end) {
-        return redisson.<T>getList(key).range(start, end);
-    }
-
-    @Override
-    public long lSize(String key) {
-        return redisson.getList(key).size();
-    }
 
     // ==================== Set 操作 ====================
 
@@ -193,19 +125,8 @@ public class RedisUtil implements CacheClient {
     }
 
     @Override
-    public <T> boolean sIsMember(String key, T value) {
-        return redisson.<T>getSet(key).contains(value);
-    }
-
-    @Override
     public <T> boolean sRemove(String key, T value) {
         return redisson.<T>getSet(key).remove(value);
-    }
-
-    @Override
-    @SafeVarargs
-    public final <T> boolean sRemove(String key, T... values) {
-        return redisson.<T>getSet(key).removeAll(Arrays.asList(values));
     }
 
     // ==================== ZSet 有序集合 ====================
@@ -216,18 +137,8 @@ public class RedisUtil implements CacheClient {
     }
 
     @Override
-    public <T> Collection<T> zRange(String key, int start, int end) {
-        return redisson.<T>getScoredSortedSet(key).valueRange(start, end);
-    }
-
-    @Override
     public <T> Collection<T> zRangeByScore(String key, double min, double max) {
         return redisson.<T>getScoredSortedSet(key).valueRange(min, true, max, true);
-    }
-
-    @Override
-    public <T> Double zScore(String key, T value) {
-        return redisson.<T>getScoredSortedSet(key).getScore(value);
     }
 
     @Override
@@ -240,109 +151,36 @@ public class RedisUtil implements CacheClient {
         return redisson.getScoredSortedSet(key).size();
     }
 
+    @Override
+    public void zRemoveThrough(String key, double maxScore) {
+        redisson.getScoredSortedSet(key).removeRangeByScore(Double.NEGATIVE_INFINITY, true, maxScore, true);
+    }
+
     // ==================== 限流器 ====================
 
     @Override
     public boolean tryAcquire(String key, long rate, long interval) {
         RRateLimiter limiter = redisson.getRateLimiter(key);
-        limiter.trySetRate(
-                RateType.OVERALL,
-                rate,
-                Duration.ofSeconds(interval),
-                Duration.ofSeconds(interval)
-        );
-        return limiter.tryAcquire(1);
-    }
-
-    // ==================== 分布式锁 ====================
-
-    public boolean lock(String lockKey) {
-        return lock(lockKey, DEFAULT_WAIT_TIME, DEFAULT_LEASE_TIME);
-    }
-
-    public boolean lock(String lockKey, long waitTime, long leaseTime) {
-        RLock lock = redisson.getLock(lockKey);
+        initializeLimiter(key, rate, interval, limiter);
         try {
-            return lock.tryLock(waitTime, leaseTime, TimeUnit.SECONDS);
-        } catch (InterruptedException e) {
-            Thread.currentThread().interrupt();
-            return false;
+            return limiter.tryAcquire();
+        } catch (RedisException e) {
+            // Redis may have evicted or expired the limiter independently of this process.
+            if (e.getMessage() == null || !e.getMessage().contains("RateLimiter is not initialized")) {
+                throw e;
+            }
+            initializedLimiters.invalidate(key);
+            initializeLimiter(key, rate, interval, limiter);
+            return limiter.tryAcquire();
         }
     }
 
-    public void unlock(String lockKey) {
-        RLock lock = redisson.getLock(lockKey);
-        if (lock.isHeldByCurrentThread()) {
-            lock.unlock();
-        }
+    private void initializeLimiter(String key, long rate, long interval, RRateLimiter limiter) {
+        initializedLimiters.get(key, name -> {
+            limiter.trySetRate(RateType.OVERALL, rate, Duration.ofSeconds(interval),
+                    Duration.ofSeconds(Math.max(120, interval * 2)));
+            return Boolean.TRUE;
+        });
     }
 
-    public <T> T executeWithLock(String lockKey, Supplier<T> supplier) {
-        return executeWithLock(lockKey, DEFAULT_WAIT_TIME, DEFAULT_LEASE_TIME, supplier);
-    }
-
-    public <T> T executeWithLock(String lockKey, long waitTime, long leaseTime, Supplier<T> supplier) {
-        boolean locked = lock(lockKey, waitTime, leaseTime);
-        if (!locked) {
-            return null;
-        }
-        try {
-            return supplier.get();
-        } finally {
-            unlock(lockKey);
-        }
-    }
-
-    public boolean executeWithLock(String lockKey, Runnable runnable) {
-        boolean locked = lock(lockKey);
-        if (!locked) {
-            return false;
-        }
-        try {
-            runnable.run();
-            return true;
-        } finally {
-            unlock(lockKey);
-        }
-    }
-
-    // ==================== 布隆过滤器 ====================
-
-    public void initBloomFilter(String key, long expectedInsertions, double falseProbability) {
-        redisson.<Object>getBloomFilter(key).tryInit(expectedInsertions, falseProbability);
-    }
-
-    public <T> boolean bloomAdd(String key, T value) {
-        return redisson.<T>getBloomFilter(key).add(value);
-    }
-
-    public <T> boolean bloomContains(String key, T value) {
-        return redisson.<T>getBloomFilter(key).contains(value);
-    }
-
-    // ==================== 发布订阅 ====================
-
-    public <T> void publish(String channel, T message) {
-        redisson.getTopic(channel).publish(message);
-    }
-
-    public <T> int subscribe(String channel, Class<T> type, MessageListener<T> listener) {
-        return redisson.getTopic(channel).addListener(type, listener);
-    }
-
-    // ==================== 延迟队列 ====================
-
-    public <T> void addDelayedTask(String queueName, T value, long delaySeconds) {
-        String zsetKey = queueName + ":delay";
-        long executeAt = System.currentTimeMillis() + delaySeconds * 1000;
-        redisson.<T>getScoredSortedSet(zsetKey).add(executeAt, value);
-    }
-
-    public <T> T takeDelayedTask(String queueName) throws InterruptedException {
-        return redisson.<T>getBlockingQueue(queueName).take();
-    }
-
-    public <T> T pollDelayedTask(String queueName) {
-        return redisson.<T>getBlockingQueue(queueName).poll();
-    }
 }

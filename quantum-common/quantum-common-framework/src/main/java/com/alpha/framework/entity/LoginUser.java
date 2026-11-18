@@ -93,6 +93,10 @@ public class LoginUser implements UserDetails, Serializable {
      */
     private String refreshTokenId;
 
+    private String webSessionId;
+
+    private String sessionGeneration;
+
     /**
      * 登录时间
      */
@@ -128,6 +132,10 @@ public class LoginUser implements UserDetails, Serializable {
      * 是否为管理员
      */
     public boolean isAdmin() {
+        return isSuperAdmin(userId);
+    }
+
+    public static boolean isSuperAdmin(Long userId) {
         return CommonConstants.SUPER_ADMIN_ID.equals(userId);
     }
 
@@ -135,6 +143,9 @@ public class LoginUser implements UserDetails, Serializable {
      * 是否拥有角色
      */
     public boolean hasRole(String role) {
+        if (CommonConstants.SUPER_ADMIN_ROLE.equals(role)) {
+            return isAdmin();
+        }
         return roles != null && roles.contains(role);
     }
 

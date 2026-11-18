@@ -9,7 +9,6 @@ import com.alpha.cache.constant.CacheKeyConstant;
 import com.alpha.cache.util.CacheClient;
 import com.alpha.security.service.ICaptchaService;
 import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -20,7 +19,6 @@ import java.time.Duration;
  * <p>
  * 基于 Hutool Captcha + CacheClient 实现（支持 Redis 和 Caffeine 本地缓存）
  */
-@Slf4j
 @Service
 @RequiredArgsConstructor
 public class CaptchaServiceImpl implements ICaptchaService {
@@ -79,8 +77,6 @@ public class CaptchaServiceImpl implements ICaptchaService {
         // 返回 Base64 图片
         String imageBase64 = captcha.getImageBase64Data();
 
-        log.debug("生成验证码 | Key: {} | Code: {}", key, code);
-
         return new CaptchaResult(key, imageBase64, captchaLength);
     }
 
@@ -91,19 +87,7 @@ public class CaptchaServiceImpl implements ICaptchaService {
         }
 
         String cacheKey = CacheKeyConstant.AUTH_CAPTCHA + key;
-        String cachedCode = cacheClient.get(cacheKey);
-
-        // 验证后删除（一次性使用）
-        cacheClient.delete(cacheKey);
-
-        if (StrUtil.isBlank(cachedCode)) {
-            log.debug("验证码已过期 | Key: {}", key);
-            return false;
-        }
-
-        boolean result = cachedCode.equalsIgnoreCase(code);
-        log.debug("验证码校验 | Key: {} | Input: {} | Cached: {} | Result: {}", key, code, cachedCode, result);
-
-        return result;
+        String cachedCode = cacheClient.getAndDelete(cacheKey);
+        return cachedCode != null && cachedCode.equalsIgnoreCase(code);
     }
 }

@@ -32,18 +32,6 @@
         </Property>
 
         <!-- JSON 格式（便于 ELK/Loki 收集，取消注释 JsonTemplateLayout 使用） -->
-        <Property name="JSON_TEMPLATE">{
-            "@timestamp": "%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}",
-            "level": "%level",
-            "thread": "%t",
-            "traceId": "%X{traceId}",
-            "userId": "%X{userId}",
-            "requestUri": "%X{requestUri}",
-            "logger": "%c{1.}",
-            "message": "%msg",
-            "exception": "%xEx"
-            }
-        </Property>
 
         <!-- 滚动策略参数 -->
         <Property name="MAX_FILE_SIZE">100MB</Property>
@@ -139,7 +127,6 @@
         <Logger name="org.apache.tomcat" level="WARN"/>
         <Logger name="org.apache.coyote" level="WARN"/>
         <!-- MyBatis Flex SQL 日志 -->
-        <Logger name="com.alpha.web.mapper" level="INFO"/>
 
         <!-- ==================== SQL 审计日志 ==================== -->
         <AsyncLogger name="com.alpha.sql.audit" level="INFO" additivity="false" includeLocation="false">

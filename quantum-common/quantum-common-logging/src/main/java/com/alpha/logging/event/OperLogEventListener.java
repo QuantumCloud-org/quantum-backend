@@ -11,7 +11,7 @@ import org.springframework.stereotype.Component;
 /**
  * 操作日志事件监听器
  * <p>
- * 异步落库（虚拟线程执行器），避免日志写库耗时叠加到请求响应时间上。
+ * 操作日志通过有界执行器落库。
  * 事件对象在发布前已携带全部上下文，不依赖请求线程的 ThreadLocal。
  */
 @Slf4j
@@ -28,7 +28,7 @@ public class OperLogEventListener {
         try {
             operLogService.insertOperLog(operLog);
         } catch (Exception e) {
-            log.error("操作日志异步落库失败 | title: {}", operLog.getTitle(), e);
+            log.error("操作日志落库失败 | title={} | errorType={}", operLog.getTitle(), e.getClass().getName());
         }
     }
 }

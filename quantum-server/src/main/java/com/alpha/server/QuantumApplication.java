@@ -7,14 +7,12 @@ import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.ConfigurableApplicationContext;
 import org.springframework.core.env.Environment;
-import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.net.InetAddress;
 
 @Slf4j
 @MapperScan("com.alpha.**.mapper")
 @EnableCaching
-@EnableAsync
 @SpringBootApplication(scanBasePackages = "com.alpha")
 public class QuantumApplication {
 

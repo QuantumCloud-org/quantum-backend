@@ -4,7 +4,7 @@
 
 Quantum Backend 是 Spring Boot + Maven 多模块的模块化单体。
 
-最近更新: 2026-07-31T02:00:00Z
+最近更新: 2026-11-18（sprint: 2026-11-deps-upgrade-audit：依赖升级、会话代际与 S17 refresh、死代码清理；细节见 auth-security.md、auth-mcp-oauth.md）
 
 | 模块 | 职责 |
 |---|---|

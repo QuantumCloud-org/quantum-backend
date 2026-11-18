@@ -23,8 +23,7 @@ public class CapabilityManifestService {
         );
     }
 
-    public List<Map<String, Object>> tools() {
-        return List.of(
+    private static final List<Map<String, Object>> TOOLS = List.of(
                 tool(
                         "system.user.search",
                         "查询用户",
@@ -78,7 +77,10 @@ public class CapabilityManifestService {
                         Map.of("type", "object", "properties", Map.of()),
                         Map.of("type", "array")
                 )
-        );
+    );
+
+    public List<Map<String, Object>> tools() {
+        return TOOLS;
     }
 
     public Map<String, Object> toolByName(String name) {

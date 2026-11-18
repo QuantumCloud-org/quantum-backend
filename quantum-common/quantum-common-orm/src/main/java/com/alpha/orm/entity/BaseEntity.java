@@ -31,7 +31,7 @@ public abstract class BaseEntity implements Serializable {
     /**
      * 创建人 ID
      * <p>
-     * 由 AuditInterceptor 自动填充当前登录用户 ID
+     * 由 MyBatis-Flex 实体监听器填充当前登录用户 ID
      */
     private Long createBy;
 
@@ -46,7 +46,7 @@ public abstract class BaseEntity implements Serializable {
     /**
      * 更新人 ID
      * <p>
-     * 由 AuditInterceptor 自动填充当前登录用户 ID
+     * 由 MyBatis-Flex 实体监听器填充当前登录用户 ID
      */
     private Long updateBy;
 

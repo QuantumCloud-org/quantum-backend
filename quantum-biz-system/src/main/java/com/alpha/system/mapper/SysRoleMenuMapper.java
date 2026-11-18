@@ -20,12 +20,6 @@ public interface SysRoleMenuMapper extends BaseMapper<SysRoleMenu> {
     int deleteByRoleId(@Param("roleId") Long roleId);
 
     /**
-     * 删除菜单的所有角色关联
-     */
-    @Delete("DELETE FROM sys_role_menu WHERE menu_id = #{menuId}")
-    int deleteByMenuId(@Param("menuId") Long menuId);
-
-    /**
      * 批量删除菜单的所有角色关联
      */
     @Delete("""

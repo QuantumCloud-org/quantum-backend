@@ -106,7 +106,7 @@ public class FileController {
     @DeleteMapping("/path")
     @Operation(summary = "按路径删除已登记文件（兼容接口，仅管理员）")
     @SystemLog(title = "文件管理", businessType = BusinessType.DELETE)
-    @RequiresRole("admin")
+    @RequiresRole(com.alpha.framework.constant.CommonConstants.SUPER_ADMIN_ROLE)
     @RequiresPermission("system:file:remove")
     public Result<Boolean> deleteByPath(@RequestParam("path") String path) {
         return Result.ok(sysFileService.deleteByPath(path));
@@ -114,7 +114,7 @@ public class FileController {
 
     @GetMapping("/exists")
     @Operation(summary = "检查已登记文件是否存在（按路径，仅管理员）")
-    @RequiresRole("admin")
+    @RequiresRole(com.alpha.framework.constant.CommonConstants.SUPER_ADMIN_ROLE)
     @RequiresPermission("system:file:query")
     public Result<Boolean> exists(@RequestParam("path") String path) {
         return Result.ok(sysFileService.existsByPath(path));
@@ -138,11 +138,7 @@ public class FileController {
 
         try (InputStream is = sysFileService.downloadById(entity.getId());
              OutputStream os = response.getOutputStream()) {
-            byte[] buffer = new byte[8192];
-            int len;
-            while ((len = is.read(buffer)) != -1) {
-                os.write(buffer, 0, len);
-            }
+            is.transferTo(os);
             os.flush();
         }
     }

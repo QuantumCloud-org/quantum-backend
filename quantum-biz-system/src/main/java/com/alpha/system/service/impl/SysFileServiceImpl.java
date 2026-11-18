@@ -15,13 +15,17 @@ import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.TransactionDefinition;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
+import org.springframework.transaction.support.TransactionTemplate;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 
 import static com.alpha.system.domain.table.SysFileTableDef.SYS_FILE;
 
@@ -34,18 +38,25 @@ import static com.alpha.system.domain.table.SysFileTableDef.SYS_FILE;
 public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> implements ISysFileService {
 
     private final FileStorageService fileStorageService;
+    private final PlatformTransactionManager transactionManager;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public SysFile upload(MultipartFile file, String bizType, Long bizId, String path) {
         String normalizedBiz = normalizeBizType(bizType);
         FileInfo info = fileStorageService.upload(file, path);
-        try {
-            return saveFromFileInfo(info, normalizedBiz, bizId);
-        } catch (Exception e) {
-            cleanupUploadedFile(info);
-            throw e;
-        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCompletion(int status) {
+                if (status == STATUS_ROLLED_BACK) {
+                    cleanupUploadedFile(info);
+                } else if (status == STATUS_UNKNOWN) {
+                    log.warn("上传事务结果未知，保留文件待对账 | path={} | biz={}:{}",
+                            info.getFilePath(), normalizedBiz, bizId);
+                }
+            }
+        });
+        return saveFromFileInfo(info, normalizedBiz, bizId);
     }
 
     @Override
@@ -71,36 +82,8 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
     }
 
     @Override
-    public SysFile selectByPath(String path) {
-        if (StrUtil.isBlank(path)) {
-            throw new BizException("文件不存在");
-        }
-        SysFile entity = list(QueryWrapper.create()
-                .where(SYS_FILE.FILE_PATH.eq(path.trim())))
-                .stream()
-                .findFirst()
-                .orElse(null);
-        if (entity == null || !fileStorageService.exists(entity.getFilePath())) {
-            throw new BizException("文件不存在");
-        }
-        return entity;
-    }
-
-    @Override
     public Page<SysFile> selectFilePage(SysFileQuery query) {
         return page(query.getPage(), buildQueryWrapper(query));
-    }
-
-    @Override
-    public List<SysFile> listByBiz(String bizType, Long bizId) {
-        if (StrUtil.isBlank(bizType) || bizId == null) {
-            return List.of();
-        }
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_FILE.BIZ_TYPE.eq(bizType))
-                .and(SYS_FILE.BIZ_ID.eq(bizId))
-                .orderBy(SYS_FILE.UPLOAD_TIME.desc());
-        return list(wrapper);
     }
 
     @Override
@@ -115,20 +98,40 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         if (ids == null || ids.isEmpty()) {
             return 0;
         }
-        int success = 0;
-        for (Long id : ids) {
-            SysFile entity = getById(id);
-            if (entity == null) {
-                continue;
-            }
-            boolean storageDeleted = fileStorageService.delete(entity.getFilePath());
-            if (!storageDeleted) {
-                throw new BizException("文件存储删除失败: " + entity.getOriginalName());
-            }
-            removeById(id);
-            success++;
+        return deleteFiles(listByIds(ids));
+    }
+
+    private int deleteFiles(List<SysFile> files) {
+        if (files.isEmpty()) {
+            return 0;
         }
-        return success;
+        if (!removeByIds(files.stream().map(SysFile::getId).toList())) {
+            throw new BizException("文件记录删除失败");
+        }
+        TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+            @Override
+            public void afterCommit() {
+                // The committing transaction's resources are still bound during this callback.
+                var readReferences = new TransactionTemplate(transactionManager);
+                readReferences.setPropagationBehavior(TransactionDefinition.PROPAGATION_REQUIRES_NEW);
+                readReferences.setReadOnly(true);
+                files.stream().map(SysFile::getFilePath).distinct()
+                        .forEach(path -> deleteUnreferencedObject(path, readReferences));
+            }
+        });
+        return files.size();
+    }
+
+    private void deleteUnreferencedObject(String path, TransactionTemplate readReferences) {
+        try {
+            Boolean referenced = readReferences.execute(status ->
+                    exists(QueryWrapper.create().where(SYS_FILE.FILE_PATH.eq(path))));
+            if (Boolean.FALSE.equals(referenced) && !fileStorageService.delete(path)) {
+                log.warn("文件记录已删除，存储清理失败 | path={}", path);
+            }
+        } catch (RuntimeException e) {
+            log.warn("文件记录已删除，存储清理失败 | path={}", path, e);
+        }
     }
 
     @Override
@@ -137,16 +140,8 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         if (StrUtil.isBlank(path)) {
             return false;
         }
-        List<Long> ids = list(QueryWrapper.create()
-                .where(SYS_FILE.FILE_PATH.eq(path.trim())))
-                .stream()
-                .map(SysFile::getId)
-                .filter(Objects::nonNull)
-                .toList();
-        if (ids.isEmpty()) {
-            return false;
-        }
-        return deleteByIds(ids) > 0;
+        List<SysFile> files = list(QueryWrapper.create().where(SYS_FILE.FILE_PATH.eq(path.trim())));
+        return deleteFiles(files) > 0;
     }
 
     @Override
@@ -154,12 +149,12 @@ public class SysFileServiceImpl extends ServiceImpl<SysFileMapper, SysFile> impl
         if (StrUtil.isBlank(path)) {
             return false;
         }
-        return list(QueryWrapper.create()
-                .where(SYS_FILE.FILE_PATH.eq(path.trim())))
-                .stream()
-                .findFirst()
-                .map(entity -> fileStorageService.exists(entity.getFilePath()))
-                .orElse(false);
+        SysFile entity = findByPath(path);
+        return entity != null && fileStorageService.exists(entity.getFilePath());
+    }
+
+    private SysFile findByPath(String path) {
+        return getOne(QueryWrapper.create().where(SYS_FILE.FILE_PATH.eq(path.trim())).limit(1));
     }
 
     @Override

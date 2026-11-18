@@ -8,16 +8,17 @@
             SELECT m.* FROM sys_menu m
             INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
             INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+            INNER JOIN sys_role r ON r.id = ur.role_id AND r.status = 1 AND r.deleted = 0
             WHERE ur.user_id = #{userId}
             AND m.menu_type IN ('M', 'C')
             AND m.status = 1
             AND m.deleted = 0
-            UNION ALL
+            UNION
             SELECT m.* FROM sys_menu m
             INNER JOIN menu_tree t ON m.id = t.parent_id
-            WHERE m.deleted = 0
+            WHERE m.status = 1 AND m.deleted = 0
         )
-        SELECT DISTINCT * FROM menu_tree
+        SELECT * FROM menu_tree
         ORDER BY parent_id, order_num
     </select>
 
@@ -26,6 +27,7 @@
         SELECT DISTINCT m.perms FROM sys_menu m
         INNER JOIN sys_role_menu rm ON m.id = rm.menu_id
         INNER JOIN sys_user_role ur ON rm.role_id = ur.role_id
+        INNER JOIN sys_role r ON r.id = ur.role_id AND r.status = 1 AND r.deleted = 0
         WHERE ur.user_id = #{userId}
         AND m.perms IS NOT NULL
         AND m.perms != ''

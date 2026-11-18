@@ -105,4 +105,7 @@ public class UserVO implements Serializable {
      */
     private Set<String> permissions;
 
+    /** 实时审计日志清空权限，由认证信息接口提供。 */
+    private Boolean canClearAuditLogs;
+
 }

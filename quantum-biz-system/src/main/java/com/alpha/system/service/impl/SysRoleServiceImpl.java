@@ -3,7 +3,9 @@ package com.alpha.system.service.impl;
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
+import com.alpha.orm.enums.DataScopeType;
 import com.alpha.system.domain.SysRole;
 import com.alpha.system.domain.SysUserRole;
 import com.alpha.system.dto.request.RoleQuery;
@@ -12,6 +14,7 @@ import com.alpha.system.mapper.SysRoleMapper;
 import com.alpha.system.mapper.SysRoleMenuMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
 import com.alpha.system.security.UserCacheRefreshEvent;
+import com.alpha.system.security.RoleDelegationPolicy;
 import com.alpha.system.service.ISysRoleService;
 import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -46,17 +49,12 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     private final SysRoleDeptMapper roleDeptMapper;
     private final SysUserRoleMapper userRoleMapper;
     private final ApplicationEventPublisher eventPublisher;
+    private final RoleDelegationPolicy roleDelegation;
 
     @Override
     public Page<SysRole> selectRolePage(RoleQuery query) {
         QueryWrapper wrapper = buildQueryWrapper(query);
         return page(new Page<>(query.getPageNum(), query.getPageSize()), wrapper);
-    }
-
-    @Override
-    public List<SysRole> selectRoleList(RoleQuery query) {
-        QueryWrapper wrapper = buildQueryWrapper(query);
-        return list(wrapper);
     }
 
     @Override
@@ -67,11 +65,6 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Override
     public SysRole selectRoleById(Long roleId) {
         return getById(roleId);
-    }
-
-    @Override
-    public List<SysRole> selectRolesByUserId(Long userId) {
-        return roleMapper.selectRolesByUserId(userId);
     }
 
     @Override
@@ -103,6 +96,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     @Transactional(rollbackFor = Exception.class)
     public Long insertRole(SysRole role, List<Long> menuIds, List<Long> deptIds) {
         validateDataScope(role.getDataScope());
+        roleDelegation.checkDefinition(role, menuIds, deptIds);
         // 检查名称唯一性
         if (!checkRoleNameUnique(role.getRoleName(), null)) {
             throw new BizException("角色名称已存在");
@@ -121,7 +115,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         }
 
         // 保存角色部门关联（自定义数据权限）
-        if (role.getDataScope() != null && role.getDataScope() == 4 && CollUtil.isNotEmpty(deptIds)) {
+        if (DataScopeType.fromCode(role.getDataScope()) == DataScopeType.CUSTOM && CollUtil.isNotEmpty(deptIds)) {
             roleDeptMapper.batchInsert(role.getId(), deptIds);
         }
 
@@ -149,6 +143,8 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
             throw new BizException("角色不存在");
         }
 
+        roleDelegation.checkDefinition(oldRole, null, null);
+        roleDelegation.checkDefinition(role, menuIds, deptIds);
         oldRole.setRoleName(role.getRoleName());
         oldRole.setRoleKey(role.getRoleKey());
         oldRole.setOrderNum(role.getOrderNum());
@@ -159,7 +155,7 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
         boolean updated = updateById(oldRole);
         if (!updated) {
-            throw new BizException("角色信息已变更，请刷新后重试");
+            throw new BizException(ResultCode.DATA_CONFLICT, "角色信息已变更，请刷新后重试");
         }
 
         // 更新角色菜单关联
@@ -173,23 +169,20 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         // 更新角色部门关联
         if (deptIds != null) {
             roleDeptMapper.deleteByRoleId(role.getId());
-            if (oldRole.getDataScope() != null && oldRole.getDataScope() == 4 && CollUtil.isNotEmpty(deptIds)) {
+            if (DataScopeType.fromCode(oldRole.getDataScope()) == DataScopeType.CUSTOM && CollUtil.isNotEmpty(deptIds)) {
                 roleDeptMapper.batchInsert(role.getId(), deptIds);
             }
         }
 
         // 角色变更后刷新关联用户缓存
-        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(role.getId());
-        if (CollUtil.isNotEmpty(affectedUserIds)) {
-            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
-        }
+        refreshAssignedUsers(role.getId());
         return true;
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     public boolean updateStatus(Long roleId, Integer status) {
-        if (status != 0 && status != 1) {
+        if (!CommonConstants.STATUS_DISABLE.equals(status) && !CommonConstants.STATUS_NORMAL.equals(status)) {
             throw new BizException("状态值无效，仅支持0(禁用)和1(正常)");
         }
         checkRoleAllowed(roleId);
@@ -198,15 +191,13 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         if (oldRole == null) {
             throw new BizException("角色不存在");
         }
+        roleDelegation.checkDefinition(oldRole, null, null);
         oldRole.setStatus(status);
         boolean result = updateById(oldRole);
         if (!result) {
             throw new BizException("角色状态更新失败，请刷新后重试");
         }
-        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(roleId);
-        if (CollUtil.isNotEmpty(affectedUserIds)) {
-            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
-        }
+        refreshAssignedUsers(roleId);
         return true;
     }
 
@@ -220,7 +211,9 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
         if (oldRole == null) {
             throw new BizException("角色不存在");
         }
+        roleDelegation.checkDefinition(oldRole, null, null);
         oldRole.setDataScope(dataScope);
+        roleDelegation.checkDefinition(oldRole, null, deptIds == null ? List.of() : deptIds);
         boolean updated = updateById(oldRole);
         if (!updated) {
             throw new BizException("数据权限更新失败，请刷新后重试");
@@ -228,15 +221,12 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
         // 更新角色部门关联
         roleDeptMapper.deleteByRoleId(roleId);
-        if (dataScope == 4 && CollUtil.isNotEmpty(deptIds)) {
+        if (DataScopeType.fromCode(dataScope) == DataScopeType.CUSTOM && CollUtil.isNotEmpty(deptIds)) {
             roleDeptMapper.batchInsert(roleId, deptIds);
         }
 
         // 数据权限变更后刷新关联用户缓存
-        Set<Long> affectedUserIds = userRoleMapper.selectUserIdsByRoleId(roleId);
-        if (CollUtil.isNotEmpty(affectedUserIds)) {
-            eventPublisher.publishEvent(new UserCacheRefreshEvent(affectedUserIds));
-        }
+        refreshAssignedUsers(roleId);
         return true;
     }
 
@@ -251,6 +241,11 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
                 throw new BizException("角色 " + role.getRoleName() + " 已分配给用户，不能删除");
             }
 
+            var role = getById(roleId);
+            if (role != null) {
+                roleDelegation.checkDefinition(role, null, null);
+            }
+
             // 删除角色菜单关联
             roleMenuMapper.deleteByRoleId(roleId);
             // 删除角色部门关联
@@ -262,12 +257,12 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
 
     @Override
     public boolean checkRoleNameUnique(String roleName, Long excludeId) {
-        return roleMapper.checkRoleNameExists(roleName, excludeId != null ? excludeId : 0L) == 0;
+        return roleMapper.checkRoleNameExists(roleName, excludeId) == 0;
     }
 
     @Override
     public boolean checkRoleKeyUnique(String roleKey, Long excludeId) {
-        return roleMapper.checkRoleKeyExists(roleKey, excludeId != null ? excludeId : 0L) == 0;
+        return roleMapper.checkRoleKeyExists(roleKey, excludeId) == 0;
     }
 
     @Override
@@ -278,6 +273,13 @@ public class SysRoleServiceImpl extends ServiceImpl<SysRoleMapper, SysRole> impl
     /**
      * 检查是否允许操作角色
      */
+    private void refreshAssignedUsers(Long roleId) {
+        Set<Long> affected = userRoleMapper.selectUserIdsByRoleIds(Set.of(roleId));
+        if (!affected.isEmpty()) {
+            eventPublisher.publishEvent(new UserCacheRefreshEvent(affected));
+        }
+    }
+
     private void checkRoleAllowed(Long roleId) {
         if (CommonConstants.SUPER_ADMIN_ID.equals(roleId)) {
             throw new BizException("不允许操作超级管理员角色");

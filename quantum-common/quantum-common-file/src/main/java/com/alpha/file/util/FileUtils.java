@@ -120,10 +120,9 @@ public final class FileUtils {
         }
 
         try (InputStream is = file.getInputStream()) {
-            byte[] header = new byte[headerLength];
-            int bytesRead = is.read(header);
-            if (!matchesMagicBytes(normalizedExtension, expectedMagic, header, bytesRead)) {
-                log.warn("文件魔术字节不匹配 | 声明扩展名: {} | 实际头字节: {}", extension, bytesToHex(header));
+            byte[] header = is.readNBytes(headerLength);
+            if (!matchesMagicBytes(normalizedExtension, expectedMagic, header)) {
+                log.warn("文件魔术字节不匹配 | 声明扩展名: {}", extension);
                 throw new BizException("文件内容与扩展名不匹配");
             }
         } catch (IOException e) {
@@ -139,30 +138,17 @@ public final class FileUtils {
         return expectedMagic != null ? expectedMagic.length : 0;
     }
 
-    private static boolean matchesMagicBytes(String extension, byte[] expectedMagic, byte[] header, int bytesRead) {
+    private static boolean matchesMagicBytes(String extension, byte[] expectedMagic, byte[] header) {
         if ("webp".equals(extension)) {
-            return matchesAtOffset(header, bytesRead, WEBP_RIFF_PREFIX, 0)
-                    && matchesAtOffset(header, bytesRead, WEBP_BRAND, 8);
+            return matchesAtOffset(header, WEBP_RIFF_PREFIX, 0)
+                    && matchesAtOffset(header, WEBP_BRAND, 8);
         }
-        return expectedMagic != null && matchesAtOffset(header, bytesRead, expectedMagic, 0);
+        return expectedMagic != null && matchesAtOffset(header, expectedMagic, 0);
     }
 
-    private static boolean matchesAtOffset(byte[] actual, int bytesRead, byte[] expected, int offset) {
-        if (bytesRead < offset + expected.length) {
-            return false;
-        }
-        return Arrays.equals(
-                Arrays.copyOfRange(actual, offset, offset + expected.length),
-                expected
-        );
-    }
-
-    private static String bytesToHex(byte[] bytes) {
-        StringBuilder sb = new StringBuilder();
-        for (byte b : bytes) {
-            sb.append(String.format("%02X ", b));
-        }
-        return sb.toString().trim();
+    private static boolean matchesAtOffset(byte[] actual, byte[] expected, int offset) {
+        int end = offset + expected.length;
+        return actual.length >= end && Arrays.equals(actual, offset, end, expected, 0, expected.length);
     }
 
     /**

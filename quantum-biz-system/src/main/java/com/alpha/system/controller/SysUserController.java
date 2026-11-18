@@ -19,6 +19,8 @@ import com.alpha.system.dto.request.UserStatusUpdateRequest;
 import com.alpha.system.dto.request.UserUpdateRequest;
 import com.alpha.system.dto.response.UserEditVO;
 import com.alpha.system.dto.response.UserExportVO;
+import com.alpha.system.dto.response.ImportRowResult;
+import com.alpha.system.security.UserImportException;
 import com.alpha.system.dto.response.UserVO;
 import com.alpha.system.service.ISysRoleService;
 import com.alpha.system.service.ISysUserService;
@@ -32,7 +34,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
@@ -139,34 +140,22 @@ public class SysUserController {
     @SystemLog(title = "用户管理", businessType = BusinessType.IMPORT)
     @RequiresPermission("system:user:import")
     @PostMapping("/import")
-    public Result<String> importData(MultipartFile file, boolean updateSupport) {
+    public Result<List<ImportRowResult>> importData(MultipartFile file, boolean updateSupport) {
         if (file == null || file.isEmpty()) {
             return Result.fail("请选择要导入的Excel文件");
         }
 
         try {
-            List<UserExportVO> voList = ExcelUtil.read(file.getInputStream(), UserExportVO.class);
-
-            if (CollUtil.isEmpty(voList)) {
+            var rows = ExcelUtil.read(file.getInputStream(), UserExportVO.class, ISysUserService.MAX_IMPORT_ROWS);
+            if (rows.isEmpty()) {
                 return Result.fail("Excel文件中没有数据");
             }
 
-            List<UserImportRequest> userList = new ArrayList<>();
-            for (UserExportVO vo : voList) {
-                UserImportRequest user = new UserImportRequest();
-                user.setUsername(vo.getUsername());
-                user.setNickname(vo.getNickname());
-                user.setEmail(vo.getEmail());
-                user.setPhone(vo.getPhone());
-                user.setSex(convertSexLabel(vo.getSexLabel()));
-                user.setStatus(convertStatusLabel(vo.getStatusLabel()));
-                user.setDeptId(vo.getDeptId());
-                user.setRoleIds(parseRoleIds(vo.getRoleIds()));
-                userList.add(user);
-            }
-
-            String msg = userService.importUsers(userList, updateSupport);
-            return Result.ok(msg);
+            return Result.ok(userService.importUsers(rows.stream().map(this::toImportRequest).toList(), updateSupport));
+        } catch (UserImportException e) {
+            Result<List<ImportRowResult>> result = Result.fail(e.getCode(), e.getMessage());
+            result.setData(e.getRows());
+            return result;
         } catch (BizException e) {
             return Result.fail(e.getMessage());
         } catch (Exception e) {
@@ -190,6 +179,27 @@ public class SysUserController {
         }
 
         com.alpha.file.util.ExcelUtil.export(response, "用户列表", UserExportVO.class, voList);
+    }
+
+    private ExcelUtil.ReadRow<UserImportRequest> toImportRequest(ExcelUtil.ReadRow<UserExportVO> row) {
+        var vo = row.data();
+        if (vo == null) {
+            return new ExcelUtil.ReadRow<>(row.number(), null, row.error());
+        }
+        var user = new UserImportRequest();
+        user.setUsername(vo.getUsername());
+        user.setNickname(vo.getNickname());
+        user.setEmail(vo.getEmail());
+        user.setPhone(vo.getPhone());
+        user.setSex(convertSexLabel(vo.getSexLabel()));
+        user.setStatus(convertStatusLabel(vo.getStatusLabel()));
+        user.setDeptId(vo.getDeptId());
+        try {
+            user.setRoleIds(parseRoleIds(vo.getRoleIds()));
+            return new ExcelUtil.ReadRow<>(row.number(), user, null);
+        } catch (BizException e) {
+            return new ExcelUtil.ReadRow<>(row.number(), user, e.getMessage());
+        }
     }
 
     private Integer convertSexLabel(String sexLabel) {

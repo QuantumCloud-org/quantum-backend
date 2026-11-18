@@ -11,7 +11,7 @@ class CookieUtilTest {
     void writeRefreshCookieShouldIncludeSecureWhenEnabled() {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        CookieUtil.writeRefreshCookie(response, "token-1", true, 3600, true);
+        CookieUtil.writeRefreshCookie(response, "token-1", true, 3600, true, "/api/auth");
 
         assertThat(response.getHeader("Set-Cookie"))
                 .contains("refresh_token=token-1")
@@ -25,7 +25,7 @@ class CookieUtilTest {
     void writeRefreshCookieShouldOmitSecureWhenDisabled() {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        CookieUtil.writeRefreshCookie(response, "token-1", false, 3600, false);
+        CookieUtil.writeRefreshCookie(response, "token-1", false, 3600, false, "/api/auth");
 
         assertThat(response.getHeader("Set-Cookie"))
                 .contains("refresh_token=token-1")
@@ -37,7 +37,7 @@ class CookieUtilTest {
     void clearRefreshCookieShouldRespectSecureFlag() {
         MockHttpServletResponse response = new MockHttpServletResponse();
 
-        CookieUtil.clearRefreshCookie(response, true);
+        CookieUtil.clearRefreshCookie(response, true, "/api/auth");
 
         assertThat(response.getHeader("Set-Cookie"))
                 .contains("refresh_token=")

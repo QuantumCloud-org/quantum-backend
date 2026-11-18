@@ -8,11 +8,11 @@ import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.jspecify.annotations.NonNull;
 import org.redisson.api.RLock;
+import org.redisson.api.RTopic;
 import org.redisson.api.RedissonClient;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
+import org.redisson.codec.TypedJsonJacksonCodec;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.cache.support.AbstractValueAdaptingCache;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -34,11 +34,11 @@ import java.util.concurrent.TimeUnit;
  */
 @Slf4j
 @Configuration(proxyBeanMethods = false)
-@EnableCaching
-@ConditionalOnBean(RedissonClient.class)
 @ConditionalOnProperty(name = "cache.mode", havingValue = "redis", matchIfMissing = true)
 @DependsOn("redisson")
 public class MultiLevelCacheConfig {
+
+    private static final TypedJsonJacksonCodec SYNC_CODEC = new TypedJsonJacksonCodec(SyncMessage.class);
 
     @Bean
     public CacheManager cacheManager(RedisUtil redisUtil, RedissonClient redissonClient) {
@@ -60,18 +60,20 @@ public class MultiLevelCacheConfig {
         private final ConcurrentMap<String, MultiLevelCache> caches = new ConcurrentHashMap<>();
         private final RedisUtil redisUtil;
         private final RedissonClient redissonClient;
+        private final RTopic syncTopic;
 
         public MultiLevelCacheManager(RedisUtil redisUtil, RedissonClient redissonClient) {
             this.instanceId = UUID.randomUUID().toString().substring(0, 8);
             this.redisUtil = redisUtil;
             this.redissonClient = redissonClient;
+            this.syncTopic = redissonClient.getTopic(CacheConstants.SYNC_TOPIC, SYNC_CODEC);
             subscribeSyncMessage();
         }
 
         @Override
         public org.springframework.cache.Cache getCache(@NonNull String name) {
             return caches.computeIfAbsent(name, n ->
-                    new MultiLevelCache(n, redisUtil, redissonClient, instanceId));
+                    new MultiLevelCache(n, redisUtil, redissonClient, instanceId, syncTopic));
         }
 
         @Override
@@ -84,7 +86,7 @@ public class MultiLevelCacheConfig {
          * 订阅缓存同步消息
          */
         private void subscribeSyncMessage() {
-            redisUtil.subscribe(CacheConstants.SYNC_TOPIC, SyncMessage.class, (channel, msg) -> {
+            syncTopic.addListener(SyncMessage.class, (channel, msg) -> {
                 // 忽略自己发送的消息
                 if (instanceId.equals(msg.instanceId())) {
                     return;
@@ -128,12 +130,14 @@ public class MultiLevelCacheConfig {
         private final Cache<Object, Object> localCache;
         private final RedisUtil redis;
         private final RedissonClient redissonClient;
+        private final RTopic syncTopic;
 
-        public MultiLevelCache(String name, RedisUtil redis, RedissonClient redissonClient, String instanceId) {
+        public MultiLevelCache(String name, RedisUtil redis, RedissonClient redissonClient, String instanceId, RTopic syncTopic) {
             super(false);
             this.name = name;
             this.redis = redis;
             this.redissonClient = redissonClient;
+            this.syncTopic = syncTopic;
             this.instanceId = instanceId;
             this.keyPrefix = CacheConstants.REDIS_KEY_PREFIX + name + ":";
             this.localCache = Caffeine.newBuilder()
@@ -265,14 +269,12 @@ public class MultiLevelCacheConfig {
          */
         private void publishSync(Object key, boolean clearAll) {
             // 异步发布，不阻塞主流程
-            Thread.startVirtualThread(() -> {
-                try {
-                    redis.publish(CacheConstants.SYNC_TOPIC,
-                            new SyncMessage(instanceId, name, key != null ? key.toString() : null, clearAll));
-                } catch (Exception e) {
-                    log.warn("缓存同步消息发布失败", e);
-                }
-            });
+            syncTopic.publishAsync(new SyncMessage(instanceId, name, key == null ? null : key.toString(), clearAll))
+                    .whenComplete((count, error) -> {
+                        if (error != null) {
+                            log.warn("同步缓存失效消息失败 | name={}", name, error);
+                        }
+                    });
         }
     }
 }

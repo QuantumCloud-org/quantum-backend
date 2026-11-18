@@ -4,7 +4,7 @@ import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.enums.ResultCode;
-import com.alpha.framework.util.JsonUtil;
+import com.alpha.framework.util.ServletJsonWriter;
 import com.alpha.security.config.SecurityProperties;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -13,7 +13,6 @@ import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
@@ -35,7 +34,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
     private static final String RATE_LIMIT_KEY = "rate:limit:";
 
     private final CacheClient cacheClient;
-    private final JsonUtil jsonUtil;
+    private final ServletJsonWriter jsonWriter;
     private final SecurityProperties securityProperties;
 
     @Override
@@ -66,10 +65,7 @@ public class RateLimitFilter extends OncePerRequestFilter {
      * 响应错误
      */
     private void responseError(HttpServletResponse response) throws IOException {
-        response.setStatus(ResultCode.RATE_LIMIT_EXCEEDED.getCode());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(jsonUtil.toJson(Result.fail(ResultCode.RATE_LIMIT_EXCEEDED)));
+        jsonWriter.write(response, ResultCode.RATE_LIMIT_EXCEEDED.getCode(), Result.fail(ResultCode.RATE_LIMIT_EXCEEDED));
     }
 
     @Override

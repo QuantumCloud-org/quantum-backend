@@ -21,11 +21,6 @@ public class SecurityProperties {
     private List<String> whitelist = new ArrayList<>();
 
     /**
-     * 是否启用 CSRF
-     */
-    private boolean csrfEnabled = false;
-
-    /**
      * 是否启用 XSS 过滤
      */
     private boolean xssEnabled = true;
@@ -79,6 +74,9 @@ public class SecurityProperties {
      * Refresh Token Cookie 是否设置 Secure 标记
      */
     private boolean refreshCookieSecure = false;
+
+    /** Browser-visible path shared by login, logout and refresh. */
+    private String refreshCookiePath = "/api/auth";
 
     /**
      * 登录失败最大次数

@@ -37,14 +37,7 @@ public class CacheInfo {
                 .map(name -> {
                     var cache = cacheManager.getCache(name);
                     if (cache instanceof MultiLevelCacheConfig.MultiLevelCache mlc) {
-                        var s = mlc.getLocalCache().stats();
-                        return Map.of(
-                                "name", name,
-                                "hitCount", s.hitCount(),
-                                "missCount", s.missCount(),
-                                "hitRate", String.format("%.2f%%", s.hitRate() * 100),
-                                "size", mlc.getLocalCache().estimatedSize()
-                        );
+                        return statOf(name, mlc, false);
                     }
                     return Map.of("name", name);
                 })
@@ -58,19 +51,25 @@ public class CacheInfo {
      */
     @ReadOperation
     public Map<String, Object> stat(@Selector String name) {
-        var cache = cacheManager.getCache(name);
+        var cache = cacheManager.getCacheNames().contains(name) ? cacheManager.getCache(name) : null;
         if (cache instanceof MultiLevelCacheConfig.MultiLevelCache mlc) {
-            var s = mlc.getLocalCache().stats();
-            return Map.of(
-                    "name", name,
-                    "hitCount", s.hitCount(),
-                    "missCount", s.missCount(),
-                    "hitRate", String.format("%.2f%%", s.hitRate() * 100),
-                    "evictionCount", s.evictionCount(),
-                    "loadCount", s.loadCount(),
-                    "size", mlc.getLocalCache().estimatedSize()
-            );
+            return statOf(name, mlc, true);
         }
         return Map.of("error", "Cache not found: " + name);
+    }
+
+    private Map<String, Object> statOf(String name, MultiLevelCacheConfig.MultiLevelCache cache, boolean detailed) {
+        var stats = cache.getLocalCache().stats();
+        var row = new HashMap<String, Object>();
+        row.put("name", name);
+        row.put("hitCount", stats.hitCount());
+        row.put("missCount", stats.missCount());
+        row.put("hitRate", String.format("%.2f%%", stats.hitRate() * 100));
+        row.put("size", cache.getLocalCache().estimatedSize());
+        if (detailed) {
+            row.put("evictionCount", stats.evictionCount());
+            row.put("loadCount", stats.loadCount());
+        }
+        return row;
     }
 }

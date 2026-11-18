@@ -20,11 +20,6 @@ public interface ISysRoleService extends IService<SysRole> {
     Page<SysRole> selectRolePage(RoleQuery query);
 
     /**
-     * 查询角色列表
-     */
-    List<SysRole> selectRoleList(RoleQuery query);
-
-    /**
      * 查询所有角色
      */
     List<SysRole> selectAllRoles();
@@ -33,11 +28,6 @@ public interface ISysRoleService extends IService<SysRole> {
      * 根据ID查询角色
      */
     SysRole selectRoleById(Long roleId);
-
-    /**
-     * 根据用户ID查询角色
-     */
-    List<SysRole> selectRolesByUserId(Long userId);
 
     /**
      * 根据用户ID查询角色ID集合

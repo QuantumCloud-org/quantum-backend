@@ -14,9 +14,14 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
 import org.springframework.security.authentication.AuthenticationManager;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UserDetailsPasswordService;
+import org.springframework.security.crypto.password.DelegatingPasswordEncoder;
+import com.alpha.security.util.BcryptPasswords;
 import org.springframework.security.authentication.ProviderManager;
 import org.springframework.security.authentication.dao.DaoAuthenticationProvider;
-import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
 import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
@@ -34,6 +39,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 /**
  * Spring Security 核心配置
@@ -41,8 +47,9 @@ import java.util.List;
 @Slf4j
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity
 public class SecurityConfig {
+
+    private static final BCryptPasswordEncoder BCRYPT = new BCryptPasswordEncoder();
 
     private final SecurityProperties securityProperties;
     private final TokenService tokenService;
@@ -74,16 +81,35 @@ public class SecurityConfig {
      */
     @Bean
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new DelegatingPasswordEncoder("bcrypt", Map.of("bcrypt", BCRYPT));
     }
 
     /**
      * 认证管理器
      */
     @Bean
-    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder) {
-        DaoAuthenticationProvider provider = new DaoAuthenticationProvider(userDetailsService);
+    public AuthenticationManager authenticationManager(UserDetailsService userDetailsService, PasswordEncoder passwordEncoder,
+                                                       UserDetailsPasswordService passwordUpdater) {
+        var provider = new DaoAuthenticationProvider(userDetailsService) {
+            @Override
+            protected void additionalAuthenticationChecks(UserDetails user, UsernamePasswordAuthenticationToken authentication) {
+                Object credentials = authentication.getCredentials();
+                if (!(credentials instanceof String raw) || !BcryptPasswords.withinByteLimit(raw)) {
+                    throw new BadCredentialsException("Bad credentials");
+                }
+                try {
+                    if (!BcryptPasswords.isLegacy(user.getPassword())) {
+                        super.additionalAuthenticationChecks(user, authentication);
+                    } else if (!BCRYPT.matches(user.getUsername() + raw, user.getPassword())) {
+                        throw new BadCredentialsException("Bad credentials");
+                    }
+                } catch (IllegalArgumentException e) {
+                    throw new BadCredentialsException("Bad credentials");
+                }
+            }
+        };
         provider.setPasswordEncoder(passwordEncoder);
+        provider.setUserDetailsPasswordService(passwordUpdater);
         return new ProviderManager(provider);
     }
 
@@ -93,8 +119,8 @@ public class SecurityConfig {
     }
 
     @Bean
-    public RequestWrapperFilter requestWrapperFilter() {
-        return new RequestWrapperFilter(securityProperties);
+    public RequestWrapperFilter requestWrapperFilter(com.alpha.framework.util.ServletJsonWriter writer) {
+        return new RequestWrapperFilter(securityProperties, writer);
     }
 
     /*
@@ -141,7 +167,7 @@ public class SecurityConfig {
      * 安全过滤链
      */
     @Bean
-    public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain securityFilterChain(HttpSecurity http, RequestWrapperFilter requestWrapper) throws Exception {
         // 白名单路径
         String[] whitelist = securityProperties.getWhitelist().toArray(new String[0]);
 
@@ -174,6 +200,7 @@ public class SecurityConfig {
                 // 授权配置
                 .authorizeHttpRequests(auth -> auth
                         // 白名单路径
+                        .requestMatchers(HttpMethod.POST, "/auth/refresh").permitAll()
                         .requestMatchers(whitelist).permitAll()
                         // 探活端点公开
                         .requestMatchers(HttpMethod.GET, "/actuator/health").permitAll()
@@ -184,7 +211,7 @@ public class SecurityConfig {
                                 return new org.springframework.security.authorization.AuthorizationDecision(false);
                             }
                             if (auth2.getPrincipal() instanceof com.alpha.framework.entity.LoginUser loginUser) {
-                                boolean isAdmin = loginUser.getRoles() != null && loginUser.getRoles().contains("admin");
+                                boolean isAdmin = loginUser.isAdmin();
                                 return new org.springframework.security.authorization.AuthorizationDecision(isAdmin);
                             }
                             return new org.springframework.security.authorization.AuthorizationDecision(false);
@@ -209,7 +236,7 @@ public class SecurityConfig {
                 // 2. RateLimitFilter 在 TokenAuth 之后（此时已有用户信息）
                 .addFilterAfter(rateLimitFilter, TokenAuthenticationFilter.class)
                 // 3. RequestWrapperFilter 在 RateLimit 之后（包装请求体，供 RepeatSubmit 读取 body）
-                .addFilterAfter(requestWrapperFilter(), RateLimitFilter.class)
+                .addFilterAfter(requestWrapper, RateLimitFilter.class)
                 // 4. RepeatSubmitFilter 在 RequestWrapper 之后（此时可读取 body MD5）
                 .addFilterAfter(repeatSubmitFilter, RequestWrapperFilter.class);
 

@@ -1,5 +1,7 @@
 package com.alpha.mcp.controller;
 
+import com.alpha.framework.advice.NoResultWrap;
+
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
@@ -26,6 +28,7 @@ import java.util.Map;
 import java.util.Set;
 
 @RestController
+@NoResultWrap
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "ai.mcp", name = "enabled", havingValue = "true")
 public class OAuthController {
@@ -84,7 +87,7 @@ public class OAuthController {
     }
 
     @PostMapping(value = "/oauth/token", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)
-    public Map<String, Object> token(
+    public ResponseEntity<Map<String, Object>> token(
             @RequestParam("grant_type") String grantType,
             @RequestParam("client_id") String clientId,
             @RequestParam(value = "redirect_uri", required = false) String redirectUri,
@@ -94,6 +97,9 @@ public class OAuthController {
             @RequestParam(value = "resource", required = false) String resource) {
         OAuthTokenResponse tokenResponse;
         if ("authorization_code".equals(grantType)) {
+            if (codeVerifier == null || codeVerifier.isBlank()) {
+                return ResponseEntity.badRequest().body(Map.of("error", "invalid_grant"));
+            }
             tokenResponse = tokenService.exchangeAuthorizationCode(
                     clientId,
                     redirectUri,
@@ -105,7 +111,7 @@ public class OAuthController {
         } else {
             throw new BizException(ResultCode.PARAM_INVALID, "unsupported grant_type");
         }
-        return tokenResponse(tokenResponse);
+        return ResponseEntity.ok(tokenResponse(tokenResponse));
     }
 
     @PostMapping(value = "/oauth/revoke", consumes = MediaType.APPLICATION_FORM_URLENCODED_VALUE)

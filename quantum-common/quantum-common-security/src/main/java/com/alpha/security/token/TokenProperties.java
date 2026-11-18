@@ -31,11 +31,6 @@ public class TokenProperties {
      */
     private int refreshTokenExpire = 10080;
 
-    /**
-     * Token 自动续期阈值（百分比 0-1）
-     * 当剩余有效期小于此比例时自动续期
-     */
-    private double renewThreshold = 0.3;
 
     /**
      * 是否启用单设备登录

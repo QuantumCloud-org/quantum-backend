@@ -63,3 +63,10 @@
 | `system.role.list` | `system.role.read` | `system:role:query` | permission-only |
 
 `McpToolService` 在 service 调用前断言 `UserContext.getUser() != null`、OAuth token scope 与 tool permission。输出统一先经 `JsonUtil` 序列化为 JSON 文本。JSON-RPC `tools/call` 捕获业务异常并返回 JSON-RPC error envelope; legacy 非 JSON-RPC `tools/call` 分支返回显式 `error.code/message` payload。数字参数解析失败归一为 `PARAM_INVALID`。
+
+## 2026-11-18 变更（sprint: 2026-11-deps-upgrade-audit）
+
+- token 不再沿用登录时的 `LoginUser` 快照：validate 和 refresh 时都按 userId 重新加载当前用户并校验 enabled（S02）。refresh 先校验 client、resource 绑定和当前用户，再消费旧 token；用户加载临时失败时旧 token 仍可用，不会误触发复用吊销（B1）。
+- 按用户强退、改密时，通过会话代际同时吊销 Web 和 MCP 会话（R03/R05）。按会话强退只影响目标 Web 会话。
+- `McpController`、`OAuthController`、`OAuthMetadataController` 都标了 `@NoResultWrap`，`ResponseAdvice` 不再包装它们的响应，保持 JSON-RPC 与 RFC 6749 的原始格式（X01）。
+- PKCE 缺少 `code_verifier` 时返回 400 `invalid_grant`，不再返回 500（S22）。

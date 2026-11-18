@@ -3,11 +3,11 @@ package com.alpha.mcp.security;
 import com.alpha.cache.util.LocalCacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
-import com.alpha.framework.util.JsonUtil;
 import com.alpha.mcp.config.McpProperties;
 import com.alpha.mcp.oauth.OAuthTokenResponse;
 import com.alpha.mcp.oauth.OAuthTokenService;
 import com.alpha.mcp.oauth.PkceUtil;
+import com.alpha.security.token.SessionGeneration;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -26,13 +26,22 @@ class OAuthBearerAuthenticationFilterTest {
     private McpProperties properties;
     private OAuthTokenService tokenService;
     private OAuthBearerAuthenticationFilter filter;
+    private SessionGeneration generations;
 
     @BeforeEach
     void setUp() {
         properties = new McpProperties();
         properties.setEnabled(true);
-        tokenService = new OAuthTokenService(new LocalCacheClient(), properties);
-        filter = new OAuthBearerAuthenticationFilter(tokenService, properties, new JsonUtil(new ObjectMapper()));
+        var client = new McpProperties.Client();
+        client.setRedirectUris(java.util.List.of("http://127.0.0.1/callback"));
+        client.setScopes(properties.getDefaultScopes());
+        properties.getClients().put("quantum-local-agent", client);
+        var userDetails = org.mockito.Mockito.mock(com.alpha.system.service.impl.UserDetailsServiceImpl.class);
+        org.mockito.Mockito.when(userDetails.loadUserById(2L)).thenAnswer(invocation -> loginUser());
+        var cache = new LocalCacheClient();
+        generations = new SessionGeneration(cache);
+        tokenService = new OAuthTokenService(cache, properties, userDetails, generations);
+        filter = new OAuthBearerAuthenticationFilter(tokenService, properties, new com.alpha.framework.util.ServletJsonWriter(new ObjectMapper()));
     }
 
     @AfterEach
@@ -78,6 +87,31 @@ class OAuthBearerAuthenticationFilterTest {
         assertThat(response.getStatus()).isEqualTo(200);
     }
 
+    @Test
+    void rejectsMissingBearerTokenWithServletContextPath() throws Exception {
+        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/quantum/mcp");
+        request.setContextPath("/quantum");
+
+        assertMcpAuthenticationRequired(request);
+    }
+
+    @Test
+    void rejectsMissingBearerTokenAtTheMappedEndpointEvenWhenConfigurationDiffers() throws Exception {
+        properties.setEndpoint("/configured-mcp");
+
+        assertMcpAuthenticationRequired(new MockHttpServletRequest("GET", "/mcp"));
+    }
+
+    private void assertMcpAuthenticationRequired(MockHttpServletRequest request) throws Exception {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        AtomicBoolean chainCalled = new AtomicBoolean();
+
+        filter.doFilter(request, response, (req, res) -> chainCalled.set(true));
+
+        assertThat(chainCalled).isFalse();
+        assertThat(response.getStatus()).isEqualTo(401);
+    }
+
     private OAuthTokenResponse issueToken() {
         String verifier = "filter-test-verifier-123456";
         String code = tokenService.createAuthorizationCode(
@@ -89,7 +123,7 @@ class OAuthBearerAuthenticationFilterTest {
                         properties.getResource(),
                         Set.of("system.user.read"),
                         "nonce-1"),
-                loginUser());
+                loginUser().setSessionGeneration(generations.open(2L)));
         return tokenService.exchangeAuthorizationCode(
                 "quantum-local-agent",
                 "http://127.0.0.1/callback",

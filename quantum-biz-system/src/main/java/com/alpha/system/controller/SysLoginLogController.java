@@ -5,6 +5,8 @@ import com.alpha.logging.annotation.SystemLog;
 import com.alpha.logging.enums.BusinessType;
 import com.alpha.orm.entity.PageResult;
 import com.alpha.security.annotation.RequiresPermission;
+import com.alpha.security.annotation.RequiresRole;
+import com.alpha.framework.constant.CommonConstants;
 import com.alpha.system.domain.SysLoginLog;
 import com.alpha.system.dto.request.LoginLogQuery;
 import com.alpha.system.service.ISysLoginLogService;
@@ -47,6 +49,7 @@ public class SysLoginLogController {
     @Operation(summary = "清空登录日志")
     @SystemLog(title = "登录日志", businessType = BusinessType.CLEAN)
     @RequiresPermission("monitor:loginlog:remove")
+    @RequiresRole(CommonConstants.SUPER_ADMIN_ROLE)
     @DeleteMapping("/clean")
     public Result<Void> clean() {
         loginLogService.cleanLoginLog();

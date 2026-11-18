@@ -35,7 +35,7 @@ public class McpProperties {
             "system.role.read"
     ));
 
-    private Map<String, Client> clients = defaultClients();
+    private Map<String, Client> clients = new LinkedHashMap<>();
 
     public Client requireClient(String clientId) {
         Client client = clients.get(clientId);
@@ -55,24 +55,6 @@ public class McpProperties {
 
     public String normalizedEndpoint() {
         return endpoint == null || endpoint.isBlank() ? "/mcp" : endpoint;
-    }
-
-    private static Map<String, Client> defaultClients() {
-        Client localAgent = new Client();
-        localAgent.setName("Quantum Local Agent");
-        localAgent.setRedirectUris(new ArrayList<>(List.of(
-                "http://127.0.0.1/callback",
-                "http://localhost/callback"
-        )));
-        localAgent.setScopes(new ArrayList<>(List.of(
-                "system.user.read",
-                "system.dept.read",
-                "system.role.read"
-        )));
-
-        Map<String, Client> defaults = new LinkedHashMap<>();
-        defaults.put("quantum-local-agent", localAgent);
-        return defaults;
     }
 
     private static String stripTrailingSlash(String value) {

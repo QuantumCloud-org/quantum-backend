@@ -2,7 +2,9 @@
 sprint_slug: "2026-07-30-security-dependency-refresh"
 path: "System"
 stage: "impl"
-status: "approved"
+status: "paused"
+resume_when: "after 2026-11-deps-upgrade-audit"
+paused_stage: "ship"
 ---
 
 # Security and Dependency Refresh — quantum-backend

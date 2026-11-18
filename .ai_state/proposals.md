@@ -154,3 +154,21 @@
   交付物 (3 个 commit) 已在 main 且证据充分 (101 tests 全绿 + 解析集合 A/B 232 vs 232 diff 为空 +
   runtime-verify 实启动/HTTP/fail-closed)。Stop 将持续 block, 属已知且已记录状态。
 - **触发 sprint**: 2026-07-30-security-dependency-refresh (依赖升级切片收口时暴露)。
+
+
+## 2026-09-07 · .ai_state 解析越过 repo 边界, 无关仓库继承父项目 ESCALATED 门禁 (中优先级)
+
+- **现象**: quantum-agent 仓 (cwd=workspace/quantum/quantum-agent) 在 af7d9de 删除自身 `.ai_state/` 后,
+  SessionStart/Stop hook 向上解析到父目录 `workspace/quantum/.ai_state`, 于是本仓的纯配置会话
+  (/statusline) 被父项目 2026-07-30 sprint 的 ship 契约 (missing evidence.yaml, 已 ESCALATED)
+  逐 Stop 拦截 — 该 block 是父项目已记录的「持续 block」既定状态 (见上一条 2026-07-31 处置),
+  却外溢到了无关仓库。
+- **根因**: 状态解析按目录向上爬且不停在 `git rev-parse --show-toplevel`; 嵌套 repo (父目录本身
+  含另一个 .ai_state) 场景下, 子仓无 .ai_state ≠ 应继承父项目 sprint 状态。
+- **提案**: hook 解析 .ai_state 时以当前 git toplevel 为上界; 越界命中时降级为 "uninitialized"
+  (提示 /athena-init) 而非套用父项目 stage 契约。
+- **本轮处置**: 未伪造 evidence.yaml、未动父项目 _index; 在 quantum-agent 重跑 /athena-init
+  (本就是用户中断前的待续命令) 重建本仓 .ai_state, 使 hook 就近解析、脱离父项目 ship 契约。
+- **触发**: quantum-agent 2026-09-07 /statusline 会话 Stop (session 622f5dc8)。
+- **修复 (2026-09-07)**: 已按提案落地 — findAiState 以 .git 为上界, 源码库 9.9.9 与部署目录同步修复
+  (31 文件, 验证与备份见 harness-patches.md 同日条目), 用户点名批准主 agent 直改。

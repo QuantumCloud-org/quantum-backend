@@ -18,11 +18,6 @@ public interface ISysDictTypeService extends IService<SysDictType> {
     Page<SysDictType> selectDictTypePage(DictTypeQuery query);
 
     /**
-     * 查询字典类型列表
-     */
-    List<SysDictType> selectDictTypeList(DictTypeQuery query);
-
-    /**
      * 查询所有字典类型
      */
     List<SysDictType> selectAllDictTypes();
@@ -31,11 +26,6 @@ public interface ISysDictTypeService extends IService<SysDictType> {
      * 根据ID查询字典类型
      */
     SysDictType selectDictTypeById(Long dictId);
-
-    /**
-     * 根据字典类型查询
-     */
-    SysDictType selectByDictType(String dictType);
 
     /**
      * 新增字典类型
@@ -61,9 +51,4 @@ public interface ISysDictTypeService extends IService<SysDictType> {
      * 刷新字典缓存
      */
     void refreshCache();
-
-    /**
-     * 清除字典缓存
-     */
-    void clearCache();
 }

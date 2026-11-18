@@ -2,7 +2,6 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.useragent.UserAgent;
-import cn.hutool.http.useragent.UserAgentUtil;
 import com.alpha.cache.constant.CacheKeyConstant;
 import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
@@ -12,11 +11,13 @@ import com.alpha.framework.exception.BizException;
 import com.alpha.framework.util.IpUtil;
 import com.alpha.security.config.SecurityProperties;
 import com.alpha.security.service.ICaptchaService;
+import com.alpha.security.token.SessionGeneration;
 import com.alpha.security.token.TokenInfo;
 import com.alpha.security.token.TokenService;
 import com.alpha.system.domain.SysLoginLog;
 import com.alpha.system.dto.request.LoginRequest;
 import com.alpha.system.dto.response.LoginResponse;
+import com.alpha.system.mapper.SysUserMapper;
 import com.alpha.system.service.ISysLoginLogService;
 import com.alpha.system.service.ISysUserService;
 import com.nimbusds.jose.JOSEException;
@@ -28,6 +29,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
+import java.util.Objects;
 
 /**
  * 登录服务实现
@@ -44,6 +46,8 @@ public class LoginServiceImpl {
     private final ISysLoginLogService loginLogService;
     private final ICaptchaService captchaService;
     private final ISysUserService sysUserService;
+    private final SessionGeneration generations;
+    private final SysUserMapper userMapper;
 
     /**
      * 登录
@@ -53,18 +57,16 @@ public class LoginServiceImpl {
         String password = request.getPassword();
 
         String clientIpEarly = UserContext.getIp();
-        UserAgent uaEarly = parseUserAgent(UserContext.getUserAgent());
+        UserAgent ua = UserContext.getParsedUserAgent();
 
         // 1. 校验验证码
         if (securityProperties.isCaptchaRequired()) {
             if (StrUtil.isBlank(request.getCaptchaKey()) || StrUtil.isBlank(request.getCaptchaCode())) {
-                recordLoginFail(username);
-                recordLoginLog(username, clientIpEarly, uaEarly, false, "验证码错误");
+                recordLoginLog(username, clientIpEarly, ua, false, "验证码错误");
                 throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");
             }
             if (!captchaService.verify(request.getCaptchaKey(), request.getCaptchaCode())) {
-                recordLoginFail(username);
-                recordLoginLog(username, clientIpEarly, uaEarly, false, "验证码错误");
+                recordLoginLog(username, clientIpEarly, ua, false, "验证码错误");
                 throw new BizException(ResultCode.UNAUTHORIZED, "验证码错误");
             }
         }
@@ -73,7 +75,7 @@ public class LoginServiceImpl {
         try {
             checkAccountLock(username);
         } catch (BizException e) {
-            recordLoginLog(username, clientIpEarly, uaEarly, false, e.getMessage());
+            recordLoginLog(username, clientIpEarly, ua, false, e.getMessage());
             throw e;
         }
 
@@ -81,9 +83,10 @@ public class LoginServiceImpl {
         LoginUser loginUser;
         String ip = UserContext.getIp();
         String userAgent = UserContext.getUserAgent();
-        UserAgent ua = parseUserAgent(userAgent);
+        Long userId = userMapper.selectIdByUsername(username);
+        String generation = userId == null ? null : generations.open(userId);
         try {
-            Authentication authentication = authenticationManager.authenticate(new UsernamePasswordAuthenticationToken(username, username + password));
+            Authentication authentication = authenticationManager.authenticate(UsernamePasswordAuthenticationToken.unauthenticated(username, password));
             loginUser = (LoginUser) authentication.getPrincipal();
         } catch (BadCredentialsException e) {
             recordLoginFail(username);
@@ -102,26 +105,25 @@ public class LoginServiceImpl {
             throw new BizException(ResultCode.SYSTEM_ERROR, "登录失败，请稍后重试");
         }
 
-        // 4. 清除登录失败记录
-        clearLoginFail(username);
+        if (!Objects.equals(userId, loginUser.getUserId()) || generation == null) {
+            throw new BizException(ResultCode.SESSION_TRANSITION);
+        }
 
-        // 5. 设置登录信息
-        setLoginInfo(loginUser);
+        loginUser.setPassword(null);
+        setLoginInfo(loginUser, ua);
 
-        // 6. 记录登录成功日志
-        recordLoginLog(username, ip, ua, true, "登录成功");
-
-        // 7. 生成 Token
-        String deviceId = request.getDeviceId();
-        String clientIp = UserContext.getIp();
         TokenInfo tokenInfo = tokenService.createToken(
                 loginUser,
-                deviceId,
-                clientIp,
+                generation,
+                request.getDeviceId(),
+                ip,
                 userAgent,
                 Boolean.TRUE.equals(request.getRememberMe())
         );
 
+        clearLoginFail(username);
+        updateLoginInfo(loginUser);
+        recordLoginLog(username, ip, ua, true, "登录成功");
         return LoginResponse.of(loginUser, tokenInfo);
     }
 
@@ -169,35 +171,24 @@ public class LoginServiceImpl {
     /**
      * 设置登录信息
      */
-    private void setLoginInfo(LoginUser loginUser) {
+    private void setLoginInfo(LoginUser loginUser, UserAgent ua) {
         String ip = UserContext.getIp();
 
         loginUser.setLoginIp(ip);
-        loginUser.setLoginLocation(IpUtil.getIpAddress(ip));
+        loginUser.setLoginLocation(IpUtil.getCityInfo(ip));
 
-        String userAgent = UserContext.getUserAgent();
-        if (StrUtil.isNotBlank(userAgent)) {
-            UserAgent ua = UserAgentUtil.parse(userAgent);
-            if (ua != null) {
-                loginUser.setBrowser(ua.getBrowser().getName());
-                loginUser.setOs(ua.getPlatform().getName());
-            }
+        if (ua != null) {
+            loginUser.setBrowser(ua.getBrowser().getName());
+            loginUser.setOs(ua.getPlatform().getName());
         }
+    }
+
+    private void updateLoginInfo(LoginUser loginUser) {
         try {
             sysUserService.updateLoginInfo(loginUser.getUserId(), loginUser);
         } catch (Exception e) {
             log.warn("更新用户最近登录信息失败 | UserId: {}", loginUser.getUserId(), e);
         }
-    }
-
-    /**
-     * 解析 UserAgent
-     */
-    private UserAgent parseUserAgent(String userAgent) {
-        if (StrUtil.isBlank(userAgent)) {
-            return null;
-        }
-        return UserAgentUtil.parse(userAgent);
     }
 
     /**
@@ -207,7 +198,7 @@ public class LoginServiceImpl {
         SysLoginLog loginLog = new SysLoginLog();
         loginLog.setUsername(username);
         loginLog.setIpaddr(ip);
-        loginLog.setLoginLocation(IpUtil.getIpAddress(ip));
+        loginLog.setLoginLocation(IpUtil.getCityInfo(ip));
         loginLog.setStatus(success ? 0 : 1);
         loginLog.setMsg(message);
         loginLog.setLoginTime(LocalDateTime.now());

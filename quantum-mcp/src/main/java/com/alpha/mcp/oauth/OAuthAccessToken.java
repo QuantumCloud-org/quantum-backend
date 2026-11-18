@@ -1,6 +1,6 @@
 package com.alpha.mcp.oauth;
 
-import com.alpha.framework.entity.LoginUser;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import lombok.Data;
 import lombok.experimental.Accessors;
 
@@ -11,6 +11,7 @@ import java.util.Set;
 
 @Data
 @Accessors(chain = true)
+@JsonIgnoreProperties("loginUser")
 public class OAuthAccessToken implements Serializable {
 
     @Serial
@@ -20,7 +21,9 @@ public class OAuthAccessToken implements Serializable {
 
     private String refreshTokenId;
 
-    private LoginUser loginUser;
+    private Long userId;
+
+    private String sessionVersion;
 
     private String clientId;
 

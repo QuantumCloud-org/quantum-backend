@@ -3,7 +3,6 @@ package com.alpha.logging.filter;
 import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.http.useragent.UserAgent;
-import cn.hutool.http.useragent.UserAgentUtil;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.util.IpUtil;
@@ -22,6 +21,7 @@ import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.util.regex.Pattern;
 
 /**
  * 请求上下文过滤器
@@ -31,13 +31,15 @@ import java.io.IOException;
  * 2. 提取请求信息
  * 3. 确保在 finally 记录访问日志中并且彻底清理 ThreadLocal
  * <p>
- * Order = HIGHEST_PRECEDENCE + 10，仅次于 RequestWrapperFilter
+ * 在安全过滤链之前初始化请求上下文。
  */
 @Slf4j
 @Component
 @Order(Ordered.HIGHEST_PRECEDENCE + 10)
 @RequiredArgsConstructor
 public class TraceFilter extends OncePerRequestFilter {
+
+    private static final Pattern TRACE_ID = Pattern.compile("[A-Za-z0-9-]{8,64}");
 
     private final JsonUtil jsonUtil;
 
@@ -49,7 +51,7 @@ public class TraceFilter extends OncePerRequestFilter {
         try {
             // 1. 设置 TraceId
             String traceId = request.getHeader(CommonConstants.HEADER_TRACE_ID);
-            if (StrUtil.isBlank(traceId)) {
+            if (traceId == null || !TRACE_ID.matcher(traceId).matches()) {
                 traceId = IdUtil.fastSimpleUUID().substring(0, 16);
             }
             UserContext.setTraceId(traceId);
@@ -103,7 +105,7 @@ public class TraceFilter extends OncePerRequestFilter {
         LogInfo info = new LogInfo();
 
         String traceId = UserContext.getTraceId();
-        if (StrUtil.isBlank(traceId)) {
+        if (traceId == null || !TRACE_ID.matcher(traceId).matches()) {
             traceId = MDC.get(CommonConstants.MDC_TRACE_ID);
         }
         info.setTraceId(traceId);
@@ -111,27 +113,16 @@ public class TraceFilter extends OncePerRequestFilter {
         info.setUserId(UserContext.getUserId());
         info.setUsername(UserContext.getUsername());
 
-        // 租户 ID
-        String tenantIdStr = request.getHeader(CommonConstants.HEADER_TENANT_ID);
-        if (StrUtil.isNotBlank(tenantIdStr)) {
-            try {
-                info.setTenantId(Long.parseLong(tenantIdStr));
-            } catch (NumberFormatException ignored) {
-            }
-        }
-
         // IP
         info.setIp(UserContext.getIp());
-        info.setIpAddress(IpUtil.getIpAddress(UserContext.getIp()));
+        info.setIpAddress(IpUtil.getCityInfo(UserContext.getIp()));
 
         // User-Agent
         String uaString = UserContext.getUserAgent();
         info.setUserAgent(uaString);
-        if (StrUtil.isNotBlank(uaString)) {
-            UserAgent ua = UserAgentUtil.parse(uaString);
-            if (ua != null) {
-                info.setDeviceType(ua.getPlatform().getName());
-            }
+        UserAgent ua = UserContext.getParsedUserAgent();
+        if (ua != null) {
+            info.setDeviceType(ua.getPlatform().getName());
         }
 
         // 请求信息

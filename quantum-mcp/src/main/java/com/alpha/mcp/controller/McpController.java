@@ -1,5 +1,7 @@
 package com.alpha.mcp.controller;
 
+import com.alpha.framework.advice.NoResultWrap;
+
 import com.alpha.framework.exception.BizException;
 import com.alpha.mcp.manifest.CapabilityManifestService;
 import com.alpha.mcp.tool.McpToolService;
@@ -14,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.Map;
 
 @RestController
+@NoResultWrap
 @RequiredArgsConstructor
 @ConditionalOnProperty(prefix = "ai.mcp", name = "enabled", havingValue = "true")
 public class McpController {

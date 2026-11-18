@@ -1,11 +1,9 @@
 package com.alpha.system.service;
 
 import com.alpha.system.domain.SysDept;
-import com.alpha.system.dto.response.TreeSelectVO;
 import com.mybatisflex.core.service.IService;
 
 import java.util.List;
-import java.util.Set;
 
 /**
  * 部门服务接口
@@ -21,11 +19,6 @@ public interface ISysDeptService extends IService<SysDept> {
      * 根据ID查询部门
      */
     SysDept selectDeptById(Long deptId);
-
-    /**
-     * 查询子部门ID集合（包含自身）
-     */
-    Set<Long> selectChildDeptIds(Long deptId);
 
     /**
      * 新增部门

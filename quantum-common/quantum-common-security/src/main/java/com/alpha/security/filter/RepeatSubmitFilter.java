@@ -6,9 +6,9 @@ import com.alpha.cache.util.CacheClient;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.Result;
 import com.alpha.framework.enums.ResultCode;
-import com.alpha.framework.util.JsonUtil;
+import com.alpha.framework.util.ServletJsonWriter;
 import com.alpha.security.config.SecurityProperties;
-import com.alpha.security.warpper.SecurityRequestWrapper;
+import com.alpha.security.wrapper.SecurityRequestWrapper;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -17,8 +17,8 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.http.HttpMethod;
-import org.springframework.http.MediaType;
 import org.springframework.stereotype.Component;
+import org.springframework.security.web.servlet.util.matcher.PathPatternRequestMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -37,10 +37,11 @@ import java.time.Duration;
 @ConditionalOnProperty(prefix = "security", name = "repeat-submit-enabled", havingValue = "true", matchIfMissing = true)
 public class RepeatSubmitFilter extends OncePerRequestFilter {
 
+    private static final PathPatternRequestMatcher REFRESH = PathPatternRequestMatcher.withDefaults().matcher(HttpMethod.POST, "/auth/refresh");
     private static final String REPEAT_SUBMIT_KEY = "repeat:submit:";
 
     private final CacheClient cacheClient;
-    private final JsonUtil jsonUtil;
+    private final ServletJsonWriter jsonWriter;
     private final SecurityProperties securityProperties;
 
     @Override
@@ -97,16 +98,13 @@ public class RepeatSubmitFilter extends OncePerRequestFilter {
     }
 
     private void responseError(HttpServletResponse response) throws IOException {
-        response.setStatus(ResultCode.DUPLICATE_REQUEST.getCode());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(jsonUtil.toJson(Result.fail(ResultCode.DUPLICATE_REQUEST)));
+        jsonWriter.write(response, ResultCode.DUPLICATE_REQUEST.getCode(), Result.fail(ResultCode.DUPLICATE_REQUEST));
     }
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
         String method = request.getMethod();
         // GET 和 OPTIONS 不过滤
-        return HttpMethod.GET.name().equals(method) || HttpMethod.OPTIONS.name().equals(method);
+        return HttpMethod.GET.name().equals(method) || HttpMethod.OPTIONS.name().equals(method) || REFRESH.matches(request);
     }
 }

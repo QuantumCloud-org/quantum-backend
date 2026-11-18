@@ -8,14 +8,13 @@ import org.springframework.scheduling.annotation.AsyncConfigurer;
 import org.springframework.scheduling.annotation.EnableAsync;
 
 import java.lang.reflect.Method;
-import java.util.Arrays;
 import java.util.concurrent.Executor;
-import java.util.concurrent.Executors;
+import java.util.concurrent.RejectedExecutionException;
+import java.util.concurrent.TimeUnit;
+import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 /**
  * 异步任务配置
- * <p>
- * Java 25 特性：使用 Virtual Threads
  */
 @Slf4j
 @Configuration
@@ -25,8 +24,34 @@ public class AsyncConfig implements AsyncConfigurer {
     @Override
     @Bean("asyncExecutor")
     public Executor getAsyncExecutor() {
-        // 使用 Virtual Threads（Java 25）
-        return Executors.newVirtualThreadPerTaskExecutor();
+        var executor = auditExecutor(2, 4, 256, "audit-");
+        executor.setRejectedExecutionHandler((task, pool) -> {
+            try {
+                if (pool.isShutdown() || !pool.getQueue().offer(task, 1, TimeUnit.SECONDS)) {
+                    throw new RejectedExecutionException("Audit executor queue is full or shutting down");
+                }
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                throw new RejectedExecutionException("Interrupted while queuing an audit event", e);
+            }
+        });
+        return executor;
+    }
+
+    @Bean("loginAuditExecutor")
+    public ThreadPoolTaskExecutor loginAuditExecutor() {
+        return auditExecutor(1, 2, 128, "login-audit-");
+    }
+
+    private ThreadPoolTaskExecutor auditExecutor(int coreSize, int maxSize, int queueCapacity, String threadPrefix) {
+        var executor = new ThreadPoolTaskExecutor();
+        executor.setCorePoolSize(coreSize);
+        executor.setMaxPoolSize(maxSize);
+        executor.setQueueCapacity(queueCapacity);
+        executor.setThreadFactory(Thread.ofPlatform().inheritInheritableThreadLocals(false).name(threadPrefix, 0).factory());
+        executor.setWaitForTasksToCompleteOnShutdown(true);
+        executor.setAwaitTerminationSeconds(10);
+        return executor;
     }
 
     @Override
@@ -41,10 +66,8 @@ public class AsyncConfig implements AsyncConfigurer {
 
         @Override
         public void handleUncaughtException(Throwable ex, Method method, Object... params) {
-            log.error("异步任务异常 | Method: {} | Params: {} | Error: {}",
-                    method.getDeclaringClass().getName() + "." + method.getName(),
-                    Arrays.toString(params),
-                    ex.getMessage(), ex);
+            log.error("异步任务异常 | method={}.{} | errorType={}",
+                    method.getDeclaringClass().getName(), method.getName(), ex.getClass().getName());
         }
     }
 }

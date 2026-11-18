@@ -1,0 +1,10 @@
+sprint_slug: "2026-07-30-security-dependency-refresh"
+collected_evidence:
+  - tool_use_id: "exec-2e0e3712-66e7-47f8-a736-63c866ed6b12"
+    tool: "Bash"
+    file: ""
+    kind: "lint"
+    command: "npm exec -- tsc --noEmit; npm run lint"
+    result: "unknown"
+    timestamp: "2026-09-14T05:54:57.011780Z"
+    binding_status: "unverifiable"

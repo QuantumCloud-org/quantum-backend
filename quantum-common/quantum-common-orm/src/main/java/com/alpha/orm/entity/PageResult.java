@@ -90,30 +90,5 @@ public class PageResult<T> implements Serializable {
         return result;
     }
 
-    /**
-     * 空分页结果
-     */
-    public static <T> PageResult<T> empty() {
-        PageResult<T> result = new PageResult<>();
-        result.setPageNum(1);
-        result.setPageSize(10);
-        result.setTotal(0);
-        result.setPages(0);
-        result.setRecords(Collections.emptyList());
-        return result;
-    }
-
-    /**
-     * 手动构建分页结果（用于非 MyBatis-Flex 场景）
-     */
-    public static <T> PageResult<T> of(List<T> records, long total, int pageNum, int pageSize) {
-        PageResult<T> result = new PageResult<>();
-        result.setPageNum(pageNum);
-        result.setPageSize(pageSize);
-        result.setTotal(total);
-        result.setPages(pageSize > 0 ? (total + pageSize - 1) / pageSize : 0);
-        result.setRecords(records != null ? records : Collections.emptyList());
-        return result;
-    }
 
 }

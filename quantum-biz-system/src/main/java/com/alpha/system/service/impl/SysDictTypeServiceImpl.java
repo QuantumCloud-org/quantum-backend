@@ -3,7 +3,6 @@ package com.alpha.system.service.impl;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.cache.constant.CacheKeyConstant;
 import com.alpha.framework.context.UserContext;
-import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysDictType;
@@ -12,6 +11,7 @@ import com.alpha.system.mapper.SysDictDataMapper;
 import com.alpha.system.mapper.SysDictTypeMapper;
 import com.alpha.system.service.ISysDictTypeService;
 import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryCondition;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
@@ -42,32 +42,21 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
     }
 
     @Override
-    public List<SysDictType> selectDictTypeList(DictTypeQuery query) {
-        QueryWrapper wrapper = buildQueryWrapper(query);
-        return list(wrapper);
-    }
-
-    @Override
     public List<SysDictType> selectAllDictTypes() {
-        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DELETED.eq(0)).orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
+        QueryWrapper wrapper = QueryWrapper.create().where(visibleTypeCondition()).orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
         return list(wrapper);
     }
 
     @Override
     public SysDictType selectDictTypeById(Long dictId) {
-        return getById(dictId);
-    }
-
-    @Override
-    public SysDictType selectByDictType(String dictType) {
-        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType)).and(SYS_DICT_TYPE.DELETED.eq(0));
-        return getOne(wrapper);
+        return getOne(QueryWrapper.create().where(SYS_DICT_TYPE.ID.eq(dictId)).and(visibleTypeCondition()));
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = CacheKeyConstant.SYS_DICT, allEntries = true)
     public Long insertDictType(SysDictType dictType) {
+        assertWritableBusiness(dictType.getBusiness());
         if (!checkDictTypeUnique(dictType.getDictType(), null)) {
             throw new BizException("字典类型已存在");
         }
@@ -80,11 +69,12 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = CacheKeyConstant.SYS_DICT, allEntries = true)
     public boolean updateDictType(SysDictType dictType) {
-        if (!checkDictTypeUnique(dictType.getDictType(), dictType.getId())) {
-            throw new BizException("字典类型已存在");
-        }
-
         SysDictType oldDict = getById(dictType.getId());
+        if (oldDict == null) {
+            throw new BizException(ResultCode.DATA_NOT_FOUND, "字典类型不存在");
+        }
+        assertWritableBusiness(oldDict.getBusiness());
+        assertWritableBusiness(dictType.getBusiness());
         // 如果字典类型变更，同步更新字典数据
         if (!oldDict.getDictType().equals(dictType.getDictType())) {
             // 这里可以考虑更新字典数据的 dict_type 字段
@@ -92,7 +82,10 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
             throw new BizException("不支持修改字典类型");
         }
 
-        return updateById(dictType);
+        if (!updateById(dictType)) {
+            throw new BizException(ResultCode.DATA_CONFLICT, "字典类型已变更，请刷新后重试");
+        }
+        return true;
     }
 
     @Override
@@ -105,7 +98,8 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
                 continue;
             }
 
-            QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_DATA.DICT_TYPE.eq(dictType.getDictType())).and(SYS_DICT_DATA.DELETED.eq(0));
+            assertWritableBusiness(dictType.getBusiness());
+            QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_DATA.DICT_TYPE.eq(dictType.getDictType()));
             dictDataMapper.deleteByQuery(wrapper);
         }
 
@@ -114,7 +108,7 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
 
     @Override
     public boolean checkDictTypeUnique(String dictType, Long excludeId) {
-        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType)).and(SYS_DICT_TYPE.DELETED.eq(0)).and(SYS_DICT_TYPE.ID.ne(excludeId != null ? excludeId : 0L));
+        QueryWrapper wrapper = QueryWrapper.create().where(SYS_DICT_TYPE.DICT_TYPE.eq(dictType)).and(SYS_DICT_TYPE.ID.ne(excludeId).when(excludeId != null));
         return count(wrapper) == 0;
     }
 
@@ -124,18 +118,11 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         log.info("刷新字典缓存");
     }
 
-    @Override
-    @CacheEvict(value = CacheKeyConstant.SYS_DICT, allEntries = true)
-    public void clearCache() {
-        log.info("清除字典缓存");
-    }
-
     /**
      * 构建查询条件
      */
     private QueryWrapper buildQueryWrapper(DictTypeQuery query) {
-        LoginUser loginUser = UserContext.getUser();
-        QueryWrapper wrapper = QueryWrapper.create();
+        QueryWrapper wrapper = QueryWrapper.create().where(visibleTypeCondition());
 
         if (StrUtil.isNotBlank(query.getDictName())) {
             wrapper.and(SYS_DICT_TYPE.DICT_NAME.like(query.getDictName()));
@@ -149,11 +136,26 @@ public class SysDictTypeServiceImpl extends ServiceImpl<SysDictTypeMapper, SysDi
         if (StrUtil.isNotBlank(query.getBusiness())) {
             wrapper.and(SYS_DICT_TYPE.BUSINESS.eq(query.getBusiness()));
         }
-         // 非管理员不允许查看 admin 类型
-        if (loginUser == null || !loginUser.isAdmin()) {
-             wrapper.and(SYS_DICT_TYPE.BUSINESS.ne("admin"));
-        }
         wrapper.orderBy(SYS_DICT_TYPE.CREATE_TIME.desc());
         return wrapper;
+    }
+
+    static QueryCondition visibleTypeCondition() {
+        var condition = SYS_DICT_TYPE.DELETED.eq(0);
+        if (!isAdmin()) {
+            condition = condition.and(SYS_DICT_TYPE.BUSINESS.ne("admin").or(SYS_DICT_TYPE.BUSINESS.isNull()));
+        }
+        return condition;
+    }
+
+    static boolean isAdmin() {
+        var user = UserContext.getUser();
+        return user != null && user.isAdmin();
+    }
+
+    private static void assertWritableBusiness(String business) {
+        if ("admin".equals(business) && !isAdmin()) {
+            throw new BizException(ResultCode.ACCESS_DENIED, "无权操作管理员字典");
+        }
     }
 }

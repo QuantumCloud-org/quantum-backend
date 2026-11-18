@@ -2,11 +2,10 @@ package com.alpha.system.service.impl;
 
 import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
-import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.enums.ResultCode;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysMenu;
 import com.alpha.system.dto.response.RouterVO;
-import com.alpha.system.dto.response.TreeSelectVO;
 import com.alpha.system.mapper.SysMenuMapper;
 import com.alpha.system.mapper.SysRoleMenuMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
@@ -23,9 +22,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.LinkedHashSet;
+import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -60,7 +57,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     /**
      * 按钮类型
      */
-    private static final String TYPE_BUTTON = "F";
     /**
      * Layout组件
      */
@@ -95,9 +91,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
     public List<SysMenu> selectMenuTreeByUserId(Long userId) {
         List<SysMenu> menus;
         // 管理员显示所有菜单
-        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
+        if (com.alpha.framework.entity.LoginUser.isSuperAdmin(userId)) {
             QueryWrapper wrapper = QueryWrapper.create()
-                    .where(SYS_MENU.MENU_TYPE.in("M", "C"))
+                    .where(SYS_MENU.MENU_TYPE.in(TYPE_DIR, TYPE_MENU))
                     .and(SYS_MENU.STATUS.eq(1))
                     .and(SYS_MENU.DELETED.eq(0))
                     .orderBy(SYS_MENU.PARENT_ID.asc(), SYS_MENU.ORDER_NUM.asc());
@@ -114,15 +110,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .select(SYS_ROLE_MENU.MENU_ID)
                 .where(SYS_ROLE_MENU.ROLE_ID.eq(roleId));
         return roleMenuMapper.selectListByQueryAs(wrapper, Long.class).stream().collect(Collectors.toSet());
-    }
-
-    @Override
-    public Set<String> selectPermsByUserId(Long userId) {
-        // 管理员拥有所有权限
-        if (CommonConstants.SUPER_ADMIN_ID.equals(userId)) {
-            return Set.of("*:*:*");
-        }
-        return menuMapper.selectPermsByUserId(userId);
     }
 
     @Override
@@ -170,6 +157,9 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         if (java.util.Objects.equals(menu.getId(), effectiveParentId)) {
             throw new BizException("父菜单不能是自己");
         }
+        if (!Objects.equals(oldMenu.getParentId(), effectiveParentId)) {
+            checkParentAncestry(menu.getId(), effectiveParentId);
+        }
 
         // 对比旧菜单，perms/status/menuType 变更时失效关联用户会话
         boolean securityFieldChanged = (
@@ -196,20 +186,14 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
 
         boolean result = updateById(oldMenu);
         if (!result) {
-            throw new BizException("菜单信息已变更，请刷新后重试");
+            throw new BizException(ResultCode.DATA_CONFLICT, "菜单信息已变更，请刷新后重试");
         }
 
         if (securityFieldChanged) {
             Set<Long> roleIds = roleMenuMapper.selectRoleIdsByMenuId(menu.getId());
-            if (CollUtil.isNotEmpty(roleIds)) {
-                Set<Long> userIds = new LinkedHashSet<>();
-                for (Long rid : roleIds) {
-                    Set<Long> ids = userRoleMapper.selectUserIdsByRoleId(rid);
-                    if (CollUtil.isNotEmpty(ids)) userIds.addAll(ids);
-                }
-                if (!userIds.isEmpty()) {
-                    eventPublisher.publishEvent(new UserCacheRefreshEvent(userIds));
-                }
+            Set<Long> userIds = collectUserIdsByRoleIds(roleIds);
+            if (!userIds.isEmpty()) {
+                eventPublisher.publishEvent(new UserCacheRefreshEvent(userIds));
             }
         }
         return result;
@@ -247,20 +231,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .and(SYS_MENU.DELETED.eq(0))
                 .and(excludeId != null ? SYS_MENU.ID.ne(excludeId) : null);
         return count(wrapper) == 0;
-    }
-
-    @Override
-    public boolean hasChildMenu(Long menuId) {
-        QueryWrapper wrapper = QueryWrapper.create()
-                .where(SYS_MENU.PARENT_ID.eq(menuId))
-                .and(SYS_MENU.DELETED.eq(0));
-        return count(wrapper) > 0;
-    }
-
-    @Override
-    public boolean isMenuUsed(Long menuId) {
-        QueryWrapper wrapper = QueryWrapper.create().where(SYS_ROLE_MENU.MENU_ID.eq(menuId));
-        return roleMenuMapper.selectCountByQuery(wrapper) > 0;
     }
 
     @Override
@@ -324,20 +294,6 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 menu.getPerms(),
                 null
         );
-    }
-
-    /**
-     * 构建下拉树
-     */
-    private TreeSelectVO buildTreeSelect(SysMenu menu) {
-        TreeSelectVO treeSelect = TreeSelectVO.fromMenu(menu);
-        if (CollUtil.isNotEmpty(menu.getChildren())) {
-            List<TreeSelectVO> children = menu.getChildren().stream()
-                    .map(this::buildTreeSelect)
-                    .collect(Collectors.toList());
-            treeSelect.setChildren(children);
-        }
-        return treeSelect;
     }
 
     /**
@@ -416,6 +372,24 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
         return parentId == null ? 0L : parentId;
     }
 
+    private void checkParentAncestry(Long menuId, Long parentId) {
+        Set<Long> visited = new HashSet<>();
+        while (parentId != null && parentId != 0L) {
+            if (parentId.equals(menuId)) {
+                throw new BizException("父菜单不能是当前菜单的子孙菜单");
+            }
+            if (!visited.add(parentId)) {
+                throw new BizException("所选父菜单的层级存在循环");
+            }
+            // Keep inspected parent links stable until the move commits.
+            SysMenu parent = getOne(QueryWrapper.create()
+                    .select(SYS_MENU.ID, SYS_MENU.PARENT_ID)
+                    .where(SYS_MENU.ID.eq(parentId))
+                    .forUpdate());
+            parentId = parent == null ? null : parent.getParentId();
+        }
+    }
+
     private Integer normalizeOrderNum(Integer orderNum) {
         return orderNum == null ? 0 : orderNum;
     }
@@ -427,50 +401,23 @@ public class SysMenuServiceImpl extends ServiceImpl<SysMenuMapper, SysMenu> impl
                 .orderBy(SYS_MENU.PARENT_ID.asc(), SYS_MENU.ORDER_NUM.asc());
         List<SysMenu> menus = list(wrapper);
 
-        Map<Long, List<Long>> childrenByParentId = new HashMap<>();
-        boolean targetFound = false;
-        for (SysMenu menu : menus) {
-            if (Objects.equals(menu.getId(), menuId)) {
-                targetFound = true;
-            }
-            childrenByParentId
-                    .computeIfAbsent(menu.getParentId(), ignored -> new ArrayList<>())
-                    .add(menu.getId());
-        }
-
-        if (!targetFound) {
+        if (menus.stream().noneMatch(menu -> Objects.equals(menu.getId(), menuId))) {
             throw new BizException("菜单不存在");
         }
-
-        List<Long> branchMenuIds = new ArrayList<>();
-        collectDescendantMenuIds(menuId, childrenByParentId, branchMenuIds);
-        return branchMenuIds;
-    }
-
-    private void collectDescendantMenuIds(
-            Long currentMenuId,
-            Map<Long, List<Long>> childrenByParentId,
-            Collection<Long> collector
-    ) {
-        collector.add(currentMenuId);
-        for (Long childMenuId : childrenByParentId.getOrDefault(currentMenuId, List.of())) {
-            collectDescendantMenuIds(childMenuId, childrenByParentId, collector);
+        Map<Long, List<SysMenu>> childrenByParent = TreeBuilder.groupByParent(menus);
+        var pending = new java.util.ArrayDeque<Long>();
+        var visited = new java.util.LinkedHashSet<Long>();
+        pending.add(menuId);
+        while (!pending.isEmpty()) {
+            Long next = pending.removeFirst();
+            if (visited.add(next)) {
+                childrenByParent.getOrDefault(next, List.of()).forEach(child -> pending.addLast(child.getId()));
+            }
         }
+        return List.copyOf(visited);
     }
 
     private Set<Long> collectUserIdsByRoleIds(Set<Long> roleIds) {
-        Set<Long> userIds = new LinkedHashSet<>();
-        if (CollUtil.isEmpty(roleIds)) {
-            return userIds;
-        }
-
-        for (Long roleId : roleIds) {
-            Set<Long> ids = userRoleMapper.selectUserIdsByRoleId(roleId);
-            if (CollUtil.isNotEmpty(ids)) {
-                userIds.addAll(ids);
-            }
-        }
-        return userIds;
+        return CollUtil.isEmpty(roleIds) ? Set.of() : userRoleMapper.selectUserIdsByRoleIds(roleIds);
     }
-
 }

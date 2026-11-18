@@ -6,9 +6,7 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Duration;
 import java.util.ArrayList;
-import java.util.LinkedHashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
@@ -59,14 +57,6 @@ class LocalCacheClientTest {
     }
 
     @Test
-    @DisplayName("getOrDefault 缺失时返回默认值")
-    void testGetOrDefault() {
-        assertThat(cache.getOrDefault("missing", "default")).isEqualTo("default");
-        cache.set("k1", "v1");
-        assertThat(cache.getOrDefault("k1", "default")).isEqualTo("v1");
-    }
-
-    @Test
     @DisplayName("getExpire 返回剩余秒数")
     void testGetExpire() {
         cache.set("k1", "v1", Duration.ofMinutes(10));
@@ -87,18 +77,6 @@ class LocalCacheClientTest {
         boolean ok = cache.expire("k1", Duration.ofMinutes(10));
         assertThat(ok).isTrue();
         assertThat(cache.getExpire("k1")).isBetween(590L, 600L);
-    }
-
-    @Test
-    @DisplayName("deleteKeysByPattern 通配符删除")
-    void testDeleteKeysByPattern() {
-        cache.set("user:1", "a");
-        cache.set("user:2", "b");
-        cache.set("order:1", "c");
-        cache.deleteKeysByPattern("user:*");
-        assertThat(cache.exists("user:1")).isFalse();
-        assertThat(cache.exists("user:2")).isFalse();
-        assertThat(cache.exists("order:1")).isTrue();
     }
 
     // ==================== getAndDelete 原子性 ====================
@@ -254,119 +232,14 @@ class LocalCacheClientTest {
     @Test
     @DisplayName("tryAcquire 不同 key 互不影响")
     void testTryAcquireIsolation() {
-        assertThat(cache.tryAcquire("key:A")).isTrue();
-        assertThat(cache.tryAcquire("key:B")).isTrue();
+        assertThat(cache.tryAcquire("key:A", 10, 1)).isTrue();
+        assertThat(cache.tryAcquire("key:B", 10, 1)).isTrue();
     }
 
-    // ==================== getOrLoad ====================
 
-    @Test
-    @DisplayName("getOrLoad 缓存未命中时执行 loader")
-    void testGetOrLoad() {
-        AtomicInteger callCount = new AtomicInteger(0);
-        String v1 = cache.getOrLoad("loaded:key", () -> {
-            callCount.incrementAndGet();
-            return "loaded-value";
-        }, Duration.ofMinutes(5));
 
-        String v2 = cache.getOrLoad("loaded:key", () -> {
-            callCount.incrementAndGet();
-            return "should-not-load";
-        }, Duration.ofMinutes(5));
-
-        assertThat(v1).isEqualTo("loaded-value");
-        assertThat(v2).isEqualTo("loaded-value");
-        assertThat(callCount.get()).isEqualTo(1); // loader 只调用一次
-    }
-
-    // ==================== Hash 操作 ====================
-
-    @Test
-    @DisplayName("hSet / hGet / hExists / hDelete 基本操作")
-    void testHashBasic() {
-        cache.hSet("user:1", "name", "Alice");
-        cache.hSet("user:1", "age", 30);
-
-        assertThat(cache.<String>hGet("user:1", "name")).isEqualTo("Alice");
-        assertThat(cache.<Integer>hGet("user:1", "age")).isEqualTo(30);
-        assertThat(cache.hExists("user:1", "name")).isTrue();
-        assertThat(cache.hExists("user:1", "missing")).isFalse();
-
-        boolean deleted = cache.hDelete("user:1", "name");
-        assertThat(deleted).isTrue();
-        assertThat(cache.hExists("user:1", "name")).isFalse();
-    }
-
-    @Test
-    @DisplayName("hSetAll / hGetAll 批量操作")
-    void testHashBatch() {
-        Map<String, Object> fields = new LinkedHashMap<>();
-        fields.put("city", "Beijing");
-        fields.put("score", 99.5);
-        cache.hSetAll("profile:1", fields);
-
-        Map<String, Object> all = cache.hGetAll("profile:1");
-        assertThat(all).containsEntry("city", "Beijing").containsEntry("score", 99.5);
-    }
-
-    @Test
-    @DisplayName("hGet 不存在的 key 返回 null")
-    void testHashMissing() {
-        assertThat(cache.<String>hGet("no:key", "field")).isNull();
-        assertThat(cache.<String>hGetAll("no:key")).isEmpty();
-    }
-
-    // ==================== List 操作 ====================
-
-    @Test
-    @DisplayName("lPush / rPush / lPop / rPop 基本操作")
-    void testListBasic() {
-        cache.rPush("list:1", "a");
-        cache.rPush("list:1", "b");
-        cache.rPush("list:1", "c");
-
-        assertThat(cache.lSize("list:1")).isEqualTo(3L);
-        assertThat(cache.<String>lPop("list:1")).isEqualTo("a");
-        assertThat(cache.<String>rPop("list:1")).isEqualTo("c");
-        assertThat(cache.lSize("list:1")).isEqualTo(1L);
-    }
-
-    @Test
-    @DisplayName("lRange 返回指定范围元素")
-    void testListRange() {
-        for (int i = 1; i <= 5; i++) cache.rPush("list:2", "v" + i);
-
-        assertThat(cache.<String>lRange("list:2", 0, 2)).containsExactly("v1", "v2", "v3");
-        assertThat(cache.<String>lRange("list:2", 0, -1)).containsExactly("v1", "v2", "v3", "v4", "v5");
-        assertThat(cache.<String>lRange("list:2", -2, -1)).containsExactly("v4", "v5");
-    }
-
-    @Test
-    @DisplayName("lPop 空 list 返回 null")
-    void testListPopEmpty() {
-        assertThat(cache.<String>lPop("missing:list")).isNull();
-    }
 
     // ==================== ZSet 有序集合 ====================
-
-    @Test
-    @DisplayName("zAdd / zRange / zScore / zRemove / zSize 基本操作")
-    void testZSetBasic() {
-        cache.zAdd("rank", "Alice", 100.0);
-        cache.zAdd("rank", "Bob", 80.0);
-        cache.zAdd("rank", "Carol", 90.0);
-
-        assertThat(cache.zSize("rank")).isEqualTo(3L);
-        assertThat(cache.zScore("rank", "Alice")).isEqualTo(100.0);
-
-        // zRange 按 score 升序：Bob(80) < Carol(90) < Alice(100)
-        assertThat(cache.<String>zRange("rank", 0, -1))
-                .containsExactly("Bob", "Carol", "Alice");
-
-        boolean removed = cache.zRemove("rank", "Bob");
-        assertThat(removed).isTrue();
-        assertThat(cache.zSize("rank")).isEqualTo(2L);
-    }
 
     @Test
     @DisplayName("zRangeByScore 按 score 区间返回元素")
@@ -380,20 +253,4 @@ class LocalCacheClientTest {
                 .containsExactly("p2", "p3");
     }
 
-    @Test
-    @DisplayName("zScore 不存在的元素返回 null")
-    void testZSetScoreMissing() {
-        assertThat(cache.zScore("empty:zset", "nobody")).isNull();
-    }
-
-    // ==================== sIsMember ====================
-
-    @Test
-    @DisplayName("sIsMember 成员判断")
-    void testSIsMember() {
-        cache.sAdd("fruits", "apple", "banana");
-        assertThat(cache.sIsMember("fruits", "apple")).isTrue();
-        assertThat(cache.sIsMember("fruits", "grape")).isFalse();
-        assertThat(cache.sIsMember("missing:set", "x")).isFalse();
-    }
 }

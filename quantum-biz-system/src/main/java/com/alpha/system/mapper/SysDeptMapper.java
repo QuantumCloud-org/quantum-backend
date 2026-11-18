@@ -30,11 +30,6 @@ public interface SysDeptMapper extends BaseMapper<SysDept> {
     Set<Long> selectDeptIdsByRoleIds(@Param("roleIds") List<Long> roleIds);
 
     /**
-     * 查询部门及其所有子部门
-     */
-    List<SysDept> selectDeptAndChildren(@Param("deptId") Long deptId);
-
-    /**
      * 检查部门名称是否存在
      */
     int checkDeptNameExists(@Param("deptName") String deptName, @Param("parentId") Long parentId, @Param("excludeId") Long excludeId);
@@ -53,9 +48,5 @@ public interface SysDeptMapper extends BaseMapper<SysDept> {
      * 更新子部门的祖级列表
      */
     int updateChildrenAncestors(@Param("oldAncestors") String oldAncestors, @Param("newAncestors") String newAncestors);
-
-    /**
-     * 根据ID查询部门名称
-     */
-    String selectNameById(@Param("deptId") Long deptId);
+    String selectDeptNameById(@Param("deptId") Long deptId);
 }

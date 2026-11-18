@@ -8,6 +8,8 @@ import com.alpha.logging.enums.BusinessType;
 import com.alpha.logging.service.ISysOperLogService;
 import com.alpha.orm.entity.PageResult;
 import com.alpha.security.annotation.RequiresPermission;
+import com.alpha.security.annotation.RequiresRole;
+import com.alpha.framework.constant.CommonConstants;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.RequiredArgsConstructor;
@@ -55,6 +57,7 @@ public class SysOperLogController {
     @Operation(summary = "清空操作日志")
     @SystemLog(title = "清空操作日志", businessType = BusinessType.CLEAN)
     @RequiresPermission("monitor:operlog:remove")
+    @RequiresRole(CommonConstants.SUPER_ADMIN_ROLE)
     @DeleteMapping("/clean")
     public Result<Void> clean() {
         operLogService.cleanOperLog();

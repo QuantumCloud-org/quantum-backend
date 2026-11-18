@@ -1,6 +1,7 @@
 package com.alpha.system.domain;
 
 import com.alpha.orm.entity.BaseEntity;
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.mybatisflex.annotation.Column;
 import com.mybatisflex.annotation.Table;
 import lombok.Data;
@@ -28,6 +29,7 @@ public class SysUser extends BaseEntity implements Serializable {
     /**
      * 密码
      */
+    @JsonIgnore
     private String password;
 
     /**

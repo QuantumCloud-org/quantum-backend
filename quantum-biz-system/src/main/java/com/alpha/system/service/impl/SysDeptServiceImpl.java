@@ -1,11 +1,11 @@
 package com.alpha.system.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
+import com.alpha.framework.enums.ResultCode;
+import com.alpha.framework.enums.SensitiveStrategy;
 import com.alpha.framework.exception.BizException;
 import com.alpha.system.domain.SysDept;
-import com.alpha.system.dto.response.TreeSelectVO;
 import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.service.ISysDeptService;
 import com.alpha.system.support.TreeBuilder;
@@ -18,7 +18,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 import static com.alpha.system.domain.table.SysDeptTableDef.SYS_DEPT;
 
@@ -46,17 +45,12 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         wrapper.orderBy(SYS_DEPT.PARENT_ID.asc(), SYS_DEPT.ORDER_NUM.asc());
 
         List<SysDept> depts = list(wrapper);
-        return TreeBuilder.buildTree(depts);  // ✅ 使用 TreeBuilder
+        return TreeBuilder.buildTree(depts);
     }
 
     @Override
     public SysDept selectDeptById(Long deptId) {
         return getById(deptId);
-    }
-
-    @Override
-    public Set<Long> selectChildDeptIds(Long deptId) {
-        return deptMapper.selectChildDeptIds(deptId);
     }
 
     @Override
@@ -136,14 +130,19 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
         oldDept.setDeptName(dept.getDeptName());
         oldDept.setOrderNum(dept.getOrderNum());
         oldDept.setLeader(dept.getLeader());
-        oldDept.setPhone(dept.getPhone());
-        oldDept.setEmail(dept.getEmail());
+        if (dept.getPhone() != null) {
+            oldDept.setPhone(dept.getPhone());
+        }
+        // Older clients may submit the masked value returned by the detail endpoint.
+        if (dept.getEmail() != null && !dept.getEmail().equals(SensitiveStrategy.EMAIL.desensitize(oldDept.getEmail()))) {
+            oldDept.setEmail(dept.getEmail());
+        }
         oldDept.setStatus(dept.getStatus());
         oldDept.setVersion(dept.getVersion());
 
         boolean updated = updateById(oldDept);
         if (!updated) {
-            throw new BizException("部门信息已变更，请刷新后重试");
+            throw new BizException(ResultCode.DATA_CONFLICT, "部门信息已变更，请刷新后重试");
         }
         return true;
     }
@@ -191,7 +190,7 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
 
     @Override
     public boolean checkDeptNameUnique(String deptName, Long parentId, Long excludeId) {
-        return deptMapper.checkDeptNameExists(deptName, parentId, excludeId != null ? excludeId : 0L) == 0;
+        return deptMapper.checkDeptNameExists(deptName, parentId, excludeId) == 0;
     }
 
     @Override
@@ -202,17 +201,5 @@ public class SysDeptServiceImpl extends ServiceImpl<SysDeptMapper, SysDept> impl
     @Override
     public boolean hasUserInDept(Long deptId) {
         return deptMapper.selectUserCount(deptId) > 0;
-    }
-
-    /**
-     * 转换为下拉树节点（递归）
-     */
-    private TreeSelectVO convertToTreeSelect(SysDept dept) {
-        TreeSelectVO treeSelect = TreeSelectVO.fromDept(dept);
-        if (CollUtil.isNotEmpty(dept.getChildren())) {
-            List<TreeSelectVO> children = dept.getChildren().stream().map(this::convertToTreeSelect).toList();
-            treeSelect.setChildren(children);
-        }
-        return treeSelect;
     }
 }

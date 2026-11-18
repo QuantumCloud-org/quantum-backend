@@ -43,19 +43,9 @@ public interface ISysFileService {
     SysFile selectById(Long id);
 
     /**
-     * 按已登记文件路径查询
-     */
-    SysFile selectByPath(String path);
-
-    /**
      * 分页查询
      */
     Page<SysFile> selectFilePage(SysFileQuery query);
-
-    /**
-     * 按业务对象查询
-     */
-    List<SysFile> listByBiz(String bizType, Long bizId);
 
     /**
      * 按 id 下载（返回流）

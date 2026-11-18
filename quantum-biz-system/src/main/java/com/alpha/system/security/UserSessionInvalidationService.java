@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import com.alpha.security.token.TokenService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.event.TransactionPhase;
 import org.springframework.transaction.event.TransactionalEventListener;
@@ -28,7 +29,8 @@ public class UserSessionInvalidationService {
         event.userIds().forEach(tokenService::refreshUserCache);
     }
 
-    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+    @Order(0)
+    @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT, fallbackExecution = true)
     public void onForceLogout(ForceLogoutEvent event) {
         if (CollUtil.isEmpty(event.userIds())) return;
         log.info("强制下线 | userIds: {}", event.userIds());

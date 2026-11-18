@@ -55,6 +55,8 @@ springdoc:
 security:
   cors-allowed-origins: ${SECURITY_CORS_ALLOWED_ORIGINS:}
   refresh-cookie-secure: true
+  # 生产浏览器侧 API 前缀为 /talent_manger（前端 .env.produce），cookie 只随 /auth 子路径发送
+  refresh-cookie-path: /talent_manger/auth
   trusted-proxies:
     cidrs:
       - 10.0.0.0/8

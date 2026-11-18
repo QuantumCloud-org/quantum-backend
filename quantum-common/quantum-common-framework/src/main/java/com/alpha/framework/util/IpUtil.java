@@ -15,9 +15,6 @@ import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
 import java.io.InputStream;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
-import java.util.List;
 import java.util.regex.Pattern;
 
 /**
@@ -52,11 +49,6 @@ public class IpUtil {
     private static Searcher searcher;
 
     /**
-     * 缓存的 xdb 数据（完全基于内存查询）
-     */
-    private static byte[] xdbData;
-
-    /**
      * 初始化 ip2region
      */
     @PostConstruct
@@ -70,7 +62,7 @@ public class IpUtil {
 
             try (InputStream is = resource.getInputStream()) {
                 // 加载到内存，实现毫秒级查询
-                xdbData = IoUtil.readBytes(is);
+                byte[] xdbData = IoUtil.readBytes(is);
                 LongByteArray buffer = new LongByteArray();
                 buffer.append(xdbData);
                 searcher = Searcher.newWithBuffer(Version.IPv4, buffer);
@@ -89,7 +81,8 @@ public class IpUtil {
         if (searcher != null) {
             try {
                 searcher.close();
-            } catch (Exception ignored) {
+            } catch (Exception e) {
+                log.debug("关闭 IP 查询资源失败", e);
             }
         }
     }
@@ -172,23 +165,6 @@ public class IpUtil {
     }
 
     /**
-     * 获取完整的 IP 信息
-     * <p>
-     * 返回原始格式：国家|区域|省份|城市|ISP
-     */
-    public static String getFullRegion(String ip) {
-        if (StrUtil.isBlank(ip) || isInternalIp(ip) || searcher == null) {
-            return UNKNOWN;
-        }
-
-        try {
-            return searcher.search(ip);
-        } catch (Exception e) {
-            return UNKNOWN;
-        }
-    }
-
-    /**
      * 解析地区信息
      * <p>
      * 输入：中国|0|广东省|深圳市|电信
@@ -247,64 +223,7 @@ public class IpUtil {
     }
 
     private static boolean isTrustedProxy(String remoteAddr) {
-        List<String> trustedProxies = TrustedProxyProperties.getTrustedProxies();
-        if (trustedProxies.isEmpty() || !isValidIp(remoteAddr)) {
-            return false;
-        }
-        return trustedProxies.stream().anyMatch(cidr -> cidrMatch(cidr, remoteAddr));
-    }
-
-    private static boolean cidrMatch(String cidr, String remoteAddr) {
-        if (StrUtil.isBlank(cidr) || !isValidIp(remoteAddr)) {
-            return false;
-        }
-
-        String normalizedRemote = normalizeLoopback(remoteAddr.trim());
-        String normalizedCidr = normalizeLoopback(cidr.trim());
-        if (!normalizedCidr.contains("/")) {
-            try {
-                return InetAddress.getByName(normalizedCidr).equals(InetAddress.getByName(normalizedRemote));
-            } catch (UnknownHostException e) {
-                return false;
-            }
-        }
-
-        String[] parts = normalizedCidr.split("/", 2);
-        if (parts.length != 2) {
-            return false;
-        }
-
-        try {
-            InetAddress network = InetAddress.getByName(parts[0]);
-            InetAddress target = InetAddress.getByName(normalizedRemote);
-            byte[] networkBytes = network.getAddress();
-            byte[] targetBytes = target.getAddress();
-            if (networkBytes.length != targetBytes.length) {
-                return false;
-            }
-
-            int prefixLength = Integer.parseInt(parts[1]);
-            if (prefixLength < 0 || prefixLength > networkBytes.length * 8) {
-                return false;
-            }
-
-            int fullBytes = prefixLength / 8;
-            int remainingBits = prefixLength % 8;
-            for (int i = 0; i < fullBytes; i++) {
-                if (networkBytes[i] != targetBytes[i]) {
-                    return false;
-                }
-            }
-
-            if (remainingBits == 0) {
-                return true;
-            }
-
-            int mask = (-1) << (8 - remainingBits);
-            return (networkBytes[fullBytes] & mask) == (targetBytes[fullBytes] & mask);
-        } catch (IllegalArgumentException | UnknownHostException e) {
-            return false;
-        }
+        return TrustedProxyProperties.isTrusted(normalizeLoopback(remoteAddr));
     }
 
     private static String normalizeLoopback(String ip) {
@@ -379,54 +298,5 @@ public class IpUtil {
         return false;
     }
 
-    /**
-     * 判断是否为外网 IP
-     */
-    public static boolean isExternalIp(String ip) {
-        return isIpv4(ip) && !isInternalIp(ip);
-    }
-
     // ==================== IP 转换工具 ====================
-
-    /**
-     * IP 转 Long
-     */
-    public static long ipToLong(String ip) {
-        if (!isIpv4(ip)) {
-            return 0L;
-        }
-        String[] parts = ip.split("\\.");
-        return (Long.parseLong(parts[0]) << 24)
-                + (Long.parseLong(parts[1]) << 16)
-                + (Long.parseLong(parts[2]) << 8)
-                + Long.parseLong(parts[3]);
-    }
-
-    /**
-     * Long 转 IP
-     */
-    public static String longToIp(long ipLong) {
-        return ((ipLong >> 24) & 0xFF) + "."
-                + ((ipLong >> 16) & 0xFF) + "."
-                + ((ipLong >> 8) & 0xFF) + "."
-                + (ipLong & 0xFF);
-    }
-
-    /**
-     * 脱敏 IP（隐藏最后一段）
-     */
-    public static String maskIp(String ip) {
-        if (!isIpv4(ip)) {
-            return ip;
-        }
-        int lastDot = ip.lastIndexOf('.');
-        return ip.substring(0, lastDot) + ".*";
-    }
-
-    /**
-     * 获取 IP 地址（兼容旧方法名）
-     */
-    public static String getIpAddress(String ip) {
-        return getCityInfo(ip);
-    }
 }

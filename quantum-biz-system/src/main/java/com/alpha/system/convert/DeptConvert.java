@@ -94,31 +94,7 @@ public class DeptConvert {
                 .collect(Collectors.toList());
     }
 
-    /**
-     * 实体 -> TreeSelectVO
-     */
-    public TreeSelectVO toTreeSelect(SysDept dept) {
-        if (dept == null) {
-            return null;
-        }
-        TreeSelectVO treeSelect = TreeSelectVO.fromDept(dept);
-        if (dept.getChildren() != null && !dept.getChildren().isEmpty()) {
-            treeSelect.setChildren(dept.getChildren().stream()
-                    .map(this::toTreeSelect)
-                    .collect(Collectors.toList()));
-        }
-        return treeSelect;
-    }
-
-    /**
-     * 实体列表 -> TreeSelectVO列表
-     */
     public List<TreeSelectVO> toTreeSelectList(List<SysDept> depts) {
-        if (depts == null) {
-            return Collections.emptyList();
-        }
-        return depts.stream()
-                .map(this::toTreeSelect)
-                .collect(Collectors.toList());
+        return TreeSelectVO.fromTree(depts, SysDept::getDeptName);
     }
 }

@@ -1,16 +1,21 @@
 package com.alpha.system.service.impl;
 
+import com.alpha.file.util.ExcelUtil.ReadRow;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
 import com.alpha.framework.exception.BizException;
 import com.alpha.orm.enums.DataScopeType;
+import com.alpha.orm.permission.SystemDataScope;
 import com.alpha.security.config.SecurityProperties;
 import com.alpha.system.domain.SysUser;
 import com.alpha.system.dto.request.UserImportRequest;
+import com.alpha.system.dto.request.UserQuery;
 import com.alpha.system.mapper.SysDeptMapper;
 import com.alpha.system.mapper.SysUserMapper;
 import com.alpha.system.mapper.SysUserRoleMapper;
 import com.alpha.system.security.UserCacheRefreshEvent;
+import com.mybatisflex.core.paginate.Page;
+import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import org.junit.jupiter.api.AfterEach;
@@ -21,6 +26,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.util.List;
 import java.util.Set;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.doAnswer;
@@ -50,14 +56,38 @@ class SysUserServiceImplSecurityTest {
     }
 
     @Test
+    void systemDataScopeKeepsListAndExportOpenOnlyInsideTheExplicitScope() {
+        var service = spy(newService(mock(SysUserMapper.class), mock(ApplicationEventPublisher.class)));
+        var stored = user(2L, "bob", null);
+        doAnswer(call -> visibleUsers(call.getArgument(0), stored)).when(service).list(any(QueryWrapper.class));
+        doAnswer(call -> {
+            Page<SysUser> page = call.getArgument(0);
+            page.setRecords(visibleUsers(call.getArgument(1), stored));
+            return page;
+        }).when(service).page(any(Page.class), any(QueryWrapper.class));
+        var query = new UserQuery();
+
+        assertThat(service.selectUserList(query)).isEmpty();
+        assertThat(service.selectUserPage(query).getRecords()).isEmpty();
+        assertThat(SystemDataScope.execute(() -> service.selectUserList(query))).containsExactly(stored);
+        assertThat(SystemDataScope.execute(() -> service.selectUserPage(query)).getRecords()).containsExactly(stored);
+        assertThat(service.selectUserList(query)).isEmpty();
+        assertThat(service.selectUserPage(query).getRecords()).isEmpty();
+    }
+
+    private static List<SysUser> visibleUsers(QueryWrapper wrapper, SysUser stored) {
+        return wrapper.hasCondition() ? List.of() : List.of(stored);
+    }
+
+    @Test
     void importUsersShouldRejectOutOfScopeUpdate() {
         SysUserMapper userMapper = mock(SysUserMapper.class);
         SysUserServiceImpl service = spy(newService(userMapper, mock(ApplicationEventPublisher.class)));
-        when(userMapper.selectByUsername("bob")).thenReturn(user(2L, "bob", 99L));
+        when(userMapper.selectListByQuery(any())).thenReturn(List.of(user(2L, "bob", 99L)));
         doReturn(true).when(service).updateById(any(SysUser.class));
         UserContext.setUser(operator());
 
-        assertThatThrownBy(() -> service.importUsers(List.of(importUser("bob", "13800000001", "bob@example.com")), true))
+        assertThatThrownBy(() -> service.importUsers(importRows(importUser("bob", "13800000001", "bob@example.com")), true))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("无权");
     }
@@ -66,13 +96,14 @@ class SysUserServiceImplSecurityTest {
     void importUsersShouldRejectDuplicatePhoneOnCreate() {
         SysUserMapper userMapper = mock(SysUserMapper.class);
         SysUserServiceImpl service = spy(newService(userMapper, mock(ApplicationEventPublisher.class)));
-        when(userMapper.selectByUsername("alice")).thenReturn(null);
         when(userMapper.checkUsernameExists("alice")).thenReturn(0);
-        when(userMapper.checkPhoneExists("13800000001", 0L)).thenReturn(1);
+        SysUser duplicate = user(2L, "bob", 10L);
+        duplicate.setPhone("13800000001");
+        when(userMapper.selectListByQuery(any())).thenReturn(List.of(duplicate));
         doReturn(true).when(service).save(any(SysUser.class));
         UserContext.setUser(operator());
 
-        assertThatThrownBy(() -> service.importUsers(List.of(importUser("alice", "13800000001", "alice@example.com")), false))
+        assertThatThrownBy(() -> service.importUsers(importRows(importUser("alice", "13800000001", "alice@example.com")), false))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("手机号已存在");
     }
@@ -82,13 +113,13 @@ class SysUserServiceImplSecurityTest {
         SysUserMapper userMapper = mock(SysUserMapper.class);
         ApplicationEventPublisher publisher = mock(ApplicationEventPublisher.class);
         SysUserServiceImpl service = spy(newService(userMapper, publisher));
-        when(userMapper.selectByUsername("bob")).thenReturn(user(2L, "bob", 10L));
+        when(userMapper.selectListByQuery(any())).thenReturn(List.of(user(2L, "bob", 10L)));
         when(userMapper.checkPhoneExists("13800000001", 2L)).thenReturn(0);
         when(userMapper.checkEmailExists("bob@example.com", 2L)).thenReturn(0);
         doReturn(true).when(service).updateById(any(SysUser.class));
         UserContext.setUser(operator());
 
-        service.importUsers(List.of(importUser("bob", "13800000001", "bob@example.com")), true);
+        service.importUsers(importRows(importUser("bob", "13800000001", "bob@example.com")), true);
 
         verify(publisher).publishEvent(new UserCacheRefreshEvent(Set.of(2L)));
     }
@@ -98,10 +129,9 @@ class SysUserServiceImplSecurityTest {
         SysUserMapper userMapper = mock(SysUserMapper.class);
         SysUserRoleMapper userRoleMapper = mock(SysUserRoleMapper.class);
         SysUserServiceImpl service = spy(newService(userMapper, userRoleMapper, mock(ApplicationEventPublisher.class)));
-        when(userMapper.selectByUsername("alice")).thenReturn(null);
         UserContext.setUser(operator());
 
-        assertThatThrownBy(() -> service.importUsers(List.of(importRequest("alice", "bad-phone", "alice@example.com", 10L, List.of(2L))), false))
+        assertThatThrownBy(() -> service.importUsers(importRows(importRequest("alice", "bad-phone", "alice@example.com", 10L, List.of(2L))), false))
                 .isInstanceOf(BizException.class)
                 .hasMessageContaining("手机号格式不正确");
 
@@ -114,7 +144,6 @@ class SysUserServiceImplSecurityTest {
         SysUserMapper userMapper = mock(SysUserMapper.class);
         SysUserRoleMapper userRoleMapper = mock(SysUserRoleMapper.class);
         SysUserServiceImpl service = spy(newService(userMapper, userRoleMapper, mock(ApplicationEventPublisher.class)));
-        when(userMapper.selectByUsername("alice")).thenReturn(null);
         when(userMapper.checkUsernameExists("alice")).thenReturn(0);
         when(userMapper.checkPhoneExists("13800000002", 0L)).thenReturn(0);
         when(userMapper.checkEmailExists("alice@example.com", 0L)).thenReturn(0);
@@ -125,7 +154,7 @@ class SysUserServiceImplSecurityTest {
         }).when(service).save(any(SysUser.class));
         UserContext.setUser(operator());
 
-        service.importUsers(List.of(importRequest("alice", "13800000002", "alice@example.com", 10L, List.of(2L, 3L))), false);
+        service.importUsers(importRows(importRequest("alice", "13800000002", "alice@example.com", 10L, List.of(2L, 3L))), false);
 
         verify(userRoleMapper).batchInsert(20L, List.of(2L, 3L));
     }
@@ -147,6 +176,28 @@ class SysUserServiceImplSecurityTest {
                 .hasMessageContaining("未认证");
     }
 
+    @Test
+    void batchDeleteChecksAllTargetsBeforeDeletingAnyRoleMappings() {
+        var roles = mock(SysUserRoleMapper.class);
+        var service = spy(newService(mock(SysUserMapper.class), roles, mock(ApplicationEventPublisher.class)));
+        var ids = List.of(2L, 3L);
+        doReturn(List.of(user(2L, "bob", 10L), user(3L, "charlie", 99L))).when(service).listByIds(ids);
+        UserContext.setUser(operator());
+
+        assertThatThrownBy(() -> service.deleteUserByIds(ids)).isInstanceOf(BizException.class);
+        org.mockito.Mockito.verifyNoInteractions(roles);
+    }
+
+    @Test
+    void rejectsAnImportBeyondTheRowLimitBeforeQueryingUsers() {
+        var mapper = mock(SysUserMapper.class);
+        var service = newService(mapper, mock(ApplicationEventPublisher.class));
+        var rows = java.util.Collections.nCopies(1001, new ReadRow<>(2, new UserImportRequest(), null));
+        assertThatThrownBy(() -> service.importUsers(rows, false))
+                .isInstanceOf(BizException.class).hasMessageContaining("最多 1000");
+        org.mockito.Mockito.verifyNoInteractions(mapper);
+    }
+
     private SysUserServiceImpl newService(SysUserMapper userMapper, ApplicationEventPublisher publisher) {
         return newService(userMapper, mock(SysUserRoleMapper.class), publisher);
     }
@@ -163,7 +214,8 @@ class SysUserServiceImplSecurityTest {
                 passwordEncoder,
                 properties,
                 publisher,
-                validator
+                validator,
+                mock(com.alpha.system.security.RoleDelegationPolicy.class)
         );
     }
 
@@ -196,6 +248,10 @@ class SysUserServiceImplSecurityTest {
         user.setStatus(1);
         user.setRoleIds(List.of(2L));
         return user;
+    }
+
+    private static List<ReadRow<UserImportRequest>> importRows(UserImportRequest request) {
+        return List.of(new ReadRow<>(2, request, null));
     }
 
     private UserImportRequest importRequest(String username, String phone, String email, Long deptId, List<Long> roleIds) {

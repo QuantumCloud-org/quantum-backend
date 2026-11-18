@@ -1,13 +1,13 @@
 package com.alpha.system.dto.response;
 
-import com.alpha.system.domain.SysDept;
-import com.alpha.system.domain.SysMenu;
+import com.alpha.system.support.TreeBuilder.TreeNode;
 import lombok.Data;
 
 import java.io.Serial;
 import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.function.Function;
 
 /**
  * 树形选择结构
@@ -42,17 +42,14 @@ public class TreeSelectVO implements Serializable {
         this.children = new ArrayList<>();
     }
 
-    /**
-     * 从 SysMenu 构建
-     */
-    public static TreeSelectVO fromMenu(SysMenu menu) {
-        return new TreeSelectVO(menu.getId(), menu.getMenuName());
-    }
-
-    /**
-     * 从 SysDept 构建
-     */
-    public static TreeSelectVO fromDept(SysDept dept) {
-        return new TreeSelectVO(dept.getId(), dept.getDeptName());
+    public static <T extends TreeNode<T>> List<TreeSelectVO> fromTree(List<T> nodes, Function<T, String> label) {
+        if (nodes == null || nodes.isEmpty()) {
+            return List.of();
+        }
+        return nodes.stream().map(node -> {
+            var option = new TreeSelectVO(node.getId(), label.apply(node));
+            option.setChildren(fromTree(node.getChildren(), label));
+            return option;
+        }).toList();
     }
 }

@@ -27,14 +27,6 @@ public interface ISysOperLogService {
     Page<SysOperLog> selectOperLogPage(SysOperLog query, LogPageQuery pageQuery);
 
     /**
-     * 查询操作日志列表
-     *
-     * @param query 查询条件
-     * @return 日志列表
-     */
-    List<SysOperLog> selectOperLogList(SysOperLog query, LogPageQuery pageQuery);
-
-    /**
      * 根据ID查询操作日志
      *
      * @param operId 日志ID
@@ -61,18 +53,4 @@ public interface ISysOperLogService {
      * @return 删除数量
      */
     int deleteOperLogByDays(int days);
-
-    /**
-     * 统计日志总数
-     *
-     * @return 日志总数
-     */
-    long countOperLog();
-
-    /**
-     * 统计异常日志数量
-     *
-     * @return 异常日志数量
-     */
-    long countErrorLog();
 }

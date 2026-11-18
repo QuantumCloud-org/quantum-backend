@@ -1,17 +1,17 @@
 package com.alpha.security.handler;
 
-import cn.hutool.core.util.StrUtil;
-import com.alpha.framework.constant.CommonConstants;
+import com.alpha.security.util.BearerTokens;
 import com.alpha.framework.entity.Result;
-import com.alpha.framework.util.JsonUtil;
+import com.alpha.framework.enums.ResultCode;
+import com.alpha.framework.util.ServletJsonWriter;
 import com.alpha.security.config.SecurityProperties;
 import com.alpha.security.token.TokenService;
 import com.alpha.security.util.CookieUtil;
+import com.nimbusds.jose.JOSEException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.http.MediaType;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.web.authentication.logout.LogoutSuccessHandler;
 import org.springframework.stereotype.Component;
@@ -27,26 +27,21 @@ import java.io.IOException;
 public class LogoutSuccessHandlerImpl implements LogoutSuccessHandler {
 
     private final TokenService tokenService;
-    private final JsonUtil jsonUtil;
+    private final ServletJsonWriter jsonWriter;
     private final SecurityProperties securityProperties;
 
     @Override
     public void onLogoutSuccess(HttpServletRequest request, HttpServletResponse response, Authentication authentication) throws IOException {
-        // 获取 Token
-        String header = request.getHeader(CommonConstants.HEADER_AUTHORIZATION);
-        if (StrUtil.isNotBlank(header) && header.startsWith(CommonConstants.TOKEN_PREFIX)) {
-            String token = header.substring(CommonConstants.TOKEN_PREFIX.length());
-            try {
-                tokenService.logout(token);
-            } catch (Exception e) {
-                log.error("登出处理异常: {}", e.getMessage());
+        try {
+            if (tokenService.logout(BearerTokens.resolve(request), CookieUtil.readRefreshCookie(request))) {
+                CookieUtil.clearRefreshCookie(response, securityProperties.isRefreshCookieSecure(),
+                        securityProperties.getRefreshCookiePath());
             }
+        } catch (JOSEException | RuntimeException e) {
+            log.warn("会话服务暂时无法完成登出 | errorType={}", e.getClass().getName());
+            jsonWriter.write(response, HttpServletResponse.SC_SERVICE_UNAVAILABLE, Result.fail(ResultCode.SERVICE_UNAVAILABLE));
+            return;
         }
-
-        CookieUtil.clearRefreshCookie(response, securityProperties.isRefreshCookieSecure());
-        response.setStatus(HttpServletResponse.SC_OK);
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        response.setCharacterEncoding("UTF-8");
-        response.getWriter().write(jsonUtil.toJson(Result.ok(null, "登出成功")));
+        jsonWriter.write(response, HttpServletResponse.SC_OK, Result.ok(null, "登出成功"));
     }
 }

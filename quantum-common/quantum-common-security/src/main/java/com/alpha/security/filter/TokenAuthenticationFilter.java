@@ -4,11 +4,9 @@ import cn.hutool.core.util.StrUtil;
 import com.alpha.framework.constant.CommonConstants;
 import com.alpha.framework.context.UserContext;
 import com.alpha.framework.entity.LoginUser;
-import com.alpha.framework.util.IpUtil;
 import com.alpha.security.config.SecurityProperties;
-import com.alpha.security.token.TokenInfo;
 import com.alpha.security.token.TokenService;
-import com.alpha.security.util.CookieUtil;
+import com.alpha.security.util.BearerTokens;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -22,6 +20,8 @@ import org.springframework.util.AntPathMatcher;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.text.ParseException;
+import com.nimbusds.jose.JOSEException;
 
 /**
  * Token 认证过滤器
@@ -40,8 +40,7 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
 
     @Override
     protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) throws ServletException, IOException {
-        String accessToken = extractToken(request);
-        String refreshToken = extractRefreshToken(request);
+        String accessToken = BearerTokens.resolve(request);
 
         try {
             LoginUser loginUser = null;
@@ -50,54 +49,17 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
                 loginUser = tokenService.validateToken(accessToken);
             }
 
-            if (loginUser == null && StrUtil.isNotBlank(refreshToken)) {
-                loginUser = tryRefreshToken(request, refreshToken, response);
-            }
-
             if (loginUser != null) {
                 setAuthentication(request, loginUser);
                 log.debug("【TokenFilter】认证成功 | UserId: {}", loginUser.getUserId());
-            } else if (StrUtil.isBlank(accessToken) && StrUtil.isBlank(refreshToken)) {
-                log.debug("【TokenFilter】Token 为空");
             }
-        } catch (Exception e) {
+        } catch (ParseException | JOSEException e) {
+            log.debug("忽略无法验证的访问令牌");
+        } catch (RuntimeException e) {
             log.error("【TokenFilter】认证异常: {}", e.getMessage(), e);
         }
 
         filterChain.doFilter(request, response);
-    }
-
-    /**
-     * 尝试用 RefreshToken 续期
-     */
-    private LoginUser tryRefreshToken(HttpServletRequest request, String refreshToken, HttpServletResponse response) {
-        try {
-            String deviceId = getDeviceId(request);
-            String clientIp = IpUtil.getClientIp(request);
-            String userAgent = request.getHeader("User-Agent");
-
-            TokenInfo newTokenInfo = tokenService.refreshToken(refreshToken, deviceId, clientIp, userAgent);
-            if (newTokenInfo != null) {
-                // Access Token 放响应头，Refresh Token 仅通过 HttpOnly Cookie 回写。
-                response.setHeader(CommonConstants.HEADER_AUTHORIZATION, CommonConstants.TOKEN_PREFIX + newTokenInfo.getAccessToken());
-                CookieUtil.writeRefreshCookie(
-                        response,
-                        newTokenInfo.getRefreshToken(),
-                        Boolean.TRUE.equals(newTokenInfo.getRememberMe()),
-                        tokenService.getRefreshTokenExpireSeconds(),
-                        securityProperties.isRefreshCookieSecure()
-                );
-
-                LoginUser loginUser = tokenService.validateToken(newTokenInfo.getAccessToken());
-                if (loginUser != null) {
-                    log.info("【TokenFilter】Token 自动续期成功 | UserId: {}", loginUser.getUserId());
-                    return loginUser;
-                }
-            }
-        } catch (Exception e) {
-            log.error("【TokenFilter】Token 续期失败: {}", e.getMessage());
-        }
-        return null;
     }
 
     /**
@@ -114,27 +76,10 @@ public class TokenAuthenticationFilter extends OncePerRequestFilter {
         MDC.put(CommonConstants.MDC_USERNAME, loginUser.getUsername());
     }
 
-    private String extractToken(HttpServletRequest request) {
-        String header = request.getHeader(CommonConstants.HEADER_AUTHORIZATION);
-        if (StrUtil.isNotBlank(header) && header.startsWith(CommonConstants.TOKEN_PREFIX)) {
-            return header.substring(CommonConstants.TOKEN_PREFIX.length());
-        }
-        return null;
-    }
-
-    private String extractRefreshToken(HttpServletRequest request) {
-        return CookieUtil.readRefreshCookie(request);
-    }
-
-    private String getDeviceId(HttpServletRequest request) {
-        String deviceId = request.getHeader("X-Device-Id");
-        return StrUtil.isNotBlank(deviceId) ? deviceId : "default";
-    }
-
 
     @Override
     protected boolean shouldNotFilter(HttpServletRequest request) {
-        String path = request.getRequestURI();
+        String path = request.getRequestURI().substring(request.getContextPath().length());
 
         for (String pattern : securityProperties.getWhitelist()) {
             if (pathMatcher.match(pattern, path)) {
